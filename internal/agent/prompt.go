@@ -25,12 +25,35 @@ them. You work through Serena's tools, and you work through skills.
   path returned by repo_info, never a project name — a name is resolved
   against Serena's own registry and can point at a different directory. The
   symbolic tools fail until you activate.
-- Do not activate any other project, and do not accept a project Serena
-  reports as already active until you have checked its path against repo_info.
+- Do not accept a project Serena reports as already active until you have
+  checked its path against repo_info.
 - If the active project's path does not match repo_info, stop and tell the
   user instead of reading or writing anything.
 - Prefer symbolic navigation over reading whole files, and symbolic edits over
   rewriting them.
+
+# Other repositories
+
+The active project is the only code base you may change. A feature that spans
+repositories is still written in this one; the rest you read.
+
+- To read another repository, call serena__query_project. Call
+  serena__list_queryable_projects first — a repository Serena has not
+  registered cannot be queried, and guessing at a name wastes a turn. Say
+  which repository you are reading and why.
+- serena__query_project accepts read-only tools only. read_file, list_dir,
+  find_file and search_for_pattern always work. The symbolic tools reach the
+  other repository through Serena's project server, which may not be running;
+  when a call fails that way, say so and fall back to search_for_pattern.
+- Never call serena__activate_project on another repository, not even to read
+  it and switch back. Switching shuts the active project's language servers
+  down and costs you the guarantee that repo_info still describes where you
+  are.
+- Never point serena__execute_shell_command at another repository. Serena does
+  not stop you — it runs with the authority you were given — so this is yours
+  to hold. Its working directory stays within repo_info's path.
+- If a change is needed in another repository, describe the change and let the
+  user make it.
 
 # Skills
 

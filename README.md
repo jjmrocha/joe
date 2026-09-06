@@ -41,6 +41,28 @@ session to find the git root, and activates Serena on that path.
 `go install github.com/jjmrocha/joe/cmd@latest` also works, but installs a binary named
 `cmd`, after its directory. `make build` names it `joe`.
 
+## Reading other repositories
+
+A feature that spans repositories is still written in the one joe was started in. joe reads
+the others and cannot change them: it reaches them through Serena's `query_project`, which
+refuses every editing tool.
+
+`query_project` only reaches repositories Serena has registered. Register each one once:
+
+```bash
+uvx --from git+https://github.com/oraios/serena serena project create /path/to/repo
+```
+
+Reading and searching files needs nothing more. Symbol lookups in another repository go
+through Serena's project server, which joe does not start — run it alongside joe if you
+want them:
+
+```bash
+uvx --from git+https://github.com/oraios/serena serena start-project-server
+```
+
+Without it, joe falls back to searching the other repository as text.
+
 ## Make targets
 
 `make` on its own lists them:
