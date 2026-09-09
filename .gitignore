@@ -37,3 +37,5 @@ go.work.sum
 # Editor/IDE
 /.idea
 /.serena
+/CLAUDE.md
+/CLAUDE.local.md

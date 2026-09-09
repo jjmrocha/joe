@@ -19,6 +19,12 @@ skills) and [ai-chat](https://github.com/jjmrocha/ai-chat) (chat core, TUI, slas
 | `OPEN_ROUTER_KEY` | joe talks to [OpenRouter](https://openrouter.ai) | `export OPEN_ROUTER_KEY=sk-...` |
 | `uvx` on `PATH` | Starts Serena, which serves joe's coding tools | [uv](https://github.com/astral-sh/uv) |
 | Skills in `~/.claude/skills` | joe loads a skill before acting | see below |
+| `npx` on `PATH` | Starts the context7 MCP, which serves library documentation | [Node.js](https://nodejs.org) |
+| `donsetch` on `PATH` | Starts the DonSeTch MCP, which serves web search and fetching | [donsetch](https://github.com/dondai44423/donsetch) |
+
+The last two are needed only on demand. Serena starts with joe and a missing `uvx` fails at
+launch; the two MCP servers start the first time you use them, so joe runs without `npx` or
+`donsetch` and a missing binary surfaces at that point instead.
 
 joe loads eleven skills by name from `~/.claude/skills`: `analyze-code`, `brainstorm`,
 `coding-discipline`, `designing-interfaces`, `guiding-manual-testing`, `knowledge-base`,
@@ -40,6 +46,42 @@ session to find the git root, and activates Serena on that path.
 
 `go install github.com/jjmrocha/joe/cmd@latest` also works, but installs a binary named
 `cmd`, after its directory. `make build` names it `joe`.
+
+## Your instructions
+
+At startup joe reads the CLAUDE files you already keep for Claude Code and puts each one
+into its prompt verbatim, in this order, skipping any that are absent:
+
+| File | Scope |
+|---|---|
+| `~/.claude/CLAUDE.md` | You, everywhere |
+| `<repo>/CLAUDE.md` | The repository joe was started in |
+| `<repo>/CLAUDE.local.md` | That repository, not checked in |
+
+A later file wins where two disagree, and joe's own instructions win over all of them on
+tools, skills, Serena and the knowledge base — the rest is yours.
+
+Imports are **not** followed. A line like `@RTK.md` is passed through as text; joe never
+opens the file it names.
+
+## The knowledge base
+
+If any of those files sets `kb_path`, joe registers a second set of tools — `file_read`,
+`file_write`, `file_edit`, `file_list`, `file_delete`, `file_workdir` — rooted at that
+folder and unable to leave it, and tells the model that the knowledge base is theirs while
+the repository stays Serena's.
+
+Both spellings are accepted, anywhere in the file:
+
+```
+kb_path=/Users/you/Documents/LLM_WIKI
+kb_path: /Users/you/Documents/LLM_WIKI
+```
+
+The path must be absolute and spelled out in full — `~` is not expanded, so `kb_path=~/wiki`
+is rejected. A relative path, a `~`-relative one, or a folder that cannot be opened stops joe
+at startup rather than running without the knowledge base. Without `kb_path` joe starts
+normally and the `file_*` tools are simply absent.
 
 ## Reading other repositories
 

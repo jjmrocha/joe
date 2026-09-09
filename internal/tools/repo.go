@@ -3,13 +3,11 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/jjmrocha/ai-toolkit/llm"
 	toolkit "github.com/jjmrocha/ai-toolkit/tools"
+	"github.com/jjmrocha/joe/internal/helper"
 )
 
 var repoInfoTool = llm.Tool{
@@ -20,27 +18,24 @@ var repoInfoTool = llm.Tool{
 	Schema: toolkit.NewObjectBuilder().Build(),
 }
 
-// Register adds joe's own tools to tb. It reports the failure when a tool is
-// already registered under the same name.
 func Register(tb *toolkit.ToolBox) error {
 	return tb.Add(repoInfoTool, repoInfo)
 }
 
-func repoInfo(ctx context.Context, _ map[string]any) (string, error) {
-	root, err := gitRoot(ctx)
+func repoInfo(_ context.Context, _ map[string]any) (string, error) {
+	repoPath, err := helper.RepoPath()
 	if err != nil {
-		root, err = os.Getwd()
-		if err != nil {
-			return "", err
-		}
+		return "", err
 	}
+
+	repoName := filepath.Base(repoPath)
 
 	info := struct {
 		Name string `json:"name"`
 		Path string `json:"path"`
 	}{
-		Name: filepath.Base(root),
-		Path: root,
+		Name: repoName,
+		Path: repoPath,
 	}
 
 	out, err := json.Marshal(info)
@@ -49,13 +44,4 @@ func repoInfo(ctx context.Context, _ map[string]any) (string, error) {
 	}
 
 	return string(out), nil
-}
-
-func gitRoot(ctx context.Context) (string, error) {
-	out, err := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(string(out)), nil
 }
