@@ -76,7 +76,6 @@ func Run(ctx context.Context) error {
 		chat.WithTheme(theme.Default),
 		chat.WithClearCommand(),
 		chat.WithModelCommand(),
-		chat.WithModelsCommand(),
 		chat.WithEffortCommand(),
 		chat.WithCompactCommand(),
 	)
