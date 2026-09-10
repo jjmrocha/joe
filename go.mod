@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/jjmrocha/ai-chat v0.3.0
-	github.com/jjmrocha/ai-toolkit v0.2.5
+	github.com/jjmrocha/ai-toolkit v0.2.6
 	github.com/stretchr/testify v1.11.1
 )
 
