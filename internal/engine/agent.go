@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/jjmrocha/ai-chat/chat"
-	"github.com/jjmrocha/ai-chat/theme"
 	"github.com/jjmrocha/ai-chat/ui"
 	"github.com/jjmrocha/ai-toolkit/agent"
 	"github.com/jjmrocha/ai-toolkit/packs"
@@ -73,7 +72,6 @@ func Run(ctx context.Context) error {
 	// Initialize the chat
 	chatAgent := chat.New("JOE", ag,
 		chat.WithMCP(mng),
-		chat.WithTheme(theme.Default),
 		chat.WithClearCommand(),
 		chat.WithModelCommand(),
 		chat.WithEffortCommand(),
