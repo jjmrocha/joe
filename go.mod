@@ -3,7 +3,7 @@ module github.com/jjmrocha/joe
 go 1.27.1
 
 require (
-	github.com/jjmrocha/ai-chat v0.3.3
+	github.com/jjmrocha/ai-chat v0.4.0
 	github.com/jjmrocha/ai-toolkit v0.2.7
 	github.com/stretchr/testify v1.12.1
 )
@@ -19,7 +19,7 @@ require (
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260910203606-6c9e17dc7a16 // indirect
 	github.com/charmbracelet/x/ansi v0.11.8 // indirect
-	github.com/charmbracelet/x/exp/slice v0.0.0-20260906004030-3986e9119cf9 // indirect
+	github.com/charmbracelet/x/exp/slice v0.0.0-20260913004009-c615ff2f7805 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -34,7 +34,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/xo/terminfo v1.0.0 // indirect
+	github.com/xo/terminfo v1.1.0 // indirect
 	github.com/yuin/goldmark v1.8.6 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
