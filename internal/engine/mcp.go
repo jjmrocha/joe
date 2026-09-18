@@ -1,27 +1,29 @@
 package engine
 
 import (
-	"time"
+	"context"
+	"fmt"
+	"os"
 
 	"github.com/jjmrocha/ai-toolkit/mcp"
-	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
+	"github.com/jjmrocha/joe/internal/config"
 )
 
-func context7MCPConfig() mcp.ClientConfig {
-	return mcp.ClientConfig{
-		Name:            "context7",
-		Command:         "npx",
-		Args:            []string{"-y", "@upstash/context7-mcp"},
-		ToolCallTimeout: 60 * time.Second,
-	}
-}
-
-func newMcpManager(tb *tools.ToolBox) *mcp.Manager {
+func newMcpManager(tb *tools.ToolBox, cfg *config.Config) *mcp.Manager {
 	mng := mcp.NewManager(tb)
 
-	mng.Register(packs.DonSeTchMCPConfig())
-	mng.Register(context7MCPConfig())
+	for _, clientConfig := range cfg.MCPs() {
+		mng.Register(clientConfig)
+	}
 
 	return mng
+}
+
+func startMCPs(ctx context.Context, mng *mcp.Manager, cfg *config.Config) {
+	for _, name := range cfg.BootMCPs() {
+		if err := mng.Start(ctx, name); err != nil {
+			fmt.Fprintf(os.Stderr, "starting mcp %s: %v\n", name, err)
+		}
+	}
 }

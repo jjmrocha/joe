@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/jjmrocha/joe/internal/engine"
 )
@@ -10,7 +11,12 @@ import (
 func main() {
 	ctx := context.Background()
 
-	if err := engine.Run(ctx); err != nil {
+	profile := "default"
+	if len(os.Args) > 1 {
+		profile = os.Args[1]
+	}
+
+	if err := engine.Run(ctx, profile); err != nil {
 		log.Fatal(err)
 	}
 }

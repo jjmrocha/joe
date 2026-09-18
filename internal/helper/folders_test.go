@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -27,6 +29,19 @@ func gitRepo(t *testing.T) string {
 	return dir
 }
 
+func fakeGit(t *testing.T, script string) {
+	t.Helper()
+
+	dir := t.TempDir()
+
+	path := filepath.Join(dir, "git")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n"+script), 0o700); err != nil {
+		t.Fatalf("WriteFile(%s): %v", path, err)
+	}
+
+	t.Setenv("PATH", dir)
+}
+
 func TestRepoPath(t *testing.T) {
 	t.Run("returns the repository root from inside a repository", func(t *testing.T) {
 		// given
@@ -35,7 +50,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath()
+		result, err := RepoPath(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -50,7 +65,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath()
+		result, err := RepoPath(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -63,7 +78,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath()
+		result, err := RepoPath(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -74,9 +89,71 @@ func TestRepoPath(t *testing.T) {
 		dir := gitRepo(t)
 		t.Chdir(dir)
 		// when
-		result, err := RepoPath()
+		result, err := RepoPath(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.True(t, filepath.IsAbs(result))
+	})
+
+	t.Run("falls back to the working directory when git is not installed", func(t *testing.T) {
+		// given
+		dir := t.TempDir()
+		t.Chdir(dir)
+		t.Setenv("PATH", "")
+
+		expected := resolve(t, dir)
+		// when
+		result, err := RepoPath(t.Context())
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, expected, resolve(t, result))
+	})
+
+	t.Run("reports a git that refuses instead of guessing the working directory", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			stderr string
+		}{
+			{name: "dubious ownership", stderr: "fatal: detected dubious ownership in repository at '/repo'"},
+			{name: "permission denied", stderr: "fatal: cannot read '/repo/.git/HEAD': Permission denied"},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				// given
+				t.Chdir(t.TempDir())
+				fakeGit(t, "echo \""+testCase.stderr+"\" >&2\nexit 128\n")
+				// when
+				_, err := RepoPath(t.Context())
+				// then
+				require.Error(t, err)
+			})
+		}
+	})
+
+	t.Run("falls back to the working directory when git reports no repository", func(t *testing.T) {
+		// given
+		dir := t.TempDir()
+		t.Chdir(dir)
+		fakeGit(t, "echo \"fatal: not a git repository (or any of the parent directories): .git\" >&2\nexit 128\n")
+
+		expected := resolve(t, dir)
+		// when
+		result, err := RepoPath(t.Context())
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, expected, resolve(t, result))
+	})
+
+	t.Run("honors a cancelled context", func(t *testing.T) {
+		// given
+		t.Chdir(gitRepo(t))
+
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		// when
+		_, err := RepoPath(ctx)
+		// then
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }

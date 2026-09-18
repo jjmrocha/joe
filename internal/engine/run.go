@@ -6,28 +6,34 @@ import (
 	"github.com/jjmrocha/ai-chat/chat"
 	"github.com/jjmrocha/ai-chat/ui"
 	"github.com/jjmrocha/ai-toolkit/agent"
+	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
-	"github.com/jjmrocha/joe/internal/harness"
 	"github.com/jjmrocha/joe/internal/prompt"
 	joetools "github.com/jjmrocha/joe/internal/tools"
 )
 
-func Run(ctx context.Context) error {
+func Run(ctx context.Context, profile string) error {
+	// Load the configuration
+	cfg, err := loadConfig(profile)
+	if err != nil {
+		return err
+	}
+
 	// Initialize the LLM
-	llm, err := newLLM()
+	llmClient, err := llm.New(cfg.LLMConfig())
 	if err != nil {
 		return err
 	}
 
 	// Initialize the  skills collection
-	skills, err := newSkillCollection()
+	skills, err := newSkillCollection(cfg)
 	if err != nil {
 		return err
 	}
 
 	// Load the  harness
-	harness, err := harness.LoadHarness()
+	harness, err := loadHarness(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -36,9 +42,12 @@ func Run(ctx context.Context) error {
 	toolBox := tools.NewToolBox()
 
 	// Initialize the  MCP manager
-	mng := newMcpManager(toolBox)
+	mng := newMcpManager(toolBox, cfg)
 
 	defer mng.Close()
+
+	// Start the MCP servers the profile boots
+	startMCPs(ctx, mng, cfg)
 
 	// Register tools
 	codePack, err := packs.CodingTools(ctx, toolBox)
@@ -62,7 +71,7 @@ func Run(ctx context.Context) error {
 	}
 
 	// Initialize the agent
-	ag, err := agent.New(agent.Config{}, llm)
+	ag, err := agent.New(agent.Config{}, llmClient)
 	if err != nil {
 		return err
 	}
@@ -79,11 +88,11 @@ func Run(ctx context.Context) error {
 	)
 
 	// Build prompt
-	prompt := prompt.Build(harness)
+	sysPrompt := prompt.Build(harness)
 
 	// Set session
 	ag.StartSession(agent.SessionConfig{
-		Prompt:  prompt,
+		Prompt:  sysPrompt,
 		Skills:  skills,
 		ToolBox: toolBox,
 	})

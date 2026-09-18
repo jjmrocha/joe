@@ -1,13 +1,14 @@
 package prompt
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jjmrocha/joe/internal/harness"
 )
 
-const claudePreamble = `
-<claude-instructions>
+const instructionsPreamble = `
+<%s-instructions>
 The blocks below are the user's own standing instructions, in the order they are
 read: least specific first, most specific last, so a later block wins where two
 disagree. Each is one file, quoted as it is on disk; a line naming another file
@@ -25,7 +26,7 @@ func Build(h *harness.Harness) string {
 	}
 
 	if len(h.Blocks) > 0 {
-		builder.WriteString(claudePreamble)
+		fmt.Fprintf(&builder, instructionsPreamble, h.Kind)
 
 		for _, block := range h.Blocks {
 			builder.WriteString("\n")
@@ -33,7 +34,7 @@ func Build(h *harness.Harness) string {
 			builder.WriteString("\n")
 		}
 
-		builder.WriteString("</claude-instructions>\n")
+		fmt.Fprintf(&builder, "</%s-instructions>\n", h.Kind)
 	}
 
 	return builder.String()

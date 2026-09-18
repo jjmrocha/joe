@@ -35,7 +35,7 @@ func TestBuild(t *testing.T) {
 
 	t.Run("omits the knowledge base section when no kb path is set", func(t *testing.T) {
 		// given
-		h := &harness.Harness{Blocks: []string{firstBlock}}
+		h := &harness.Harness{Kind: harness.KindClaude, Blocks: []string{firstBlock}}
 		// when
 		result := Build(h)
 		// then
@@ -45,6 +45,7 @@ func TestBuild(t *testing.T) {
 	t.Run("appends the blocks in order inside the claude instructions", func(t *testing.T) {
 		// given
 		h := &harness.Harness{
+			Kind: harness.KindClaude,
 			Blocks: []string{
 				firstBlock,
 				secondBlock,
@@ -58,9 +59,23 @@ func TestBuild(t *testing.T) {
 		assert.True(t, strings.HasSuffix(result, "</claude-instructions>\n"))
 	})
 
+	t.Run("names the instructions after the harness kind", func(t *testing.T) {
+		// given
+		h := &harness.Harness{
+			Kind:   harness.KindAgents,
+			Blocks: []string{"<agents file=\"a\">\nfirst\n</agents>"},
+		}
+		// when
+		result := Build(h)
+		// then
+		assert.Contains(t, result, "<agents-instructions>")
+		assert.True(t, strings.HasSuffix(result, "</agents-instructions>\n"))
+		assert.NotContains(t, result, "<claude-instructions>")
+	})
+
 	t.Run("opens the claude instructions after the base prompt", func(t *testing.T) {
 		// given
-		h := &harness.Harness{Blocks: []string{firstBlock}}
+		h := &harness.Harness{Kind: harness.KindClaude, Blocks: []string{firstBlock}}
 		// when
 		result := Build(h)
 		// then
@@ -70,6 +85,7 @@ func TestBuild(t *testing.T) {
 	t.Run("adds the knowledge base section before the claude instructions", func(t *testing.T) {
 		// given
 		h := &harness.Harness{
+			Kind:   harness.KindClaude,
 			KBPath: "/srv/wiki",
 			Blocks: []string{firstBlock},
 		}

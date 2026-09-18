@@ -1,17 +1,23 @@
 package helper
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
-func RepoPath() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").
-		Output()
+func RepoPath(ctx context.Context) (string, error) {
+	out, err := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
-		return os.Getwd()
+		if noRepository(err) {
+			return os.Getwd()
+		}
+
+		return "", fmt.Errorf("git rev-parse: %w", err)
 	}
 
 	repoPath := strings.TrimSpace(string(out))
@@ -22,22 +28,12 @@ func RepoPath() (string, error) {
 	return repoPath, nil
 }
 
-func homePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+func noRepository(err error) bool {
+	if errors.Is(err, exec.ErrNotFound) {
+		return true
 	}
 
-	return home, nil
-}
+	var exitErr *exec.ExitError
 
-func ClaudeHomePath() (string, error) {
-	home, err := homePath()
-	if err != nil {
-		return "", err
-	}
-
-	claudeHomePath := filepath.Join(home, ".claude")
-
-	return claudeHomePath, nil
+	return errors.As(err, &exitErr) && bytes.Contains(exitErr.Stderr, []byte("not a git repository"))
 }

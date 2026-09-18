@@ -8,51 +8,40 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/jjmrocha/joe/internal/helper"
 )
 
 var kbPathPattern = regexp.MustCompile(`(?m)^[ \t]*kb_path[ \t]*[:=][ \t]*(.*?)[ \t\r]*$`)
 
+type Paths struct {
+	ConfigDir string
+	Home      string
+	Repo      string
+}
+
 type Harness struct {
+	Kind   Kind
 	Blocks []string
 	KBPath string
 }
 
-func LoadHarness() (*Harness, error) {
-	claudeHomePath, err := helper.ClaudeHomePath()
-	if err != nil {
-		return nil, err
-	}
+func Load(kind Kind, paths Paths) (*Harness, error) {
+	h := Harness{Kind: kind}
 
-	repoPath, err := helper.RepoPath()
-	if err != nil {
-		return nil, err
-	}
-
-	paths := []string{
-		filepath.Join(claudeHomePath, "CLAUDE.md"),
-		filepath.Join(repoPath, "CLAUDE.md"),
-		filepath.Join(repoPath, "CLAUDE.local.md"),
-	}
-
-	var h Harness
-
-	for _, path := range paths {
+	for _, path := range kind.files(paths) {
 		content, err := os.ReadFile(path) //nolint:gosec
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
 
-			return &h, err
+			return nil, err
 		}
 
-		h.Blocks = append(h.Blocks, renderBlock(path, string(content)))
+		h.Blocks = append(h.Blocks, renderBlock(kind, path, string(content)))
 
 		kbPath, err := findKBPath(string(content))
 		if err != nil {
-			return &h, fmt.Errorf("%s: %w", path, err)
+			return nil, fmt.Errorf("%s: %w", path, err)
 		}
 
 		if kbPath != "" {
@@ -63,8 +52,10 @@ func LoadHarness() (*Harness, error) {
 	return &h, nil
 }
 
-func renderBlock(path string, content string) string {
-	return fmt.Sprintf("<claude file=%q>\n%s\n</claude>", path, strings.TrimRight(content, "\n"))
+func renderBlock(kind Kind, path string, content string) string {
+	body := strings.ReplaceAll(strings.TrimRight(content, "\n"), "</"+string(kind), "&lt;/"+string(kind))
+
+	return fmt.Sprintf("<%s file=%q>\n%s\n</%s>", kind, path, body, kind)
 }
 
 func findKBPath(content string) (string, error) {
