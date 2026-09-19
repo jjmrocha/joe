@@ -53,7 +53,7 @@ func TestBuildIfNeed(t *testing.T) {
 	t.Run("builds every part of the environment", func(t *testing.T) {
 		// given
 		dir := configDir(t)
-		answer(t, "ollama\nqwen3\nclaude\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\n")
 		// when
 		err := BuildIfNeed()
 		// then

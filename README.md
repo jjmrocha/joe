@@ -83,18 +83,27 @@ Run joe once to set it up:
 ./bin/joe
 ```
 
-It finds no configuration folder, so it asks four questions:
+It finds no configuration folder, so it asks you to describe the setup:
 
 ```
 Provider [openrouter, ollama, anthropic]: openrouter
 Model: z-ai/glm-5.3-flash
 Name of the API key variable: OPEN_ROUTER_KEY
 Harness [claude, agents]: claude
+Knowledge base [yes, no]: yes
+Knowledge base folder: /Users/you/Documents/LLM_WIKI
 ```
 
-The last one decides which instruction files joe reads — see
+The API-key question is skipped on Ollama, and the folder question only follows a `yes`.
+
+`Harness` decides which instruction files joe reads — see
 [Your own instructions](#your-own-instructions). Pick `claude` if you already keep a
 `~/.claude/CLAUDE.md`.
+
+`Knowledge base` decides whether joe gets the `file_*` tools — see
+[A knowledge base of your own](#a-knowledge-base-of-your-own). **joe does not create the
+folder**: it must already exist, and joe asks again until it does. A leading `~` is expanded
+before joe checks, and the profile stores the path in full.
 
 From the answers joe writes:
 
@@ -171,6 +180,7 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
 ```json
 {
   "harness": "claude",
+  "kb-path": "/Users/you/Documents/LLM_WIKI",
   "llm": {
     "provider": "openrouter",
     "api-key-env": "OPEN_ROUTER_KEY",
@@ -190,6 +200,7 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
 | Key | What it does |
 |---|---|
 | `harness` | `claude` or `agents` — which instruction files joe reads |
+| `kb-path` | Absolute path to your knowledge base. Omit it for no knowledge base and no `file_*` tools |
 | `llm.provider` | `openrouter`, `ollama` or `anthropic` |
 | `llm.base-url` | Overrides the provider's endpoint; omit it to use the standard one |
 | `llm.api-key-env` | The **name** of the variable holding the key, never the key itself. Required except on Ollama |
@@ -201,9 +212,9 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
 | `mcps-on` | The servers started at launch; the rest start on first use |
 
 A profile that names an unknown provider, effort, harness or `mcps-on` server, a skill that
-is not a bare name, or leaves the model empty, or names an API-key variable that is not set,
-stops joe before the session opens — and the message lists every fault in the file, not just
-the first.
+is not a bare name, a `kb-path` that is not absolute, or leaves the model empty, or names an
+API-key variable that is not set, stops joe before the session opens — and the message lists
+every fault in the file, not just the first.
 
 Serena is not configurable here: it always starts with joe.
 
@@ -243,26 +254,40 @@ opens the file it names.
 
 ### A knowledge base of your own
 
-If any of those files sets `kb_path`, joe gets a second set of tools — `file_read`,
-`file_write`, `file_edit`, `file_list`, `file_delete`, `file_workdir` — rooted at that folder
-and unable to leave it. The repository stays Serena's; that folder is joe's to write in,
-which is where it keeps notes, plans and manuals across sessions.
+When the profile sets `kb-path`, joe gets a second set of tools — `file_read`, `file_write`,
+`file_edit`, `file_list`, `file_delete`, `file_workdir` — rooted at that folder and unable to
+leave it. The repository stays Serena's; that folder is joe's to write in, which is where it
+keeps notes, plans and manuals across sessions.
 
-Both spellings work, anywhere in the file:
+```json
+{ "kb-path": "/Users/you/Documents/LLM_WIKI" }
+```
+
+The path must be absolute and the folder must already exist — joe never creates it. A
+relative path stops joe at startup with every other fault in the profile; a folder that is
+missing or unreadable stops it when the tools are registered. Omit the key and joe starts
+normally with the `file_*` tools simply absent.
+
+**The profile is the only place joe reads this from.** A `kb_path` line in a `CLAUDE.md` or
+`AGENTS.md` is quoted into the prompt like any other line of those files, and otherwise
+ignored — joe will not take a knowledge-base root from a file a repository can ship. If you
+used to keep the line in `~/.claude/CLAUDE.md`, move the value into your profile; leaving the
+line where it is does no harm.
+
+Either way joe closes the prompt with a `<knowledge-base>` block naming the path it actually
+uses, or naming none, so a stale `kb_path` line elsewhere in the prompt cannot mislead the
+model:
 
 ```
+<knowledge-base>
+Ignore any kb_path set anywhere above. This block is the only one that counts.
+
 kb_path=/Users/you/Documents/LLM_WIKI
-kb_path: /Users/you/Documents/LLM_WIKI
+...
 ```
 
-The path must be absolute and spelled out in full — `~` is not expanded, so `kb_path=~/wiki`
-is rejected, and a relative path or an unreadable folder stops joe at startup. The **last**
-`kb_path` line in a file wins, and the search does not skip fenced code blocks, so keep one
-line per file. Without `kb_path` joe starts normally and the `file_*` tools are simply
-absent.
-
-The `knowledge-base` skill looks for `kb_path` in a CLAUDE file of its own accord, so under
-`harness: agents` keep the line in `~/.claude/CLAUDE.md` as well.
+Different profiles can name different folders, so `joe work` and `joe personal` can keep
+separate knowledge bases.
 
 ### Reading other repositories
 
@@ -297,7 +322,8 @@ joe validates what it can before the session opens, and the message names the fa
 | `skill folder not found: …` | A skill is missing from `~/.config/joe/skills` | Install the skills — every missing one is listed at once |
 | `api key variable is not set` | `api-key-env` names a variable with no value | `export` it, or point `api-key-env` at the one you use |
 | `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
-| `kb_path is not absolute` | A `kb_path` line is relative or starts with `~` | Spell the path out in full |
+| `kb_path is not absolute` | The profile's `kb-path` is relative or starts with `~` | Spell the path out in full |
+| `opening root: …` | The profile's `kb-path` names a folder that is missing or unreadable | Create it, or drop the key |
 | `harness is not claude or agents` | Unknown `harness` value | Use `claude` or `agents` |
 | `git rev-parse: …` | `git` is present but refusing — dubious ownership, unreadable `.git` | Fix the repository, or run joe somewhere else |
 
@@ -307,7 +333,7 @@ error from the coding tool pack at launch, and the usual cause is `uvx` missing 
 An `mcps-on` server that fails to start does *not* stop joe. The failure prints before the
 TUI opens and `/mcp` shows the server as `off`; `/mcp on <name>` retries it.
 
-To start over, delete `~/.config/joe` and run joe again — it asks the four questions afresh.
+To start over, delete `~/.config/joe` and run joe again — it asks the setup questions afresh.
 A folder that already exists is never touched, and nothing inside it is ever overwritten.
 
 ---

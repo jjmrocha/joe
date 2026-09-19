@@ -9,5 +9,4 @@ type Paths struct {
 type Harness struct {
 	Kind   Kind
 	Blocks []string
-	KBPath string
 }

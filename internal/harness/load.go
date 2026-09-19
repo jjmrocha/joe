@@ -22,15 +22,6 @@ func Load(kind Kind, paths Paths) (*Harness, error) {
 		}
 
 		h.Blocks = append(h.Blocks, renderBlock(kind, path, string(content)))
-
-		kbPath, err := findKBPath(string(content))
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-
-		if kbPath != "" {
-			h.KBPath = kbPath
-		}
 	}
 
 	return &h, nil

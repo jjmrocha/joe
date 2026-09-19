@@ -14,6 +14,7 @@ import (
 
 type Config struct {
 	Harness string         `json:"harness"`
+	KBPath  string         `json:"kb-path,omitempty"`
 	LLM     LLM            `json:"llm"`
 	Skills  []string       `json:"skills"`
 	MCPs    map[string]MCP `json:"mcps"`

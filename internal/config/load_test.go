@@ -174,6 +174,16 @@ func TestLoad(t *testing.T) {
 				content:  profileWith(`"skills": ["../../etc/hosts"]`),
 				expected: ErrInvalidSkillName,
 			},
+			{
+				name:     "kb path that is not absolute",
+				content:  profileWith(`"kb-path": "wiki"`),
+				expected: ErrInvalidKBPath,
+			},
+			{
+				name:     "kb path that is a tilde",
+				content:  profileWith(`"kb-path": "~/wiki"`),
+				expected: ErrInvalidKBPath,
+			},
 		}
 
 		for _, testCase := range testCases {
@@ -216,6 +226,33 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, result.LLMConfig().APIKey)
 		assert.Equal(t, "http://localhost:11434", result.LLMConfig().BaseURL)
+	})
+
+	t.Run("carries an absolute kb path", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		content := profileWith(`"kb-path": "/srv/wiki"`)
+		writeProfile(t, dir, "local", content)
+
+		t.Setenv(testKeyEnv, "sk-test")
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "/srv/wiki", result.KBPath)
+	})
+
+	t.Run("leaves the kb path empty when the profile omits it", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		writeProfile(t, dir, "local", profileWith())
+
+		t.Setenv(testKeyEnv, "sk-test")
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, result.KBPath)
 	})
 
 	t.Run("reports a missing default profile", func(t *testing.T) {

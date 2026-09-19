@@ -10,10 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	testKBPath   = "/srv/wiki"
-	testFilePath = "/home/joe/CLAUDE.md"
-)
+const testFilePath = "/home/joe/CLAUDE.md"
 
 func writeFile(t testing.TB, dir, name, content string) string {
 	t.Helper()
@@ -98,27 +95,16 @@ func TestLoad(t *testing.T) {
 		assert.Len(t, result.Blocks, 1)
 	})
 
-	t.Run("keeps the last kb_path that is set", func(t *testing.T) {
+	t.Run("quotes a kb_path line as plain text", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
-		writeFile(t, paths.Home, filepath.Join(".claude", "CLAUDE.md"), "kb_path=/srv/first")
 		writeFile(t, paths.Repo, "CLAUDE.md", "kb_path=/srv/wiki")
 		// when
 		result, err := Load(KindClaude, paths)
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, testKBPath, result.KBPath)
-	})
-
-	t.Run("reports a kb_path that is not absolute", func(t *testing.T) {
-		// given
-		paths := testPaths(t)
-		writeFile(t, paths.Repo, "CLAUDE.md", "kb_path=wiki")
-		// when
-		result, err := Load(KindClaude, paths)
-		// then
-		assert.ErrorIs(t, err, ErrInvalidKBPath)
-		assert.Nil(t, result)
+		require.Len(t, result.Blocks, 1)
+		assert.Contains(t, result.Blocks[0], "kb_path=/srv/wiki")
 	})
 
 	t.Run("returns nothing when no file is present", func(t *testing.T) {
@@ -129,7 +115,6 @@ func TestLoad(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Empty(t, result.Blocks)
-		assert.Empty(t, result.KBPath)
 	})
 }
 

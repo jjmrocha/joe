@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/jjmrocha/ai-toolkit/llm"
@@ -37,6 +38,10 @@ func validate(cfg *Config) error {
 
 	if _, err := harness.ParseKind(cfg.Harness); err != nil {
 		problems = append(problems, err)
+	}
+
+	if cfg.KBPath != "" && !filepath.IsAbs(cfg.KBPath) {
+		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidKBPath, cfg.KBPath))
 	}
 
 	problems = append(problems, validateLLM(cfg.LLM)...)

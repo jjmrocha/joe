@@ -17,14 +17,72 @@ import (
 )
 
 const (
-	testModel = "z-ai/glm-5.3-flash"
-	testKind  = "agents"
+	testModel       = "z-ai/glm-5.3-flash"
+	testKind        = "agents"
+	testProvider    = "ollama"
+	testOllamaModel = "qwen3"
 )
+
+func TestAskPath(t *testing.T) {
+	t.Run("returns an existing folder", func(t *testing.T) {
+		// given
+		dir := t.TempDir()
+		in := bufio.NewReader(strings.NewReader(dir + "\n"))
+		// when
+		result, err := askPath(in, &strings.Builder{}, "Folder")
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, dir, result)
+	})
+
+	t.Run("expands a leading tilde", func(t *testing.T) {
+		// given
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+
+		require.NoError(t, os.MkdirAll(filepath.Join(home, "wiki"), 0o750))
+
+		in := bufio.NewReader(strings.NewReader("~/wiki\n"))
+		// when
+		result, err := askPath(in, &strings.Builder{}, "Folder")
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(home, "wiki"), result)
+	})
+
+	t.Run("asks again for an answer that is not an existing folder", func(t *testing.T) {
+		// given
+		dir := t.TempDir()
+
+		file := filepath.Join(dir, "notafolder")
+		require.NoError(t, os.WriteFile(file, nil, 0o600))
+
+		var out strings.Builder
+
+		in := bufio.NewReader(strings.NewReader("wiki\n" + filepath.Join(dir, "gone") + "\n" + file + "\n" + dir + "\n"))
+		// when
+		result, err := askPath(in, &out, "Folder")
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, dir, result)
+		assert.Equal(t, 3, strings.Count(out.String(), "is not an existing folder"))
+	})
+
+	t.Run("reports an answer it cannot read", func(t *testing.T) {
+		// given
+		in := bufio.NewReader(strings.NewReader(""))
+		// when
+		_, err := askPath(in, &strings.Builder{}, "Folder")
+		// then
+		assert.ErrorIs(t, err, ErrNoAnswer)
+	})
+}
 
 func TestAskProfile(t *testing.T) {
 	t.Run("collects every answer", func(t *testing.T) {
 		// given
-		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\n"))
+		dir := t.TempDir()
+		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\n"))
 		// when
 		result, err := askProfile(in, &strings.Builder{})
 		// then
@@ -34,37 +92,39 @@ func TestAskProfile(t *testing.T) {
 			provider:  "openrouter",
 			model:     testModel,
 			apiKeyEnv: "OPEN_ROUTER_KEY",
+			kbPath:    dir,
 		}, result)
 	})
 
-	t.Run("skips the key question for ollama", func(t *testing.T) {
+	t.Run("skips the folder question when no knowledge base is wanted", func(t *testing.T) {
 		// given
-		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\n"))
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\nno\n"))
 		// when
 		result, err := askProfile(in, &strings.Builder{})
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, answers{harness: testKind, provider: "ollama", model: "qwen3"}, result)
+		assert.Equal(t, answers{harness: testKind, provider: testProvider, model: testOllamaModel}, result)
 	})
 
 	t.Run("lists the options it accepts", func(t *testing.T) {
 		// given
 		var out strings.Builder
 
-		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\n"))
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\n"))
 		// when
 		_, err := askProfile(in, &out)
 		// then
 		require.NoError(t, err)
 		assert.Contains(t, out.String(), "openrouter, ollama, anthropic")
 		assert.Contains(t, out.String(), "claude, agents")
+		assert.Contains(t, out.String(), "yes, no")
 	})
 
 	t.Run("asks again after an answer it cannot use", func(t *testing.T) {
 		// given
 		var out strings.Builder
 
-		in := bufio.NewReader(strings.NewReader("openai\nanthropic\nbad name\nclaude-opus-5\n\nANTHROPIC_KEY\ncodex\nagents\n"))
+		in := bufio.NewReader(strings.NewReader("openai\nanthropic\nbad name\nclaude-opus-5\n\nANTHROPIC_KEY\ncodex\nagents\nno\n"))
 		// when
 		result, err := askProfile(in, &out)
 		// then
@@ -120,13 +180,28 @@ func TestRenderProfile(t *testing.T) {
 
 	t.Run("leaves out what the answers do not set", func(t *testing.T) {
 		// given
-		given := answers{harness: testKind, provider: "ollama", model: "qwen3"}
+		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel}
 		// when
 		content, err := renderProfile(given)
 		// then
 		require.NoError(t, err)
 		assert.NotContains(t, string(content), "api-key-env")
 		assert.NotContains(t, string(content), "base-url")
+		assert.NotContains(t, string(content), "kb-path")
+	})
+
+	t.Run("writes the kb path the answers set", func(t *testing.T) {
+		// given
+		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, kbPath: "/srv/wiki"}
+		// when
+		content, err := renderProfile(given)
+		// then
+		require.NoError(t, err)
+
+		var result config.Config
+
+		require.NoError(t, json.Unmarshal(content, &result))
+		assert.Equal(t, "/srv/wiki", result.KBPath)
 	})
 }
 
@@ -137,7 +212,7 @@ func TestBuildConfig(t *testing.T) {
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\n")
+		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\n")
 		// when
 		err := buildConfig(dir)
 		// then
@@ -156,7 +231,7 @@ func TestBuildConfig(t *testing.T) {
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
-		answer(t, "ollama\nqwen3\nclaude\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\n")
 		// when
 		err := buildConfig(dir)
 		// then

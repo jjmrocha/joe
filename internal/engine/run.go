@@ -56,8 +56,8 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
-	if harness.KBPath != "" {
-		kbPack, kbErr := packs.FileTools(toolBox, harness.KBPath)
+	if cfg.KBPath != "" {
+		kbPack, kbErr := packs.FileTools(toolBox, cfg.KBPath)
 		if kbErr != nil {
 			return kbErr
 		}
@@ -83,7 +83,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Build prompt
-	sysPrompt := prompt.Build(harness)
+	sysPrompt := prompt.Build(harness, cfg.KBPath)
 
 	// Set session
 	ag.StartSession(agent.SessionConfig{

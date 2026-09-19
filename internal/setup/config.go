@@ -37,6 +37,7 @@ type answers struct {
 	provider  string
 	model     string
 	apiKeyEnv string
+	kbPath    string
 }
 
 func buildConfig(dir string) error {
@@ -88,12 +89,33 @@ func askProfile(in *bufio.Reader, out io.Writer) (answers, error) {
 
 	given.harness = kind
 
+	kbPath, err := askKBPath(in, out)
+	if err != nil {
+		return given, err
+	}
+
+	given.kbPath = kbPath
+
 	return given, nil
+}
+
+func askKBPath(in *bufio.Reader, out io.Writer) (string, error) {
+	wanted, err := choose(in, out, "Knowledge base", []string{"yes", "no"})
+	if err != nil {
+		return "", err
+	}
+
+	if wanted == "no" {
+		return "", nil
+	}
+
+	return askPath(in, out, "Knowledge base folder")
 }
 
 func renderProfile(given answers) ([]byte, error) {
 	cfg := config.Config{
 		Harness: given.harness,
+		KBPath:  given.kbPath,
 		LLM: config.LLM{
 			Provider:  given.provider,
 			APIKeyEnv: given.apiKeyEnv,
@@ -135,6 +157,43 @@ func choose(in *bufio.Reader, out io.Writer, question string, options []string) 
 
 		_, _ = fmt.Fprintf(out, "%q is not one of: %s\n", answer, strings.Join(options, ", "))
 	}
+}
+
+func askPath(in *bufio.Reader, out io.Writer, question string) (string, error) {
+	prompt := question + ": "
+
+	for {
+		answer, err := read(in, out, prompt)
+		if err != nil {
+			return "", err
+		}
+
+		path := expandHome(answer)
+		if filepath.IsAbs(path) && isDir(path) {
+			return path, nil
+		}
+
+		_, _ = fmt.Fprintf(out, "%q is not an existing folder\n", answer)
+	}
+}
+
+func expandHome(path string) string {
+	if path != "~" && !strings.HasPrefix(path, "~/") {
+		return path
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+
+	return filepath.Join(home, strings.TrimPrefix(path, "~"))
+}
+
+func isDir(path string) bool {
+	info, err := os.Stat(path)
+
+	return err == nil && info.IsDir()
 }
 
 func match(in *bufio.Reader, out io.Writer, question string, pattern *regexp.Regexp) (string, error) {
