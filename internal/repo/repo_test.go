@@ -1,4 +1,4 @@
-package helper
+package repo
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func fakeGit(t *testing.T, script string) {
 	t.Setenv("PATH", dir)
 }
 
-func TestRepoPath(t *testing.T) {
+func TestPath(t *testing.T) {
 	t.Run("returns the repository root from inside a repository", func(t *testing.T) {
 		// given
 		dir := gitRepo(t)
@@ -50,7 +50,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath(t.Context())
+		result, err := Path(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -65,7 +65,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath(t.Context())
+		result, err := Path(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -78,7 +78,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath(t.Context())
+		result, err := Path(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -89,7 +89,7 @@ func TestRepoPath(t *testing.T) {
 		dir := gitRepo(t)
 		t.Chdir(dir)
 		// when
-		result, err := RepoPath(t.Context())
+		result, err := Path(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.True(t, filepath.IsAbs(result))
@@ -103,7 +103,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath(t.Context())
+		result, err := Path(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -124,7 +124,7 @@ func TestRepoPath(t *testing.T) {
 				t.Chdir(t.TempDir())
 				fakeGit(t, "echo \""+testCase.stderr+"\" >&2\nexit 128\n")
 				// when
-				_, err := RepoPath(t.Context())
+				_, err := Path(t.Context())
 				// then
 				require.Error(t, err)
 			})
@@ -139,7 +139,7 @@ func TestRepoPath(t *testing.T) {
 
 		expected := resolve(t, dir)
 		// when
-		result, err := RepoPath(t.Context())
+		result, err := Path(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
@@ -152,7 +152,7 @@ func TestRepoPath(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
 		// when
-		_, err := RepoPath(ctx)
+		_, err := Path(ctx)
 		// then
 		require.ErrorIs(t, err, context.Canceled)
 	})

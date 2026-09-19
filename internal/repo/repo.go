@@ -1,4 +1,4 @@
-package helper
+package repo
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func RepoPath(ctx context.Context) (string, error) {
+func Path(ctx context.Context) (string, error) {
 	out, err := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
 		if noRepository(err) {

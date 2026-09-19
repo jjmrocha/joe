@@ -7,7 +7,7 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/llm"
 	toolkit "github.com/jjmrocha/ai-toolkit/tools"
-	"github.com/jjmrocha/joe/internal/helper"
+	"github.com/jjmrocha/joe/internal/repo"
 )
 
 var repoInfoTool = llm.Tool{
@@ -19,7 +19,7 @@ var repoInfoTool = llm.Tool{
 }
 
 func repoInfo(ctx context.Context, _ map[string]any) (string, error) {
-	repoPath, err := helper.RepoPath(ctx)
+	repoPath, err := repo.Path(ctx)
 	if err != nil {
 		return "", err
 	}
