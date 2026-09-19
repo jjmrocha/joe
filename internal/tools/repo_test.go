@@ -35,35 +35,6 @@ func callRepoInfo(t *testing.T) string {
 	return message.Content
 }
 
-func TestRegister(t *testing.T) {
-	t.Run("registers the repo_info tool", func(t *testing.T) {
-		// given
-		toolBox := toolkit.NewToolBox()
-		// when
-		err := Register(toolBox)
-		// then
-		require.NoError(t, err)
-
-		var names []string
-		for _, tool := range toolBox.Tools() {
-			names = append(names, tool.Name)
-		}
-
-		assert.Equal(t, []string{"repo_info"}, names)
-	})
-
-	t.Run("leaves a single tool when called twice", func(t *testing.T) {
-		// given
-		toolBox := toolkit.NewToolBox()
-		require.NoError(t, Register(toolBox))
-		// when
-		err := Register(toolBox)
-		// then
-		require.NoError(t, err)
-		assert.Len(t, toolBox.Tools(), 1)
-	})
-}
-
 func TestRepoInfo(t *testing.T) {
 	t.Run("returns the repository name and path as JSON", func(t *testing.T) {
 		// given

@@ -18,10 +18,6 @@ var repoInfoTool = llm.Tool{
 	Schema: toolkit.NewObjectBuilder().Build(),
 }
 
-func Register(tb *toolkit.ToolBox) error {
-	return tb.Add(repoInfoTool, repoInfo)
-}
-
 func repoInfo(ctx context.Context, _ map[string]any) (string, error) {
 	repoPath, err := helper.RepoPath(ctx)
 	if err != nil {
