@@ -31,14 +31,20 @@ func testConfig(t *testing.T, profile string) *config.Config {
 	t.Helper()
 	t.Setenv(testKeyEnv, "sk-test")
 
-	dir := t.TempDir()
+	base := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", base)
+
+	dir := filepath.Join(base, "joe")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatalf("MkdirAll(%s): %v", dir, err)
+	}
 
 	path := filepath.Join(dir, "local.json")
 	if err := os.WriteFile(path, []byte(profile), 0o600); err != nil {
 		t.Fatalf("WriteFile(%s): %v", path, err)
 	}
 
-	cfg, err := config.Load(dir, "local")
+	cfg, err := config.Load("local")
 	require.NoError(t, err)
 
 	return cfg
@@ -86,7 +92,9 @@ func TestNewSkillCollection(t *testing.T) {
 		// given
 		cfg := testConfig(t, testProfile(`["removing-ai-tells"]`))
 
-		skillsDir := cfg.SkillsDir()
+		skillsDir, err := config.SkillsDir()
+		require.NoError(t, err)
+
 		for _, name := range append(skillNames, "removing-ai-tells") {
 			writeSkill(t, skillsDir, name)
 		}

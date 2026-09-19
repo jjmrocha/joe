@@ -26,9 +26,13 @@ var skillNames = []string{
 
 func newSkillCollection(cfg *config.Config) (*skills.Collection, error) {
 	skillCollection := skills.NewCollection()
-	skillsDir := cfg.SkillsDir()
 
-	problems := fn.Map(slices.Concat(skillNames, cfg.Skills()), func(skillName string) error {
+	skillsDir, err := config.SkillsDir()
+	if err != nil {
+		return nil, err
+	}
+
+	problems := fn.Map(slices.Concat(skillNames, cfg.Skills), func(skillName string) error {
 		return skillCollection.Add(filepath.Join(skillsDir, skillName))
 	})
 

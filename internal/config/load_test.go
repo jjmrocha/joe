@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,10 +27,19 @@ func validProfile() string {
   },
   "skills": ["removing-ai-tells"],
   "mcps": {
-    "context7": {"command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": "60s"}
+    "context7": {"command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": 60}
   },
   "mcps-on": ["context7"]
 }`
+}
+
+func configDir(t testing.TB) string {
+	t.Helper()
+
+	base := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", base)
+
+	return filepath.Join(base, "joe")
 }
 
 func writeProfile(t testing.TB, dir, profile, content string) {
@@ -52,24 +60,24 @@ func TestLoad(t *testing.T) {
 		// given
 		t.Setenv(testKeyEnv, "sk-test")
 
-		dir := t.TempDir()
+		dir := configDir(t)
 		writeProfile(t, dir, "local", validProfile())
 		// when
-		result, err := Load(dir, "local")
+		result, err := Load("local")
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, testModel, result.LLMConfig().Model)
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
-		assert.Equal(t, []string{"removing-ai-tells"}, result.Skills())
-		assert.Equal(t, []string{"context7"}, result.BootMCPs())
-		assert.Equal(t, filepath.Join(dir, "skills"), result.SkillsDir())
+		assert.Equal(t, []string{"removing-ai-tells"}, result.Skills)
+		assert.Equal(t, []string{"context7"}, result.MCPsOn)
+		assert.Equal(t, "claude", result.Harness)
 	})
 
 	t.Run("reports a missing named profile", func(t *testing.T) {
 		// given
-		dir := t.TempDir()
+		configDir(t)
 		// when
-		_, err := Load(dir, "nope")
+		_, err := Load("nope")
 		// then
 		assert.ErrorIs(t, err, ErrProfileNotFound)
 	})
@@ -89,9 +97,9 @@ func TestLoad(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				// given
-				dir := t.TempDir()
+				configDir(t)
 				// when
-				_, err := Load(dir, testCase.profile)
+				_, err := Load(testCase.profile)
 				// then
 				assert.ErrorIs(t, err, ErrInvalidProfileName)
 			})
@@ -110,10 +118,10 @@ func TestLoad(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				// given
-				dir := t.TempDir()
+				dir := configDir(t)
 				writeProfile(t, dir, "local", testCase.content)
 				// when
-				_, err := Load(dir, "local")
+				_, err := Load("local")
 				// then
 				assert.Error(t, err)
 			})
@@ -140,11 +148,6 @@ func TestLoad(t *testing.T) {
 				name:     "effort",
 				content:  profileWith(`"llm": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "m", "effort": "extreme"}`),
 				expected: ErrInvalidEffort,
-			},
-			{
-				name:     "timeout",
-				content:  profileWith(`"mcps": {"context7": {"command": "npx", "timeout": "soon"}}`),
-				expected: ErrInvalidTimeout,
 			},
 			{
 				name:     "model",
@@ -178,10 +181,10 @@ func TestLoad(t *testing.T) {
 				// given
 				t.Setenv(testKeyEnv, "sk-test")
 
-				dir := t.TempDir()
+				dir := configDir(t)
 				writeProfile(t, dir, "local", testCase.content)
 				// when
-				_, err := Load(dir, "local")
+				_, err := Load("local")
 				// then
 				assert.ErrorIs(t, err, testCase.expected)
 			})
@@ -190,11 +193,11 @@ func TestLoad(t *testing.T) {
 
 	t.Run("reports every fault in one pass", func(t *testing.T) {
 		// given
-		dir := t.TempDir()
+		dir := configDir(t)
 		content := profileWith(`"harness": "codex"`, `"llm": {"provider": "openai", "model": "", "effort": "extreme"}`)
 		writeProfile(t, dir, "local", content)
 		// when
-		_, err := Load(dir, "local")
+		_, err := Load("local")
 		// then
 		assert.ErrorIs(t, err, harness.ErrInvalidKind)
 		assert.ErrorIs(t, err, ErrInvalidProvider)
@@ -204,71 +207,24 @@ func TestLoad(t *testing.T) {
 
 	t.Run("accepts ollama without an api key", func(t *testing.T) {
 		// given
-		dir := t.TempDir()
+		dir := configDir(t)
 		content := profileWith(`"llm": {"provider": "ollama", "base-url": "http://localhost:11434", "model": "qwen3", "effort": "off"}`)
 		writeProfile(t, dir, "local", content)
 		// when
-		result, err := Load(dir, "local")
+		result, err := Load("local")
 		// then
 		require.NoError(t, err)
 		assert.Empty(t, result.LLMConfig().APIKey)
 		assert.Equal(t, "http://localhost:11434", result.LLMConfig().BaseURL)
 	})
 
-	t.Run("bootstraps the default profile when it is absent", func(t *testing.T) {
+	t.Run("reports a missing default profile", func(t *testing.T) {
 		// given
-		t.Setenv("OPEN_ROUTER_KEY", "sk-test")
-
-		dir := filepath.Join(t.TempDir(), "joe")
+		configDir(t)
 		// when
-		result, err := Load(dir, "default")
+		_, err := Load("default")
 		// then
-		require.NoError(t, err)
-		assert.FileExists(t, filepath.Join(dir, "default.json"))
-		assert.FileExists(t, filepath.Join(dir, "AGENTS.md"))
-		assert.DirExists(t, filepath.Join(dir, "skills"))
-		assert.Equal(t, testModel, result.LLMConfig().Model)
-	})
-
-	t.Run("leaves the files it finds alone", func(t *testing.T) {
-		// given
-		t.Setenv(testKeyEnv, "sk-test")
-
-		dir := t.TempDir()
-		writeProfile(t, dir, "default", validProfile())
-
-		agents := filepath.Join(dir, "AGENTS.md")
-		require.NoError(t, os.WriteFile(agents, []byte("be terse"), 0o600))
-		// when
-		result, err := Load(dir, "default")
-		// then
-		require.NoError(t, err)
-		assert.Equal(t, []string{"removing-ai-tells"}, result.Skills())
-
-		content, err := os.ReadFile(agents)
-		require.NoError(t, err)
-		assert.Equal(t, "be terse", string(content))
-	})
-
-	t.Run("writes a default profile that loads back", func(t *testing.T) {
-		// given
-		t.Setenv("OPEN_ROUTER_KEY", "sk-test")
-
-		dir := t.TempDir()
-		require.NoError(t, bootstrap(dir))
-		// when
-		result, err := Load(dir, "default")
-		// then
-		require.NoError(t, err)
-
-		var written profile
-		content, err := os.ReadFile(filepath.Join(dir, "default.json"))
-		require.NoError(t, err)
-		require.NoError(t, json.Unmarshal(content, &written))
-
-		assert.Equal(t, written.LLM.Model, result.LLMConfig().Model)
-		assert.Equal(t, written.Harness, "claude")
-		assert.ElementsMatch(t, []string{"context7", "donsetch"}, names(result.MCPs()))
+		assert.ErrorIs(t, err, ErrProfileNotFound)
 	})
 }
 

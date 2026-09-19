@@ -26,9 +26,11 @@ export OPEN_ROUTER_KEY=sk-...
 ./bin/joe
 ```
 
-That first run writes `~/.config/joe/default.json`, creates an empty `~/.config/joe/skills/`,
-and then stops — naming every one of the eleven skills it could not find there. Copy those
-eleven folders in from
+That first run asks four questions — provider, model, the name of the environment variable
+holding the API key, and harness — writes the answers to `~/.config/joe/default.json`,
+creates an empty `~/.config/joe/skills/` and an empty `~/.config/joe/AGENTS.md`, and then
+stops, naming every one of the eleven skills it could not find. Copy those eleven folders in
+from
 [jjmrocha/coding-skills](https://github.com/jjmrocha/coding-skills), each as
 `~/.config/joe/skills/<name>/SKILL.md`, and run it again.
 
@@ -75,9 +77,14 @@ when that variable is set. `./bin/joe` reads `default.json`, and `./bin/joe loca
 ./bin/joe local      # ~/.config/joe/local.json
 ```
 
-The first run creates the folder, writes `default.json`, and creates an empty `skills/` and
-an empty `AGENTS.md`. Nothing that already exists is overwritten. Asking for a profile that
-does not exist is an error — only `default.json` is ever created for you.
+When the folder does not exist, joe builds it before anything else — whatever profile you
+asked for. It asks for the provider (`openrouter`, `ollama` or `anthropic`), the model, the
+name of the variable holding the API key (skipped under `ollama`, which needs none) and the
+harness (`claude` or `agents`), then writes `default.json` from the answers, an empty
+`skills/` and an empty `AGENTS.md`. The two questions with a fixed set of answers list them,
+and an answer outside the set is asked again. A folder that already exists is left exactly as
+it is, and nothing inside it is ever written again. Asking for a profile that does not exist
+is an error — only `default.json` is ever created for you.
 
 That `AGENTS.md` is read only under `harness: agents`, and the `default.json` written beside
 it says `claude`, so on the default profile it stays unread until you switch the harness.
@@ -98,7 +105,7 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
   },
   "skills": ["removing-ai-tells"],
   "mcps": {
-    "context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": "60s" },
+    "context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": 60 },
     "github": { "command": "github-mcp-server", "args": ["stdio"], "env": ["GITHUB_TOKEN"] }
   },
   "mcps-on": ["github"]
@@ -115,7 +122,7 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
 | `llm.models` | The models `/model` switches between |
 | `llm.effort` | `off`, `low`, `medium` or `max` |
 | `skills` | Extra skills by name, loaded from `~/.config/joe/skills` beside joe's own |
-| `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` |
+| `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds — `0` or absent means no limit |
 | `mcps-on` | The servers started at launch; the rest start on first use |
 
 A profile that names an unknown provider, effort, harness or `mcps-on` server, a skill that is

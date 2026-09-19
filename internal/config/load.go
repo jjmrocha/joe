@@ -1,7 +1,6 @@
 package config
 
 import (
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,14 +14,10 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
+	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/go-algo/sets"
 	"github.com/jjmrocha/joe/internal/harness"
 )
-
-//go:embed default.json
-var defaultProfile []byte
-
-const defaultProfileName = "default"
 
 var bareNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
@@ -39,15 +34,23 @@ func Dir() (string, error) {
 	return filepath.Join(home, ".config", "joe"), nil
 }
 
-func Load(dir, name string) (*Config, error) {
+func SkillsDir() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, "skills"), nil
+}
+
+func Load(name string) (*Config, error) {
 	if !bareNamePattern.MatchString(name) {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidProfileName, name)
 	}
 
-	if name == defaultProfileName {
-		if err := bootstrap(dir); err != nil {
-			return nil, err
-		}
+	dir, err := Dir()
+	if err != nil {
+		return nil, err
 	}
 
 	path := filepath.Join(dir, name+".json")
@@ -66,79 +69,45 @@ func Load(dir, name string) (*Config, error) {
 	decoder := json.NewDecoder(file)
 	decoder.DisallowUnknownFields()
 
-	var p profile
+	var cfg Config
 
-	if err = decoder.Decode(&p); err != nil {
+	if err = decoder.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
-	cfg, err := newConfig(dir, p)
-	if err != nil {
+	if err = validate(&cfg); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
-	return cfg, nil
+	return &cfg, nil
 }
 
-func bootstrap(dir string) error {
-	if err := os.MkdirAll(filepath.Join(dir, "skills"), 0o750); err != nil {
-		return err
-	}
-
-	if err := createFile(filepath.Join(dir, defaultProfileName+".json"), defaultProfile); err != nil {
-		return err
-	}
-
-	return createFile(filepath.Join(dir, "AGENTS.md"), nil)
-}
-
-func createFile(path string, content []byte) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec
-	if err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			return nil
-		}
-
-		return err
-	}
-
-	defer func() { _ = file.Close() }()
-
-	_, err = file.Write(content)
-
-	return err
-}
-
-func newConfig(dir string, p profile) (*Config, error) {
+func validate(cfg *Config) error {
 	var problems []error
 
-	kind, err := harness.ParseKind(p.Harness)
-	if err != nil {
+	if _, err := harness.ParseKind(cfg.Harness); err != nil {
 		problems = append(problems, err)
 	}
 
-	problems = append(problems, validateLLM(p.LLM)...)
+	problems = append(problems, validateLLM(cfg.LLM)...)
 
-	for _, skillName := range p.Skills {
+	problems = append(problems, fn.Map(cfg.Skills, func(skillName string) error {
 		if !bareNamePattern.MatchString(skillName) {
-			problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidSkillName, skillName))
+			return fmt.Errorf("%w: %s", ErrInvalidSkillName, skillName)
 		}
-	}
 
-	mcps, mcpProblems := clientConfigs(p.MCPs)
-	problems = append(problems, mcpProblems...)
+		return nil
+	})...)
 
-	for _, name := range p.MCPsOn {
-		if _, ok := p.MCPs[name]; !ok {
-			problems = append(problems, fmt.Errorf("%w: %s", ErrUnknownMCP, name))
+	problems = append(problems, fn.Map(cfg.MCPsOn, func(name string) error {
+		if _, ok := cfg.MCPs[name]; !ok {
+			return fmt.Errorf("%w: %s", ErrUnknownMCP, name)
 		}
-	}
 
-	if err := errors.Join(problems...); err != nil {
-		return nil, err
-	}
+		return nil
+	})...)
 
-	return &Config{dir: dir, profile: p, mcps: mcps, kind: kind}, nil
+	return errors.Join(problems...)
 }
 
 var (
@@ -156,39 +125,21 @@ var (
 	)
 )
 
-func clientConfigs(entries map[string]mcpProfile) ([]mcp.ClientConfig, []error) {
-	configs := make([]mcp.ClientConfig, 0, len(entries))
-
-	var problems []error
-
-	for _, name := range slices.Sorted(maps.Keys(entries)) {
+func clientConfigs(entries map[string]MCP) []mcp.ClientConfig {
+	return fn.Map(slices.Sorted(maps.Keys(entries)), func(name string) mcp.ClientConfig {
 		entry := entries[name]
 
-		var timeout time.Duration
-
-		if entry.Timeout != "" {
-			parsed, err := time.ParseDuration(entry.Timeout)
-			if err != nil {
-				problems = append(problems, fmt.Errorf("%w: %s: %s", ErrInvalidTimeout, name, entry.Timeout))
-				continue
-			}
-
-			timeout = parsed
-		}
-
-		configs = append(configs, mcp.ClientConfig{
+		return mcp.ClientConfig{
 			Name:            name,
 			Command:         entry.Command,
 			Args:            entry.Args,
 			InheritEnv:      entry.Env,
-			ToolCallTimeout: timeout,
-		})
-	}
-
-	return configs, problems
+			ToolCallTimeout: time.Duration(entry.Timeout) * time.Second, //nolint:gosec
+		}
+	})
 }
 
-func validateLLM(l llmProfile) []error {
+func validateLLM(l LLM) []error {
 	var problems []error
 
 	if !providers.Contains(l.Provider) {

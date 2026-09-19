@@ -14,15 +14,15 @@ import (
 func newMcpManager(tb *tools.ToolBox, cfg *config.Config) *mcp.Manager {
 	mng := mcp.NewManager(tb)
 
-	fn.ForEach(cfg.MCPs(), mng.Register)
+	fn.ForEach(cfg.MCPClients(), mng.Register)
 
 	return mng
 }
 
 func startMCPs(ctx context.Context, mng *mcp.Manager, cfg *config.Config) {
-	for _, name := range cfg.BootMCPs() {
+	fn.ForEach(cfg.MCPsOn, func(name string) {
 		if err := mng.Start(ctx, name); err != nil {
 			fmt.Fprintf(os.Stderr, "starting mcp %s: %v\n", name, err)
 		}
-	}
+	})
 }

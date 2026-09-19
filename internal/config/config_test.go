@@ -1,12 +1,12 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jjmrocha/ai-toolkit/llm"
-	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/joe/internal/harness"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,23 +34,14 @@ func profileWith(overrides ...string) string {
 	return "{" + strings.Join(parts, ",") + "}"
 }
 
-func names(configs []mcp.ClientConfig) []string {
-	result := make([]string, 0, len(configs))
-	for _, config := range configs {
-		result = append(result, config.Name)
-	}
-
-	return result
-}
-
 func mustLoad(t *testing.T, content string) *Config {
 	t.Helper()
 	t.Setenv(testKeyEnv, "sk-test")
 
-	dir := t.TempDir()
+	dir := configDir(t)
 	writeProfile(t, dir, "local", content)
 
-	config, err := Load(dir, "local")
+	config, err := Load("local")
 	require.NoError(t, err)
 
 	return config
@@ -61,10 +52,10 @@ func TestLLMConfig(t *testing.T) {
 		// given
 		t.Setenv(testKeyEnv, "sk-test")
 
-		dir := t.TempDir()
+		dir := configDir(t)
 		writeProfile(t, dir, "local", validProfile())
 
-		config, err := Load(dir, "local")
+		config, err := Load("local")
 		require.NoError(t, err)
 		// when
 		result := config.LLMConfig()
@@ -81,10 +72,10 @@ func TestLLMConfig(t *testing.T) {
 func TestMCPs(t *testing.T) {
 	t.Run("converts every entry into a client config", func(t *testing.T) {
 		// given
-		content := profileWith(`"mcps": {"github": {"command": "github-mcp-server", "args": ["stdio"], "env": ["GITHUB_TOKEN"], "timeout": "90s"}}`)
+		content := profileWith(`"mcps": {"github": {"command": "github-mcp-server", "args": ["stdio"], "env": ["GITHUB_TOKEN"], "timeout": 90}}`)
 		config := mustLoad(t, content)
 		// when
-		result := config.MCPs()
+		result := config.MCPClients()
 		// then
 		require.Len(t, result, 1)
 		assert.Equal(t, "github", result[0].Name)
@@ -99,7 +90,7 @@ func TestMCPs(t *testing.T) {
 		content := profileWith(`"mcps": {"donsetch": {"command": "donsetch", "args": ["mcp"]}}`)
 		config := mustLoad(t, content)
 		// when
-		result := config.MCPs()
+		result := config.MCPClients()
 		// then
 		require.Len(t, result, 1)
 		assert.Zero(t, result[0].ToolCallTimeout)
@@ -109,7 +100,7 @@ func TestMCPs(t *testing.T) {
 		// given
 		config := mustLoad(t, profileWith())
 		// when
-		result := config.MCPs()
+		result := config.MCPClients()
 		// then
 		assert.Empty(t, result)
 	})
@@ -139,13 +130,14 @@ func TestHarnessKind(t *testing.T) {
 	})
 }
 
-func TestConfigDir(t *testing.T) {
-	t.Run("returns the folder the profile was read from", func(t *testing.T) {
+func TestSkillsDir(t *testing.T) {
+	t.Run("sits inside the config folder", func(t *testing.T) {
 		// given
-		config := mustLoad(t, profileWith())
+		dir := configDir(t)
 		// when
-		result := config.ConfigDir()
+		result, err := SkillsDir()
 		// then
-		assert.Equal(t, config.dir, result)
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(dir, "skills"), result)
 	})
 }

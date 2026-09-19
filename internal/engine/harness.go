@@ -20,8 +20,13 @@ func loadHarness(ctx context.Context, cfg *config.Config) (*harness.Harness, err
 		return nil, err
 	}
 
+	dir, err := config.Dir()
+	if err != nil {
+		return nil, err
+	}
+
 	return harness.Load(cfg.HarnessKind(), harness.Paths{
-		ConfigDir: cfg.ConfigDir(),
+		ConfigDir: dir,
 		Home:      home,
 		Repo:      repo,
 	})

@@ -9,17 +9,12 @@ import (
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
+	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/prompt"
 	joetools "github.com/jjmrocha/joe/internal/tools"
 )
 
-func Run(ctx context.Context, profile string) error {
-	// Load the configuration
-	cfg, err := loadConfig(profile)
-	if err != nil {
-		return err
-	}
-
+func Run(ctx context.Context, cfg *config.Config) error {
 	// Initialize the LLM
 	llmClient, err := llm.New(cfg.LLMConfig())
 	if err != nil {

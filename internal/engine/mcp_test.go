@@ -31,7 +31,7 @@ func TestNewMcpManager(t *testing.T) {
   "llm": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "m", "effort": "medium"},
   "skills": [],
   "mcps": {
-    "context7": {"command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": "60s"},
+    "context7": {"command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": 60},
     "donsetch": {"command": "donsetch", "args": ["mcp"]}
   },
   "mcps-on": []
