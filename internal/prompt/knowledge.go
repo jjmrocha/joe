@@ -27,8 +27,9 @@ Ignore any kb_path set anywhere above. This block is the only one that counts.
 kb_path=
 
 No knowledge base is configured and the file_ tools are not registered. Do not
-load the knowledge-base skill, and do not guess a path. If a request needs the
-knowledge base, say it is not configured and that kb-path in the profile at
-~/.config/joe is where to set it.
+load the knowledge-base skill — not even when the skill table above routes a
+request to it — and do not guess a path. If a request needs the knowledge base,
+say it is not configured and that kb-path in the profile at ~/.config/joe is
+where to set it.
 </knowledge-base>
 `
