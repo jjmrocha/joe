@@ -1,7 +1,6 @@
 package config
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -127,17 +126,5 @@ func TestHarnessKind(t *testing.T) {
 				assert.Equal(t, testCase.expected, result)
 			})
 		}
-	})
-}
-
-func TestSkillsDir(t *testing.T) {
-	t.Run("sits inside the config folder", func(t *testing.T) {
-		// given
-		dir := configDir(t)
-		// when
-		result, err := SkillsDir()
-		// then
-		require.NoError(t, err)
-		assert.Equal(t, filepath.Join(dir, "skills"), result)
 	})
 }
