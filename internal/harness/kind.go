@@ -3,6 +3,8 @@ package harness
 import (
 	"fmt"
 	"path/filepath"
+
+	"github.com/jjmrocha/go-algo/sets"
 )
 
 type Kind string
@@ -12,13 +14,17 @@ const (
 	KindAgents Kind = "agents"
 )
 
+var Kinds = sets.New(
+	string(KindClaude),
+	string(KindAgents),
+)
+
 func ParseKind(value string) (Kind, error) {
-	switch kind := Kind(value); kind {
-	case KindClaude, KindAgents:
-		return kind, nil
-	default:
+	if !Kinds.Contains(value) {
 		return "", fmt.Errorf("%w: %s", ErrInvalidKind, value)
 	}
+
+	return Kind(value), nil
 }
 
 func (k Kind) files(paths Paths) []string {

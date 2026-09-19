@@ -1,7 +1,16 @@
 package setup
 
-import "path/filepath"
+import (
+	"errors"
+	"io/fs"
+	"path/filepath"
+)
 
 func buildHarness(dir string) error {
-	return createFile(filepath.Join(dir, "AGENTS.md"), nil)
+	err := createFile(filepath.Join(dir, "AGENTS.md"), nil)
+	if errors.Is(err, fs.ErrExist) {
+		return nil
+	}
+
+	return err
 }

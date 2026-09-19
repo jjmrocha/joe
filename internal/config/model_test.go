@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +45,17 @@ func mustLoad(t *testing.T, content string) *Config {
 	require.NoError(t, err)
 
 	return config
+}
+
+func TestProviders(t *testing.T) {
+	t.Run("holds every provider joe accepts", func(t *testing.T) {
+		// given
+		expected := []string{"anthropic", "ollama", "openrouter"}
+		// when
+		result := slices.Sorted(Providers.Values())
+		// then
+		assert.Equal(t, expected, result)
+	})
 }
 
 func TestLLMConfig(t *testing.T) {

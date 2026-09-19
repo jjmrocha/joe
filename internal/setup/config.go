@@ -17,17 +17,6 @@ import (
 )
 
 var (
-	providers = []string{
-		string(llm.ProviderOpenRouter),
-		string(llm.ProviderOllama),
-		string(llm.ProviderAnthropic),
-	}
-
-	kinds = []string{
-		string(harness.KindClaude),
-		string(harness.KindAgents),
-	}
-
 	modelPattern  = regexp.MustCompile(`^[a-zA-Z0-9._:/-]+$`)
 	keyEnvPattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 )
@@ -53,13 +42,13 @@ func buildConfig(dir string) error {
 		return err
 	}
 
-	return createFile(filepath.Join(dir, "default.json"), content)
+	return createFile(filepath.Join(dir, defaultProfile), content)
 }
 
 func askProfile(in *bufio.Reader, out io.Writer) (answers, error) {
 	var given answers
 
-	provider, err := choose(in, out, "Provider", providers)
+	provider, err := choose(in, out, "Provider", slices.Sorted(config.Providers.Values()))
 	if err != nil {
 		return given, err
 	}
@@ -82,7 +71,7 @@ func askProfile(in *bufio.Reader, out io.Writer) (answers, error) {
 		given.apiKeyEnv = keyEnv
 	}
 
-	kind, err := choose(in, out, "Harness", kinds)
+	kind, err := choose(in, out, "Harness", slices.Sorted(harness.Kinds.Values()))
 	if err != nil {
 		return given, err
 	}

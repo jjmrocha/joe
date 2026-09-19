@@ -9,7 +9,14 @@ import (
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/go-algo/fn"
+	"github.com/jjmrocha/go-algo/sets"
 	"github.com/jjmrocha/joe/internal/harness"
+)
+
+var Providers = sets.New(
+	string(llm.ProviderOpenRouter),
+	string(llm.ProviderOllama),
+	string(llm.ProviderAnthropic),
 )
 
 type Config struct {
@@ -67,7 +74,7 @@ func clientConfigs(entries map[string]MCP) []mcp.ClientConfig {
 			Command:         entry.Command,
 			Args:            entry.Args,
 			InheritEnv:      entry.Env,
-			ToolCallTimeout: time.Duration(entry.Timeout) * time.Second, //nolint:gosec
+			ToolCallTimeout: time.Duration(entry.Timeout) * time.Second, //nolint:gosec // timeout is a uint of seconds; no usable value overflows
 		}
 	})
 }

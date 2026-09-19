@@ -63,17 +63,47 @@ func TestBuildIfNeed(t *testing.T) {
 		assert.FileExists(t, filepath.Join(dir, "AGENTS.md"))
 	})
 
-	t.Run("leaves an existing folder alone", func(t *testing.T) {
+	t.Run("leaves an existing profile alone", func(t *testing.T) {
 		// given
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		// when
 		err := BuildIfNeed()
 		// then
 		require.NoError(t, err)
-		assert.NoFileExists(t, filepath.Join(dir, "default.json"))
 		assert.NoFileExists(t, filepath.Join(dir, "AGENTS.md"))
 		assert.NoDirExists(t, filepath.Join(dir, "skills"))
+	})
+
+	t.Run("finishes a build an earlier run left half done", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		// when
+		err := BuildIfNeed()
+		// then
+		require.NoError(t, err)
+		assert.FileExists(t, filepath.Join(dir, "default.json"))
+		assert.FileExists(t, filepath.Join(dir, "AGENTS.md"))
+		assert.DirExists(t, filepath.Join(dir, "skills"))
+	})
+
+	t.Run("keeps a harness file an earlier run already wrote", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("be terse"), 0o600))
+		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		// when
+		err := BuildIfNeed()
+		// then
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+		require.NoError(t, err)
+		assert.Equal(t, "be terse", string(content))
 	})
 
 	t.Run("reports a folder it cannot create", func(t *testing.T) {

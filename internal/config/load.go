@@ -21,7 +21,7 @@ func Load(name string) (*Config, error) {
 
 	cfgPath := filepath.Join(dir, name+".json")
 
-	cfgFile, err := os.Open(cfgPath) //nolint:gosec
+	cfgFile, err := os.Open(cfgPath) //nolint:gosec // name passed validName, so cfgPath cannot escape Dir()
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, fmt.Errorf("%w: %s", ErrProfileNotFound, cfgPath)

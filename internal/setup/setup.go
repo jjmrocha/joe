@@ -4,9 +4,12 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/jjmrocha/joe/internal/config"
 )
+
+const defaultProfile = "default.json"
 
 func BuildIfNeed() error {
 	dir, err := config.Dir()
@@ -14,7 +17,7 @@ func BuildIfNeed() error {
 		return err
 	}
 
-	if _, err = os.Stat(dir); err != nil {
+	if _, err = os.Stat(filepath.Join(dir, defaultProfile)); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}

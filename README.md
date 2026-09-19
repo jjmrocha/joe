@@ -86,10 +86,10 @@ Run joe once to set it up:
 It finds no configuration folder, so it asks you to describe the setup:
 
 ```
-Provider [openrouter, ollama, anthropic]: openrouter
+Provider [anthropic, ollama, openrouter]: openrouter
 Model: z-ai/glm-5.3-flash
 Name of the API key variable: OPEN_ROUTER_KEY
-Harness [claude, agents]: claude
+Harness [agents, claude]: claude
 Knowledge base [yes, no]: yes
 Knowledge base folder: /Users/you/Documents/LLM_WIKI
 ```
@@ -173,6 +173,9 @@ joe local            # ~/.config/joe/local.json — an Ollama profile, say
 ```
 
 Only `default.json` is ever written for you; create the others by hand, or copy that one.
+**Keep it.** joe decides whether it needs to run setup by looking for `default.json`, so
+deleting it — even if you only ever use named profiles — makes the next run ask the setup
+questions again.
 
 **Each profile is complete.** joe runs exactly what the file says: a profile with no `mcps`
 section gets no MCP servers. There is no merging between profiles and no hidden default.
@@ -322,6 +325,7 @@ joe validates what it can before the session opens, and the message names the fa
 | `skill folder not found: …` | A skill is missing from `~/.config/joe/skills` | Install the skills — every missing one is listed at once |
 | `api key variable is not set` | `api-key-env` names a variable with no value | `export` it, or point `api-key-env` at the one you use |
 | `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
+| `no answer to read` | Setup ran with nothing on stdin — a pipe, a redirect, or Ctrl-D at a question | Run joe from a terminal and answer the questions; nothing is left broken, the next run simply asks again |
 | `kb_path is not absolute` | The profile's `kb-path` is relative or starts with `~` | Spell the path out in full |
 | `opening root: …` | The profile's `kb-path` names a folder that is missing or unreadable | Create it, or drop the key |
 | `harness is not claude or agents` | Unknown `harness` value | Use `claude` or `agents` |
@@ -333,8 +337,11 @@ error from the coding tool pack at launch, and the usual cause is `uvx` missing 
 An `mcps-on` server that fails to start does *not* stop joe. The failure prints before the
 TUI opens and `/mcp` shows the server as `off`; `/mcp on <name>` retries it.
 
-To start over, delete `~/.config/joe` and run joe again — it asks the setup questions afresh.
-A folder that already exists is never touched, and nothing inside it is ever overwritten.
+To start over, delete `~/.config/joe` — or just its `default.json` — and run joe again: it
+asks the setup questions afresh. joe looks for `default.json`, not for the folder, so a setup
+you interrupted is finished by the next run rather than leaving you stuck. Nothing already in
+the folder is ever overwritten: an existing `default.json` means setup does not run at all,
+and an `AGENTS.md` you have edited is left as it is.
 
 ---
 

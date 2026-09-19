@@ -1,11 +1,36 @@
 package harness
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestKinds(t *testing.T) {
+	t.Run("holds every kind joe accepts", func(t *testing.T) {
+		// given
+		expected := []string{string(KindAgents), string(KindClaude)}
+		// when
+		result := slices.Sorted(Kinds.Values())
+		// then
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("agrees with what ParseKind accepts", func(t *testing.T) {
+		for name := range Kinds.Values() {
+			t.Run(name, func(t *testing.T) {
+				// given
+				value := name
+				// when
+				_, err := ParseKind(value)
+				// then
+				assert.NoError(t, err)
+			})
+		}
+	})
+}
 
 func TestParseKind(t *testing.T) {
 	t.Run("accepts the kinds joe knows", func(t *testing.T) {

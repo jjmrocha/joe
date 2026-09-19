@@ -11,7 +11,7 @@ import (
 	"github.com/jjmrocha/joe/internal/config"
 )
 
-func newMcpManager(tb *tools.ToolBox, cfg *config.Config) *mcp.Manager {
+func newMCPManager(tb *tools.ToolBox, cfg *config.Config) *mcp.Manager {
 	mng := mcp.NewManager(tb)
 
 	fn.ForEach(cfg.MCPClients(), mng.Register)

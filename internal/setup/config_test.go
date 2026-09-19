@@ -115,8 +115,8 @@ func TestAskProfile(t *testing.T) {
 		_, err := askProfile(in, &out)
 		// then
 		require.NoError(t, err)
-		assert.Contains(t, out.String(), "openrouter, ollama, anthropic")
-		assert.Contains(t, out.String(), "claude, agents")
+		assert.Contains(t, out.String(), "anthropic, ollama, openrouter")
+		assert.Contains(t, out.String(), "agents, claude")
 		assert.Contains(t, out.String(), "yes, no")
 	})
 

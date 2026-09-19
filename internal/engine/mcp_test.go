@@ -11,7 +11,7 @@ import (
 func statusNames(t *testing.T, cfg string) []string {
 	t.Helper()
 
-	mng := newMcpManager(tools.NewToolBox(), testConfig(t, cfg))
+	mng := newMCPManager(tools.NewToolBox(), testConfig(t, cfg))
 	t.Cleanup(mng.Close)
 
 	names := make([]string, 0)
@@ -64,7 +64,7 @@ func TestStartMCPs(t *testing.T) {
 }`
 		cfg := testConfig(t, profile)
 
-		mng := newMcpManager(tools.NewToolBox(), cfg)
+		mng := newMCPManager(tools.NewToolBox(), cfg)
 		t.Cleanup(mng.Close)
 		// when
 		startMCPs(t.Context(), mng, cfg)

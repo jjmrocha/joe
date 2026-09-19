@@ -37,7 +37,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	toolBox := tools.NewToolBox()
 
 	// Initialize the  MCP manager
-	mng := newMcpManager(toolBox, cfg)
+	mng := newMCPManager(toolBox, cfg)
 
 	defer mng.Close()
 

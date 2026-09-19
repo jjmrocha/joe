@@ -15,12 +15,6 @@ import (
 var bareNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 var (
-	providers = sets.New(
-		string(llm.ProviderOpenRouter),
-		string(llm.ProviderOllama),
-		string(llm.ProviderAnthropic),
-	)
-
 	efforts = sets.New(
 		string(llm.EffortOff),
 		string(llm.EffortLow),
@@ -64,7 +58,7 @@ func validate(cfg *Config) error {
 func validateLLM(l LLM) []error {
 	var problems []error
 
-	if !providers.Contains(l.Provider) {
+	if !Providers.Contains(l.Provider) {
 		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidProvider, l.Provider))
 	}
 
