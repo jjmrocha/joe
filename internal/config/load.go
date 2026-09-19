@@ -15,6 +15,7 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
+	"github.com/jjmrocha/go-algo/sets"
 	"github.com/jjmrocha/joe/internal/harness"
 )
 
@@ -141,18 +142,18 @@ func newConfig(dir string, p profile) (*Config, error) {
 }
 
 var (
-	providers = []string{
+	providers = sets.New(
 		string(llm.ProviderOpenRouter),
 		string(llm.ProviderOllama),
 		string(llm.ProviderAnthropic),
-	}
+	)
 
-	efforts = []string{
+	efforts = sets.New(
 		string(llm.EffortOff),
 		string(llm.EffortLow),
 		string(llm.EffortMedium),
 		string(llm.EffortMax),
-	}
+	)
 )
 
 func clientConfigs(entries map[string]mcpProfile) ([]mcp.ClientConfig, []error) {
@@ -190,11 +191,11 @@ func clientConfigs(entries map[string]mcpProfile) ([]mcp.ClientConfig, []error) 
 func validateLLM(l llmProfile) []error {
 	var problems []error
 
-	if !slices.Contains(providers, l.Provider) {
+	if !providers.Contains(l.Provider) {
 		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidProvider, l.Provider))
 	}
 
-	if !slices.Contains(efforts, l.Effort) {
+	if !efforts.Contains(l.Effort) {
 		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidEffort, l.Effort))
 	}
 

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/jjmrocha/ai-toolkit/skills"
+	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
 )
 
@@ -27,13 +28,9 @@ func newSkillCollection(cfg *config.Config) (*skills.Collection, error) {
 	skillCollection := skills.NewCollection()
 	skillsDir := cfg.SkillsDir()
 
-	var problems []error
-
-	for _, skillName := range slices.Concat(skillNames, cfg.Skills()) {
-		if err := skillCollection.Add(filepath.Join(skillsDir, skillName)); err != nil {
-			problems = append(problems, err)
-		}
-	}
+	problems := fn.Map(slices.Concat(skillNames, cfg.Skills()), func(skillName string) error {
+		return skillCollection.Add(filepath.Join(skillsDir, skillName))
+	})
 
 	if err := errors.Join(problems...); err != nil {
 		return nil, err

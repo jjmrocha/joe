@@ -7,15 +7,14 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/ai-toolkit/tools"
+	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
 )
 
 func newMcpManager(tb *tools.ToolBox, cfg *config.Config) *mcp.Manager {
 	mng := mcp.NewManager(tb)
 
-	for _, clientConfig := range cfg.MCPs() {
-		mng.Register(clientConfig)
-	}
+	fn.ForEach(cfg.MCPs(), mng.Register)
 
 	return mng
 }

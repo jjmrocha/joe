@@ -9,15 +9,6 @@ import (
 	"github.com/jjmrocha/joe/internal/helper"
 )
 
-func loadConfig(profile string) (*config.Config, error) {
-	dir, err := config.Dir()
-	if err != nil {
-		return nil, err
-	}
-
-	return config.Load(dir, profile)
-}
-
 func loadHarness(ctx context.Context, cfg *config.Config) (*harness.Harness, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

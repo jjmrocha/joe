@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	github.com/jjmrocha/ai-chat v0.4.0
 	github.com/jjmrocha/ai-toolkit v0.2.7
+	github.com/jjmrocha/go-algo v0.1.1
 	github.com/stretchr/testify v1.12.1
 )
 
@@ -28,7 +29,6 @@ require (
 	github.com/dlclark/regexp2/v2 v2.8.0 // indirect
 	github.com/go-resty/resty/v2 v2.17.2 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/jjmrocha/go-algo v0.1.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
 	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
