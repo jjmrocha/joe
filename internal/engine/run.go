@@ -52,6 +52,13 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	defer func() { _ = codePack.Close() }()
 
+	datePack, err := packs.DateTools(toolBox)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = datePack.Close() }()
+
 	if err = joetools.Register(toolBox); err != nil {
 		return err
 	}
