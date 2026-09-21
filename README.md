@@ -1,34 +1,52 @@
+<div align="center">
+
 # joe
 
-**The Opinionated Coding Agent**
+**The opinionated coding agent for your terminal.**
 
 [![CI](https://github.com/jjmrocha/joe/actions/workflows/ci.yml/badge.svg)](https://github.com/jjmrocha/joe/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/go-1.27%2B-00ADD8)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-joe is a coding agent you run in your terminal. You point it at a repository, describe what
-you want, and it reads the code, changes it, runs the tests and tells you what it did.
+[Quickstart](#quickstart) · [Using joe](#using-joe) · [Configure](#configure) · [Troubleshooting](#troubleshooting)
+
+</div>
+
+Point joe at a repository, describe what you want, and it reads the code, changes it, runs
+the tests and tells you what it did.
+
+```
+$ cd ~/src/my-api
+$ joe
+
+❯ the /users endpoint 500s when the page param is missing — fix it
+```
+
+joe loads its debugging skill, looks up `paginate` through Serena, reproduces the panic,
+writes a failing test, fixes it, runs `go test ./...` and reports back with the file and line
+it changed.
 
 Named after [Joe Armstrong](https://en.wikipedia.org/wiki/Joe_Armstrong_(programmer)),
 creator of Erlang.
 
 ---
 
-## What it is
-
-Two things make joe opinionated.
+## Why "opinionated"
 
 **It works through skills.** Before touching anything, joe loads the skill that matches the
 request — a written procedure for that kind of work. Asked to fix a bug, it loads the
 debugging procedure; asked to build a feature, it loads the one that starts by pinning down
 requirements. The skills are not joe's own: they live in
 [coding-skills](https://github.com/jjmrocha/coding-skills), you install them yourself, and
-you can edit them. Change a skill and you change how joe works.
+you can edit them. **Change a skill and you change how joe works.**
 
 **It reads code symbolically.** joe works through [Serena](https://github.com/oraios/serena),
 so it looks up a function or a type and its references instead of grepping and guessing.
 
-joe itself is small — the prompt, the configuration and the wiring. The parts under it are:
+**You bring the model.** joe talks to OpenRouter, Anthropic or a local Ollama, whichever your
+profile names.
+
+joe itself is small — the prompt, the configuration and the wiring:
 
 | Built on | What it provides |
 |---|---|
@@ -36,48 +54,39 @@ joe itself is small — the prompt, the configuration and the wiring. The parts 
 | [ai-chat](https://github.com/jjmrocha/ai-chat) | The chat core, the terminal UI and the slash commands |
 | [coding-skills](https://github.com/jjmrocha/coding-skills) | The eleven skills joe loads by name |
 
-You bring the model. joe talks to OpenRouter, Anthropic or a local Ollama, whichever your
-profile names.
-
 ---
 
-## Install
+## Quickstart
 
-**1. Prerequisites**
+Four steps, about five minutes.
+
+### 1. Check the prerequisites
 
 | What | Why | How |
 |---|---|---|
 | Go 1.27+ | Building joe | [go.dev/dl](https://go.dev/dl/) |
 | `git` | joe finds the repository root with it | Your package manager |
-| `uvx` on `PATH` | Starts Serena, which serves joe's coding tools. joe will not start without it | [uv](https://github.com/astral-sh/uv) |
+| `uvx` on `PATH` | Starts Serena, which serves joe's coding tools. **joe will not start without it** | [uv](https://github.com/astral-sh/uv) |
 | An API key | Unless you run Ollama locally | [OpenRouter](https://openrouter.ai) or [Anthropic](https://console.anthropic.com) |
 
-**2. Build**
+### 2. Build joe and export your key
 
 ```bash
 git clone https://github.com/jjmrocha/joe.git && cd joe
-make build                      # writes ./bin/joe
+make build                       # writes ./bin/joe
+
+export OPEN_ROUTER_KEY=sk-...    # put this in your shell profile
 ```
 
-Copy `./bin/joe` somewhere on your `PATH` if you want to run it as `joe` from anywhere.
+Copy `./bin/joe` somewhere on your `PATH` to run it as `joe` from anywhere.
 
-`go install github.com/jjmrocha/joe/cmd@latest` works too, but names the binary `cmd`, after
-its directory.
+joe never stores the key — the profile holds the *name* of the variable, and joe reads the
+variable at startup.
 
-**3. Export your key**
+> `go install github.com/jjmrocha/joe/cmd@latest` works too, but names the binary `cmd`,
+> after its directory.
 
-```bash
-export OPEN_ROUTER_KEY=sk-...
-```
-
-Put it in your shell profile so it survives a new terminal. joe never stores the key — the
-profile holds the *name* of the variable, and joe reads the variable at startup.
-
----
-
-## First run
-
-Run joe once to set it up:
+### 3. Run joe once to set it up
 
 ```bash
 ./bin/joe
@@ -96,16 +105,15 @@ Knowledge base folder: /Users/you/Documents/LLM_WIKI
 
 The API-key question is skipped on Ollama, and the folder question only follows a `yes`.
 
-`Harness` decides which instruction files joe reads — see
-[Your own instructions](#your-own-instructions). Pick `claude` if you already keep a
-`~/.claude/CLAUDE.md`.
+- **`Harness`** decides which instruction files joe reads — see
+  [Your own instructions](#your-own-instructions). Pick `claude` if you already keep a
+  `~/.claude/CLAUDE.md`.
+- **`Knowledge base`** decides whether joe gets the `file_*` tools — see
+  [A knowledge base of your own](#a-knowledge-base-of-your-own). **joe does not create the
+  folder**: it must already exist, and joe asks again until it does. A leading `~` is
+  expanded before joe checks, and the profile stores the path in full.
 
-`Knowledge base` decides whether joe gets the `file_*` tools — see
-[A knowledge base of your own](#a-knowledge-base-of-your-own). **joe does not create the
-folder**: it must already exist, and joe asks again until it does. A leading `~` is expanded
-before joe checks, and the profile stores the path in full.
-
-From the answers joe writes:
+From your answers joe writes:
 
 ```
 ~/.config/joe/
@@ -114,14 +122,10 @@ From the answers joe writes:
 └── skills/         empty — you fill it in the next step
 ```
 
-Then it stops, listing the eleven skills it could not find. That is expected: installing them
-is the one manual step left.
+Then it stops, listing the eleven skills it could not find. That is expected — step 4 is the
+last thing left.
 
----
-
-## Manual steps
-
-### Required — install the skills
+### 4. Install the skills
 
 joe loads eleven skills by name at startup and refuses to run without them.
 
@@ -130,34 +134,141 @@ git clone https://github.com/jjmrocha/coding-skills.git
 cp -R coding-skills/*/ ~/.config/joe/skills/
 ```
 
-Each skill must end up as `~/.config/joe/skills/<name>/SKILL.md`. The eleven are
+Each skill must end up as `~/.config/joe/skills/<name>/SKILL.md`. No other folder is ever
+searched, and a missing skill stops joe at startup with its name in the message.
+
+<details>
+<summary>The eleven skills</summary>
+
 `analyze-code`, `brainstorm`, `coding-discipline`, `designing-interfaces`,
 `guiding-manual-testing`, `knowledge-base`, `research`, `style-checker`,
-`test-driven-development`, `using-software-specialists` and `writing-unit-tests`. No folder
-other than `~/.config/joe/skills` is ever searched, and a missing skill stops joe at startup
-with its name in the message.
+`test-driven-development`, `using-software-specialists`, `writing-unit-tests`.
 
-Run `./bin/joe` again — it should open the chat.
+</details>
 
-### Optional — web search and fetching
+Run `./bin/joe` again — the chat opens. **You're done.**
 
-The default profile registers [DonSeTch](https://github.com/dondai44423/donsetch), which
-gives joe web search, page fetching and crawling. Without it joe works fine, offline; a
-request that needs the web fails when the tool is called.
+### Optional extras
+
+<details>
+<summary>Web search and fetching · library documentation</summary>
+
+The default profile registers two MCP servers. Both start the first time joe uses them, not
+at launch — so a missing one costs you nothing until a request needs it. `/mcp` lists them
+and their state.
+
+**[DonSeTch](https://github.com/dondai44423/donsetch)** gives joe web search, page fetching
+and crawling. Without it joe works fine, offline; a request that needs the web fails when the
+tool is called.
 
 ```bash
 npm install -g donsetch
 # or: brew tap dondai44423/donsetch && brew install donsetch
 ```
 
-### Optional — library documentation
+**[context7](https://github.com/upstash/context7)** serves up-to-date documentation for
+libraries and frameworks. It runs through `npx`, so installing
+[Node.js](https://nodejs.org) is all it needs.
 
-The default profile also registers [context7](https://github.com/upstash/context7), which
-serves up-to-date documentation for libraries and frameworks. It runs through `npx`, so
-installing [Node.js](https://nodejs.org) is all it needs.
+</details>
 
-Both servers start the first time joe uses them, not at launch — so a missing one costs you
-nothing until a request needs it. `/mcp` lists them and their state.
+---
+
+## Using joe
+
+Run joe from the repository you want it to work on. It calls `repo_info` at the start of the
+session to find the git root and activates Serena on that path. Outside a repository — and
+when `git` is not installed at all — joe uses the current directory.
+
+| Command | What it does |
+|---|---|
+| `/help` | List the commands |
+| `/model [name]` | Show the current model, or switch to another from `llm.models` |
+| `/effort [level]` | Show or change reasoning effort |
+| `/clear` | Reset the conversation |
+| `/compact` | Compact the context now, instead of waiting for joe to do it |
+| `/mcp [on\|off] [name]` | Show the MCP servers, or start and stop one |
+| `/exit` | Quit |
+
+### Your own instructions
+
+At startup joe reads your standing instruction files and puts each into its prompt verbatim,
+least specific first, skipping any that are absent. Which three depends on `harness`:
+
+| `harness` | Files, least specific first |
+|---|---|
+| `claude` | `~/.claude/CLAUDE.md`, `<repo>/CLAUDE.md`, `<repo>/CLAUDE.local.md` |
+| `agents` | `~/.config/joe/AGENTS.md`, `<repo>/AGENTS.md`, `<repo>/AGENTS.local.md` |
+
+A later file wins where two disagree, and joe's own instructions win over all of them on
+tools, skills, Serena and the knowledge base — the rest is yours.
+
+Imports are **not** followed. A line like `@RTK.md` is passed through as text; joe never
+opens the file it names.
+
+### A knowledge base of your own
+
+When the profile sets `kb-path`, joe gets a second set of tools — `file_read`, `file_write`,
+`file_edit`, `file_list`, `file_delete`, `file_workdir` — rooted at that folder and unable to
+leave it. The repository stays Serena's; that folder is joe's to write in, which is where it
+keeps notes, plans and manuals across sessions.
+
+```json
+{ "kb-path": "/Users/you/Documents/LLM_WIKI" }
+```
+
+The path must be absolute and the folder must already exist — joe never creates it. A
+relative path stops joe at startup with every other fault in the profile; a folder that is
+missing or unreadable stops it when the tools are registered. Omit the key and joe starts
+normally with the `file_*` tools simply absent.
+
+Different profiles can name different folders, so `joe work` and `joe personal` can keep
+separate knowledge bases.
+
+<details>
+<summary>Why a <code>kb_path</code> line in CLAUDE.md is ignored</summary>
+
+**The profile is the only place joe reads this from.** A `kb_path` line in a `CLAUDE.md` or
+`AGENTS.md` is quoted into the prompt like any other line of those files, and otherwise
+ignored — joe will not take a knowledge-base root from a file a repository can ship. If you
+used to keep the line in `~/.claude/CLAUDE.md`, move the value into your profile; leaving the
+line where it is does no harm.
+
+Either way joe closes the prompt with a `<knowledge-base>` block naming the path it actually
+uses, or naming none, so a stale `kb_path` line elsewhere in the prompt cannot mislead the
+model:
+
+```
+<knowledge-base>
+Ignore any kb_path set anywhere above. This block is the only one that counts.
+
+kb_path=/Users/you/Documents/LLM_WIKI
+...
+```
+
+</details>
+
+### Reading other repositories
+
+A feature that spans repositories is still written in the one joe was started in. joe can
+read the others but not change them: it reaches them through Serena's `query_project`, which
+refuses every editing tool.
+
+`query_project` only reaches repositories Serena has registered. Register each one once:
+
+```bash
+uvx --from git+https://github.com/oraios/serena serena project create /path/to/repo
+```
+
+Reading and searching files needs nothing more. Symbol lookups in another repository go
+through Serena's project server, which joe does not start — run it alongside joe if you want
+them:
+
+```bash
+uvx --from git+https://github.com/oraios/serena serena start-project-server
+```
+
+Without it, joe falls back to searching the other repository as text.
 
 ---
 
@@ -223,99 +334,6 @@ Serena is not configurable here: it always starts with joe.
 
 ---
 
-## Using joe
-
-Run joe from the repository you want it to work on. It calls `repo_info` at the start of the
-session to find the git root and activates Serena on that path. Outside a repository — and
-when `git` is not installed at all — joe uses the current directory.
-
-| Command | What it does |
-|---|---|
-| `/help` | List the commands |
-| `/model [name]` | Show the current model, or switch to another from `llm.models` |
-| `/effort [level]` | Show or change reasoning effort |
-| `/clear` | Reset the conversation |
-| `/compact` | Compact the context now, instead of waiting for joe to do it |
-| `/mcp [on\|off] [name]` | Show the MCP servers, or start and stop one |
-| `/exit` | Quit |
-
-### Your own instructions
-
-At startup joe reads your standing instruction files and puts each into its prompt verbatim,
-least specific first, skipping any that are absent. Which three depends on `harness`:
-
-| `harness` | Files, least specific first |
-|---|---|
-| `claude` | `~/.claude/CLAUDE.md`, `<repo>/CLAUDE.md`, `<repo>/CLAUDE.local.md` |
-| `agents` | `~/.config/joe/AGENTS.md`, `<repo>/AGENTS.md`, `<repo>/AGENTS.local.md` |
-
-A later file wins where two disagree, and joe's own instructions win over all of them on
-tools, skills, Serena and the knowledge base — the rest is yours.
-
-Imports are **not** followed. A line like `@RTK.md` is passed through as text; joe never
-opens the file it names.
-
-### A knowledge base of your own
-
-When the profile sets `kb-path`, joe gets a second set of tools — `file_read`, `file_write`,
-`file_edit`, `file_list`, `file_delete`, `file_workdir` — rooted at that folder and unable to
-leave it. The repository stays Serena's; that folder is joe's to write in, which is where it
-keeps notes, plans and manuals across sessions.
-
-```json
-{ "kb-path": "/Users/you/Documents/LLM_WIKI" }
-```
-
-The path must be absolute and the folder must already exist — joe never creates it. A
-relative path stops joe at startup with every other fault in the profile; a folder that is
-missing or unreadable stops it when the tools are registered. Omit the key and joe starts
-normally with the `file_*` tools simply absent.
-
-**The profile is the only place joe reads this from.** A `kb_path` line in a `CLAUDE.md` or
-`AGENTS.md` is quoted into the prompt like any other line of those files, and otherwise
-ignored — joe will not take a knowledge-base root from a file a repository can ship. If you
-used to keep the line in `~/.claude/CLAUDE.md`, move the value into your profile; leaving the
-line where it is does no harm.
-
-Either way joe closes the prompt with a `<knowledge-base>` block naming the path it actually
-uses, or naming none, so a stale `kb_path` line elsewhere in the prompt cannot mislead the
-model:
-
-```
-<knowledge-base>
-Ignore any kb_path set anywhere above. This block is the only one that counts.
-
-kb_path=/Users/you/Documents/LLM_WIKI
-...
-```
-
-Different profiles can name different folders, so `joe work` and `joe personal` can keep
-separate knowledge bases.
-
-### Reading other repositories
-
-A feature that spans repositories is still written in the one joe was started in. joe can
-read the others but not change them: it reaches them through Serena's `query_project`, which
-refuses every editing tool.
-
-`query_project` only reaches repositories Serena has registered. Register each one once:
-
-```bash
-uvx --from git+https://github.com/oraios/serena serena project create /path/to/repo
-```
-
-Reading and searching files needs nothing more. Symbol lookups in another repository go
-through Serena's project server, which joe does not start — run it alongside joe if you want
-them:
-
-```bash
-uvx --from git+https://github.com/oraios/serena serena start-project-server
-```
-
-Without it, joe falls back to searching the other repository as text.
-
----
-
 ## Troubleshooting
 
 joe validates what it can before the session opens, and the message names the fault.
@@ -337,11 +355,11 @@ error from the coding tool pack at launch, and the usual cause is `uvx` missing 
 An `mcps-on` server that fails to start does *not* stop joe. The failure prints before the
 TUI opens and `/mcp` shows the server as `off`; `/mcp on <name>` retries it.
 
-To start over, delete `~/.config/joe` — or just its `default.json` — and run joe again: it
-asks the setup questions afresh. joe looks for `default.json`, not for the folder, so a setup
-you interrupted is finished by the next run rather than leaving you stuck. Nothing already in
-the folder is ever overwritten: an existing `default.json` means setup does not run at all,
-and an `AGENTS.md` you have edited is left as it is.
+**To start over**, delete `~/.config/joe` — or just its `default.json` — and run joe again:
+it asks the setup questions afresh. joe looks for `default.json`, not for the folder, so a
+setup you interrupted is finished by the next run rather than leaving you stuck. Nothing
+already in the folder is ever overwritten: an existing `default.json` means setup does not
+run at all, and an `AGENTS.md` you have edited is left as it is.
 
 ---
 
