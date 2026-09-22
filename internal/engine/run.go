@@ -94,6 +94,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		chat.WithModelCommand(),
 		chat.WithEffortCommand(),
 		chat.WithCompactCommand(),
+		chat.WithSkills(skills),
 	)
 
 	// Build prompt

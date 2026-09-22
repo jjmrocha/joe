@@ -32,7 +32,7 @@ type answers struct {
 func buildConfig(dir string) error {
 	reader := bufio.NewReader(os.Stdin)
 
-	given, err := askProfile(reader, os.Stdout)
+	given, err := askProfile(reader, os.Stdout, dir)
 	if err != nil {
 		return err
 	}
@@ -45,8 +45,12 @@ func buildConfig(dir string) error {
 	return createFile(filepath.Join(dir, defaultProfile), content)
 }
 
-func askProfile(in *bufio.Reader, out io.Writer) (answers, error) {
+func askProfile(in *bufio.Reader, out io.Writer, dir string) (answers, error) {
 	var given answers
+
+	if err := intro(out, dir); err != nil {
+		return given, err
+	}
 
 	provider, err := choose(in, out, "Provider", slices.Sorted(config.Providers.Values()))
 	if err != nil {
@@ -211,4 +215,20 @@ func read(in *bufio.Reader, out io.Writer, prompt string) (string, error) {
 	}
 
 	return strings.TrimSpace(line), nil
+}
+
+func intro(out io.Writer, dir string) error {
+	_, err := fmt.Fprintf(out, `joe — The opinionated coding agent for your terminal.
+
+First run: a few questions to set up your profile, saved to
+
+  %s
+
+which you can edit later. Then joe clones its skills into
+
+  %s
+
+`, filepath.Join(dir, defaultProfile), filepath.Join(dir, "coding-skills"))
+
+	return err
 }

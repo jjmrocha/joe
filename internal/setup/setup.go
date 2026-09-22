@@ -22,7 +22,17 @@ func BuildIfNeed() error {
 			return err
 		}
 
-		return build(dir)
+		if err = build(dir); err != nil {
+			return err
+		}
+	}
+
+	if _, err = os.Stat(filepath.Join(dir, "coding-skills")); err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+
+		return cloneSkills(dir)
 	}
 
 	return nil

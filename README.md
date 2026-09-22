@@ -37,7 +37,7 @@ creator of Erlang.
 request — a written procedure for that kind of work. Asked to fix a bug, it loads the
 debugging procedure; asked to build a feature, it loads the one that starts by pinning down
 requirements. The skills are not joe's own: they live in
-[coding-skills](https://github.com/jjmrocha/coding-skills), you install them yourself, and
+[coding-skills](https://github.com/jjmrocha/coding-skills), joe clones them on first run, and
 you can edit them. **Change a skill and you change how joe works.**
 
 **It reads code symbolically.** joe works through [Serena](https://github.com/oraios/serena),
@@ -52,20 +52,20 @@ joe itself is small — the prompt, the configuration and the wiring:
 |---|---|
 | [ai-toolkit](https://github.com/jjmrocha/ai-toolkit) | The agent loop, the LLM clients (OpenRouter, Anthropic, Ollama), the tool packs and the skill loader |
 | [ai-chat](https://github.com/jjmrocha/ai-chat) | The chat core, the terminal UI and the slash commands |
-| [coding-skills](https://github.com/jjmrocha/coding-skills) | The eleven skills joe loads by name |
+| [coding-skills](https://github.com/jjmrocha/coding-skills) | The twelve skills joe loads by name |
 
 ---
 
 ## Quickstart
 
-Four steps, about five minutes.
+Three steps, about five minutes.
 
 ### 1. Check the prerequisites
 
 | What | Why | How |
 |---|---|---|
 | Go 1.27+ | Building joe | [go.dev/dl](https://go.dev/dl/) |
-| `git` | joe finds the repository root with it | Your package manager |
+| `git` | joe finds the repository root with it, and clones the skills on first run | Your package manager |
 | `uvx` on `PATH` | Starts Serena, which serves joe's coding tools. **joe will not start without it** | [uv](https://github.com/astral-sh/uv) |
 | An API key | Unless you run Ollama locally | [OpenRouter](https://openrouter.ai) or [Anthropic](https://console.anthropic.com) |
 
@@ -86,15 +86,26 @@ variable at startup.
 > `go install github.com/jjmrocha/joe/cmd@latest` works too, but names the binary `cmd`,
 > after its directory.
 
-### 3. Run joe once to set it up
+### 3. Run joe
 
 ```bash
 ./bin/joe
 ```
 
-It finds no configuration folder, so it asks you to describe the setup:
+It finds no configuration folder, so it says where it will write and asks you to describe
+the setup:
 
 ```
+joe — The opinionated coding agent for your terminal.
+
+First run: a few questions to set up your profile, saved to
+
+  /Users/you/.config/joe/default.json
+
+which you can edit later. Then joe clones its skills into
+
+  /Users/you/.config/joe/coding-skills
+
 Provider [anthropic, ollama, openrouter]: openrouter
 Model: z-ai/glm-5.3-flash
 Name of the API key variable: OPEN_ROUTER_KEY
@@ -113,40 +124,37 @@ The API-key question is skipped on Ollama, and the folder question only follows 
   folder**: it must already exist, and joe asks again until it does. A leading `~` is
   expanded before joe checks, and the profile stores the path in full.
 
-From your answers joe writes:
+From your answers joe writes the profile, then clones the skills:
 
 ```
 ~/.config/joe/
 ├── default.json    your profile
 ├── AGENTS.md       empty, for harness: agents
-└── skills/         empty — you fill it in the next step
+├── coding-skills/  a git clone of coding-skills — joe's twelve skills
+└── skills/         empty — for extra skills of your own
 ```
 
-Then it stops, listing the eleven skills it could not find. That is expected — step 4 is the
-last thing left.
+Then the chat opens. **You're done.**
 
-### 4. Install the skills
-
-joe loads eleven skills by name at startup and refuses to run without them.
-
-```bash
-git clone https://github.com/jjmrocha/coding-skills.git
-cp -R coding-skills/*/ ~/.config/joe/skills/
-```
-
-Each skill must end up as `~/.config/joe/skills/<name>/SKILL.md`. No other folder is ever
-searched, and a missing skill stops joe at startup with its name in the message.
+If the clone fails — no network, say — joe stops with `clone skills: …`. Your answers are
+kept: the next run clones again without asking them.
 
 <details>
-<summary>The eleven skills</summary>
+<summary>The twelve skills</summary>
 
-`analyze-code`, `brainstorm`, `coding-discipline`, `designing-interfaces`,
-`guiding-manual-testing`, `knowledge-base`, `research`, `style-checker`,
-`test-driven-development`, `using-software-specialists`, `writing-unit-tests`.
+`addressing-findings`, `analyze-code`, `brainstorm`, `coding-discipline`,
+`designing-interfaces`, `guiding-manual-testing`, `knowledge-base`, `research`,
+`style-checker`, `test-driven-development`, `using-software-specialists`,
+`writing-unit-tests`.
+
+Each loads from `~/.config/joe/coding-skills/<name>/SKILL.md`. Edit them there; joe never
+touches the clone again. To pick up upstream changes, merged with your edits:
+
+```bash
+git -C ~/.config/joe/coding-skills pull
+```
 
 </details>
-
-Run `./bin/joe` again — the chat opens. **You're done.**
 
 ### Optional extras
 
@@ -321,12 +329,12 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
 | `llm.model` | The model joe starts with |
 | `llm.models` | The models `/model` switches between |
 | `llm.effort` | `off`, `low`, `medium` or `max` — how much the model reasons before answering |
-| `skills` | Extra skills by name, loaded from `~/.config/joe/skills` beside joe's own eleven |
+| `skills` | Extra skills by name, loaded from `~/.config/joe/skills`. Cannot name one of joe's own twelve |
 | `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds — `0` or absent means no limit |
 | `mcps-on` | The servers started at launch; the rest start on first use |
 
 A profile that names an unknown provider, effort, harness or `mcps-on` server, a skill that
-is not a bare name, a `kb-path` that is not absolute, or leaves the model empty, or names an
+is not a bare name or is one of joe's own twelve, a `kb-path` that is not absolute, or leaves the model empty, or names an
 API-key variable that is not set, stops joe before the session opens — and the message lists
 every fault in the file, not just the first.
 
@@ -340,7 +348,9 @@ joe validates what it can before the session opens, and the message names the fa
 
 | Message | Cause | Fix |
 |---|---|---|
-| `skill folder not found: …` | A skill is missing from `~/.config/joe/skills` | Install the skills — every missing one is listed at once |
+| `skill folder not found: …` | One of the twelve is missing from `~/.config/joe/coding-skills`, or an extra from `~/.config/joe/skills` | After upgrading joe, `git -C ~/.config/joe/coding-skills pull` — a newer joe can need a skill your clone predates. Otherwise restore it, or delete `coding-skills/` and joe clones it again. Every missing one is listed at once |
+| `clone skills: …` | The first-run clone of coding-skills failed; git's own message is printed above it | Check the network and `git`, then run joe again — only the clone is retried |
+| `skill is one of joe's own` | The profile's `skills` names one of the twelve | Remove it from `skills`; edit that skill in `coding-skills/` instead |
 | `api key variable is not set` | `api-key-env` names a variable with no value | `export` it, or point `api-key-env` at the one you use |
 | `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
 | `no answer to read` | Setup ran with nothing on stdin — a pipe, a redirect, or Ctrl-D at a question | Run joe from a terminal and answer the questions; nothing is left broken, the next run simply asks again |

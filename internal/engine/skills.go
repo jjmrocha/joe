@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"slices"
 
@@ -11,6 +12,7 @@ import (
 )
 
 var skillNames = []string{
+	"addressing-findings",
 	"analyze-code",
 	"brainstorm",
 	"coding-discipline",
@@ -27,16 +29,29 @@ var skillNames = []string{
 func newSkillCollection(cfg *config.Config) (*skills.Collection, error) {
 	skillCollection := skills.NewCollection()
 
+	codingSkillsDir, err := config.CodingSkillsDir()
+	if err != nil {
+		return nil, err
+	}
+
 	skillsDir, err := config.SkillsDir()
 	if err != nil {
 		return nil, err
 	}
 
-	problems := fn.Map(slices.Concat(skillNames, cfg.Skills), func(skillName string) error {
+	ownProblems := fn.Map(skillNames, func(skillName string) error {
+		return skillCollection.Add(filepath.Join(codingSkillsDir, skillName))
+	})
+
+	extraProblems := fn.Map(cfg.Skills, func(skillName string) error {
+		if slices.Contains(skillNames, skillName) {
+			return fmt.Errorf("%w: %s", ErrReservedSkill, skillName)
+		}
+
 		return skillCollection.Add(filepath.Join(skillsDir, skillName))
 	})
 
-	if err := errors.Join(problems...); err != nil {
+	if err := errors.Join(slices.Concat(ownProblems, extraProblems)...); err != nil {
 		return nil, err
 	}
 

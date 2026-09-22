@@ -92,12 +92,17 @@ func TestNewSkillCollection(t *testing.T) {
 		// given
 		cfg := testConfig(t, testProfile(`["removing-ai-tells"]`))
 
+		codingSkillsDir, err := config.CodingSkillsDir()
+		require.NoError(t, err)
+
 		skillsDir, err := config.SkillsDir()
 		require.NoError(t, err)
 
-		for _, name := range append(skillNames, "removing-ai-tells") {
-			writeSkill(t, skillsDir, name)
+		for _, name := range skillNames {
+			writeSkill(t, codingSkillsDir, name)
 		}
+
+		writeSkill(t, skillsDir, "removing-ai-tells")
 		// when
 		result, err := newSkillCollection(cfg)
 		// then
@@ -107,5 +112,26 @@ func TestNewSkillCollection(t *testing.T) {
 		for _, name := range append(skillNames, "removing-ai-tells") {
 			assert.Contains(t, catalog, "<name>"+name+"</name>")
 		}
+	})
+	t.Run("rejects an extra skill that is one of joe's own", func(t *testing.T) {
+		// given
+		cfg := testConfig(t, testProfile(`["brainstorm"]`))
+
+		codingSkillsDir, err := config.CodingSkillsDir()
+		require.NoError(t, err)
+
+		skillsDir, err := config.SkillsDir()
+		require.NoError(t, err)
+
+		for _, name := range skillNames {
+			writeSkill(t, codingSkillsDir, name)
+		}
+
+		writeSkill(t, skillsDir, "brainstorm")
+		// when
+		_, err = newSkillCollection(cfg)
+		// then
+		require.ErrorIs(t, err, ErrReservedSkill)
+		assert.Contains(t, err.Error(), "brainstorm")
 	})
 }

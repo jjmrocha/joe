@@ -15,6 +15,9 @@ file_delete take paths relative to its root, and file_workdir reports that root.
 - Load the knowledge-base skill before reading or writing the knowledge base. It
   owns the layout, the page format and the rule that a delete needs the user's
   approval.
+- A skill step written "if kb_path is configured" applies: it is configured.
+  Take it — the knowledge base is read before the work starts, not only written
+  after it ends.
 - The knowledge base records what is intended and what exists; the code is the
   truth. When the two disagree, say so and believe the code.
 </knowledge-base>

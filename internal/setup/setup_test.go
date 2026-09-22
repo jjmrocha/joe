@@ -2,6 +2,7 @@ package setup
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -43,6 +44,47 @@ func answer(t *testing.T, content string) {
 	})
 }
 
+func skillsFixture(t *testing.T) {
+	t.Helper()
+
+	repo := t.TempDir()
+	skill := filepath.Join(repo, "analyze-code")
+	if err := os.MkdirAll(skill, 0o750); err != nil {
+		t.Fatalf("MkdirAll(%s): %v", skill, err)
+	}
+
+	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("analyze-code"), 0o600); err != nil {
+		t.Fatalf("WriteFile(%s): %v", skill, err)
+	}
+
+	for _, args := range [][]string{
+		{"init", "--quiet"},
+		{"add", "."},
+		{"-c", "user.name=joe", "-c", "user.email=joe@test", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=", "commit", "--quiet", "-m", "skills"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repo
+
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	origin := skillsRepo
+	skillsRepo = repo
+
+	t.Cleanup(func() { skillsRepo = origin })
+}
+
+func unreachableSkills(t *testing.T) {
+	t.Helper()
+
+	origin := skillsRepo
+	skillsRepo = filepath.Join(t.TempDir(), "missing")
+
+	t.Cleanup(func() { skillsRepo = origin })
+}
+
 func names(configs []mcp.ClientConfig) []string {
 	return fn.Map(configs, func(config mcp.ClientConfig) string {
 		return config.Name
@@ -53,6 +95,7 @@ func TestBuildIfNeed(t *testing.T) {
 	t.Run("builds every part of the environment", func(t *testing.T) {
 		// given
 		dir := configDir(t)
+		skillsFixture(t)
 		answer(t, "ollama\nqwen3\nclaude\nno\n")
 		// when
 		err := BuildIfNeed()
@@ -61,11 +104,13 @@ func TestBuildIfNeed(t *testing.T) {
 		assert.DirExists(t, filepath.Join(dir, "skills"))
 		assert.FileExists(t, filepath.Join(dir, "default.json"))
 		assert.FileExists(t, filepath.Join(dir, "AGENTS.md"))
+		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
 	})
 
 	t.Run("leaves an existing profile alone", func(t *testing.T) {
 		// given
 		dir := configDir(t)
+		skillsFixture(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		// when
@@ -79,6 +124,7 @@ func TestBuildIfNeed(t *testing.T) {
 	t.Run("finishes a build an earlier run left half done", func(t *testing.T) {
 		// given
 		dir := configDir(t)
+		skillsFixture(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		answer(t, "ollama\nqwen3\nclaude\nno\n")
 		// when
@@ -93,6 +139,7 @@ func TestBuildIfNeed(t *testing.T) {
 	t.Run("keeps a harness file an earlier run already wrote", func(t *testing.T) {
 		// given
 		dir := configDir(t)
+		skillsFixture(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("be terse"), 0o600))
 		answer(t, "ollama\nqwen3\nclaude\nno\n")
@@ -104,6 +151,44 @@ func TestBuildIfNeed(t *testing.T) {
 		content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 		require.NoError(t, err)
 		assert.Equal(t, "be terse", string(content))
+	})
+
+	t.Run("clones the skills an earlier run could not fetch", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		skillsFixture(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
+		// when
+		err := BuildIfNeed()
+		// then
+		require.NoError(t, err)
+		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
+	})
+
+	t.Run("leaves cloned skills alone", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		unreachableSkills(t)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "coding-skills"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
+		// when
+		err := BuildIfNeed()
+		// then
+		assert.NoError(t, err)
+	})
+
+	t.Run("keeps the profile when the skills cannot be cloned", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		unreachableSkills(t)
+		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		// when
+		err := BuildIfNeed()
+		// then
+		require.Error(t, err)
+		assert.FileExists(t, filepath.Join(dir, "default.json"))
+		assert.NoDirExists(t, filepath.Join(dir, "coding-skills"))
 	})
 
 	t.Run("reports a folder it cannot create", func(t *testing.T) {

@@ -84,7 +84,7 @@ func TestAskProfile(t *testing.T) {
 		dir := t.TempDir()
 		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\n"))
 		// when
-		result, err := askProfile(in, &strings.Builder{})
+		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
@@ -100,10 +100,28 @@ func TestAskProfile(t *testing.T) {
 		// given
 		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\nno\n"))
 		// when
-		result, err := askProfile(in, &strings.Builder{})
+		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{harness: testKind, provider: testProvider, model: testOllamaModel}, result)
+	})
+
+	t.Run("opens with the intro and the folder it writes to", func(t *testing.T) {
+		// given
+		var out strings.Builder
+
+		dir := t.TempDir()
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\n"))
+		// when
+		_, err := askProfile(in, &out, dir)
+		// then
+		require.NoError(t, err)
+
+		result := out.String()
+		assert.Contains(t, result, "The opinionated coding agent for your terminal")
+		assert.Contains(t, result, filepath.Join(dir, defaultProfile))
+		assert.Contains(t, result, filepath.Join(dir, "coding-skills"))
+		assert.Less(t, strings.Index(result, "The opinionated"), strings.Index(result, "Provider"))
 	})
 
 	t.Run("lists the options it accepts", func(t *testing.T) {
@@ -112,7 +130,7 @@ func TestAskProfile(t *testing.T) {
 
 		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\n"))
 		// when
-		_, err := askProfile(in, &out)
+		_, err := askProfile(in, &out, t.TempDir())
 		// then
 		require.NoError(t, err)
 		assert.Contains(t, out.String(), "anthropic, ollama, openrouter")
@@ -126,7 +144,7 @@ func TestAskProfile(t *testing.T) {
 
 		in := bufio.NewReader(strings.NewReader("openai\nanthropic\nbad name\nclaude-opus-5\n\nANTHROPIC_KEY\ncodex\nagents\nno\n"))
 		// when
-		result, err := askProfile(in, &out)
+		result, err := askProfile(in, &out, t.TempDir())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
@@ -144,7 +162,7 @@ func TestAskProfile(t *testing.T) {
 		// given
 		in := bufio.NewReader(strings.NewReader("openrouter\n"))
 		// when
-		_, err := askProfile(in, &strings.Builder{})
+		_, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
 		assert.ErrorIs(t, err, ErrNoAnswer)
 	})

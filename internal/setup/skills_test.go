@@ -33,3 +33,42 @@ func TestBuildSkills(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestCloneSkills(t *testing.T) {
+	t.Run("clones the skills into their folder", func(t *testing.T) {
+		// given
+		dir := t.TempDir()
+		skillsFixture(t)
+		// when
+		err := cloneSkills(dir)
+		// then
+		require.NoError(t, err)
+		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
+	})
+
+	t.Run("clones into a folder whose name starts with a dash", func(t *testing.T) {
+		// given
+		t.Chdir(t.TempDir())
+		require.NoError(t, os.Mkdir("-config", 0o750))
+		skillsFixture(t)
+		// when
+		err := cloneSkills("-config")
+		// then
+		require.NoError(t, err)
+		assert.FileExists(t, filepath.Join("-config", "coding-skills", "analyze-code", "SKILL.md"))
+	})
+
+	t.Run("leaves nothing behind when the clone fails", func(t *testing.T) {
+		// given
+		dir := t.TempDir()
+		unreachableSkills(t)
+		// when
+		err := cloneSkills(dir)
+		// then
+		require.Error(t, err)
+
+		result, err := os.ReadDir(dir)
+		require.NoError(t, err)
+		assert.Empty(t, result)
+	})
+}

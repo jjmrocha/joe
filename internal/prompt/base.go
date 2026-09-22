@@ -49,6 +49,7 @@ the first row that matches, top to bottom.
 | An existing plan file changed                                            | brainstorm                 |
 | A vague idea turned into a spec — goal or scope still open               | brainstorm                 |
 | Style, formatting or naming checked, or a style question answered        | style-checker              |
+| Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list | addressing-findings |
 | A review of existing code — a diff, branch, PR, module; quality, security, tech debt | analyze-code    |
 | To be guided through testing a change by hand on a local or staging environment | guiding-manual-testing |
 | The knowledge base written to or audited — ingest, update, lint, write a manual | knowledge-base      |
@@ -60,7 +61,10 @@ the first row that matches, top to bottom.
 
 Tie-breakers:
 - "Review and fix" is analyze-code. It only reports; the fixes follow its
-  Suggested Next Actions.
+  Suggested Next Actions. Going through the findings it reported, one by one,
+  is addressing-findings.
+- Comments already on a PR are addressing-findings. A fresh review of that PR
+  is analyze-code.
 - Explaining how something works is research. Explaining why it is broken is
   using-software-specialists.
 - Tests only is writing-unit-tests. Tests that come with a code change — a fix,
@@ -90,6 +94,8 @@ directly when its description fits the request better than any row above.
 "Add a rollback step to plans/proj-12.md"             → brainstorm
 "Implement plans/proj-12.md"                          → using-software-specialists
 "Review my branch before I open the PR"               → analyze-code
+"Go through those findings one at a time"             → addressing-findings
+"Address the comments on PR #12"                      → addressing-findings
 "Does internal/config follow Go naming conventions?"  → style-checker
 "Add a --verbose flag"                                → using-software-specialists
 "Write tests for config.Load"                         → writing-unit-tests
@@ -102,8 +108,8 @@ directly when its description fits the request better than any row above.
 - The entry skill runs the work and names the other skills to load, and when.
   Do not load them ahead of it.
 - When a skill hands off — analyze-code to using-software-specialists,
-  guiding-manual-testing to using-software-specialists, brainstorm to planning
-  — load the skill it names.
+  addressing-findings to using-software-specialists, guiding-manual-testing to
+  using-software-specialists, brainstorm to planning — load the skill it names.
 - A follow-up that continues the same work stays in the loaded skill. Route
   again only when the request changes kind — research turning into "now fix it".
 - After /compact or /clear, call repo_info again and load the entry skill again

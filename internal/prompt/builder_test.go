@@ -34,6 +34,15 @@ func TestBuild(t *testing.T) {
 		assert.Contains(t, result, "file_workdir")
 	})
 
+	t.Run("settles the skills' kb_path condition", func(t *testing.T) {
+		// given
+		h := &harness.Harness{Kind: harness.KindClaude}
+		// when
+		result := Build(h, testKBPath)
+		// then
+		assert.Contains(t, result, `"if kb_path is configured" applies: it is configured`)
+	})
+
 	t.Run("reports no kb path when none is configured", func(t *testing.T) {
 		// given
 		h := &harness.Harness{}

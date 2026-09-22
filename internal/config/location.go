@@ -26,3 +26,12 @@ func SkillsDir() (string, error) {
 
 	return filepath.Join(dir, "skills"), nil
 }
+
+func CodingSkillsDir() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, "coding-skills"), nil
+}
