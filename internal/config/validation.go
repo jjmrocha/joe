@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/sets"
 	"github.com/jjmrocha/joe/internal/harness"
@@ -20,6 +21,10 @@ var (
 		string(llm.EffortLow),
 		string(llm.EffortMedium),
 		string(llm.EffortMax),
+	)
+
+	somProviders = sets.New(
+		string(decision.ProviderOpenRouter),
 	)
 )
 
@@ -39,6 +44,10 @@ func validate(cfg *Config) error {
 	}
 
 	problems = append(problems, validateLLM(cfg.LLM)...)
+
+	if cfg.SOM != nil {
+		problems = append(problems, validateSOM(cfg.SOM)...)
+	}
 
 	for _, skillName := range cfg.Skills {
 		if !validName(skillName) {
@@ -76,6 +85,24 @@ func validateLLM(l LLM) []error {
 
 	if l.APIKeyEnv == "" || os.Getenv(l.APIKeyEnv) == "" {
 		problems = append(problems, fmt.Errorf("%w: %s", ErrMissingAPIKey, l.APIKeyEnv))
+	}
+
+	return problems
+}
+
+func validateSOM(s *SOM) []error {
+	var problems []error
+
+	if !somProviders.Contains(s.Provider) {
+		problems = append(problems, fmt.Errorf("guard: %w: %s", ErrInvalidSOMProvider, s.Provider))
+	}
+
+	if s.Model == "" {
+		problems = append(problems, fmt.Errorf("guard: %w", ErrMissingModel))
+	}
+
+	if s.APIKeyEnv == "" || os.Getenv(s.APIKeyEnv) == "" {
+		problems = append(problems, fmt.Errorf("guard: %w: %s", ErrMissingAPIKey, s.APIKeyEnv))
 	}
 
 	return problems

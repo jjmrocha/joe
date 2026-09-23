@@ -96,7 +96,7 @@ func TestBuildIfNeed(t *testing.T) {
 		// given
 		dir := configDir(t)
 		skillsFixture(t)
-		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
 		err := BuildIfNeed()
 		// then
@@ -126,7 +126,7 @@ func TestBuildIfNeed(t *testing.T) {
 		dir := configDir(t)
 		skillsFixture(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
 		err := BuildIfNeed()
 		// then
@@ -142,7 +142,7 @@ func TestBuildIfNeed(t *testing.T) {
 		skillsFixture(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("be terse"), 0o600))
-		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
 		err := BuildIfNeed()
 		// then
@@ -182,7 +182,7 @@ func TestBuildIfNeed(t *testing.T) {
 		// given
 		dir := configDir(t)
 		unreachableSkills(t)
-		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
 		err := BuildIfNeed()
 		// then

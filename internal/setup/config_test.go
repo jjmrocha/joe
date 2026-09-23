@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/harness"
@@ -21,6 +22,8 @@ const (
 	testKind        = "agents"
 	testProvider    = "ollama"
 	testOllamaModel = "qwen3"
+	testSOMModel    = "typesafe/jev-1.13"
+	testKeyEnv      = "OPEN_ROUTER_KEY"
 )
 
 func TestAskPath(t *testing.T) {
@@ -82,23 +85,25 @@ func TestAskProfile(t *testing.T) {
 	t.Run("collects every answer", func(t *testing.T) {
 		// given
 		dir := t.TempDir()
-		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\n"))
+		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\nyes\n" + testSOMModel + "\nOPEN_ROUTER_KEY\n"))
 		// when
 		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
-			harness:   "claude",
-			provider:  "openrouter",
-			model:     testModel,
-			apiKeyEnv: "OPEN_ROUTER_KEY",
-			kbPath:    dir,
+			harness:      "claude",
+			provider:     "openrouter",
+			model:        testModel,
+			apiKeyEnv:    testKeyEnv,
+			kbPath:       dir,
+			somModel:     testSOMModel,
+			somAPIKeyEnv: testKeyEnv,
 		}, result)
 	})
 
 	t.Run("skips the folder question when no knowledge base is wanted", func(t *testing.T) {
 		// given
-		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\nno\n"))
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\nno\nno\n"))
 		// when
 		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
@@ -111,7 +116,7 @@ func TestAskProfile(t *testing.T) {
 		var out strings.Builder
 
 		dir := t.TempDir()
-		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\n"))
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n"))
 		// when
 		_, err := askProfile(in, &out, dir)
 		// then
@@ -128,7 +133,7 @@ func TestAskProfile(t *testing.T) {
 		// given
 		var out strings.Builder
 
-		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\n"))
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n"))
 		// when
 		_, err := askProfile(in, &out, t.TempDir())
 		// then
@@ -136,13 +141,14 @@ func TestAskProfile(t *testing.T) {
 		assert.Contains(t, out.String(), "anthropic, ollama, openrouter")
 		assert.Contains(t, out.String(), "agents, claude")
 		assert.Contains(t, out.String(), "yes, no")
+		assert.Contains(t, out.String(), "System One model")
 	})
 
 	t.Run("asks again after an answer it cannot use", func(t *testing.T) {
 		// given
 		var out strings.Builder
 
-		in := bufio.NewReader(strings.NewReader("openai\nanthropic\nbad name\nclaude-opus-5\n\nANTHROPIC_KEY\ncodex\nagents\nno\n"))
+		in := bufio.NewReader(strings.NewReader("openai\nanthropic\nbad name\nclaude-opus-5\n\nANTHROPIC_KEY\ncodex\nagents\nno\nno\n"))
 		// when
 		result, err := askProfile(in, &out, t.TempDir())
 		// then
@@ -156,6 +162,23 @@ func TestAskProfile(t *testing.T) {
 		assert.Contains(t, out.String(), `"openai" is not one of`)
 		assert.Contains(t, out.String(), `"bad name" is not a valid answer`)
 		assert.Contains(t, out.String(), `"codex" is not one of`)
+	})
+
+	t.Run("separates the question groups with blank lines", func(t *testing.T) {
+		// given
+		var out strings.Builder
+
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n"))
+		// when
+		_, err := askProfile(in, &out, t.TempDir())
+		// then
+		require.NoError(t, err)
+
+		result := out.String()
+		assert.Contains(t, result, "Model: Harness")
+		assert.NotContains(t, result, "Model: \n\nHarness")
+		assert.Contains(t, result, "Harness [agents, claude]: \nKnowledge base")
+		assert.Contains(t, result, "Knowledge base [yes, no]: \nSystem One model")
 	})
 
 	t.Run("reports answers it cannot read", func(t *testing.T) {
@@ -175,7 +198,7 @@ func TestRenderProfile(t *testing.T) {
 			harness:   "claude",
 			provider:  "openrouter",
 			model:     testModel,
-			apiKeyEnv: "OPEN_ROUTER_KEY",
+			apiKeyEnv: testKeyEnv,
 		}
 		// when
 		content, err := renderProfile(given)
@@ -187,7 +210,7 @@ func TestRenderProfile(t *testing.T) {
 		require.NoError(t, json.Unmarshal(content, &result))
 		assert.Equal(t, "claude", result.Harness)
 		assert.Equal(t, "openrouter", result.LLM.Provider)
-		assert.Equal(t, "OPEN_ROUTER_KEY", result.LLM.APIKeyEnv)
+		assert.Equal(t, testKeyEnv, result.LLM.APIKeyEnv)
 		assert.Equal(t, testModel, result.LLM.Model)
 		assert.Equal(t, []string{testModel}, result.LLM.Models)
 		assert.Equal(t, string(llm.EffortMedium), result.LLM.Effort)
@@ -206,6 +229,22 @@ func TestRenderProfile(t *testing.T) {
 		assert.NotContains(t, string(content), "api-key-env")
 		assert.NotContains(t, string(content), "base-url")
 		assert.NotContains(t, string(content), "kb-path")
+		assert.NotContains(t, string(content), `"guard"`)
+	})
+
+	t.Run("writes the guard block the answers set", func(t *testing.T) {
+		// given
+		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, somModel: testSOMModel, somAPIKeyEnv: testKeyEnv}
+		expected := &config.SOM{Provider: string(decision.ProviderOpenRouter), APIKeyEnv: testKeyEnv, Model: testSOMModel}
+		// when
+		content, err := renderProfile(given)
+		// then
+		require.NoError(t, err)
+
+		var result config.Config
+
+		require.NoError(t, json.Unmarshal(content, &result))
+		assert.Equal(t, expected, result.SOM)
 	})
 
 	t.Run("writes the kb path the answers set", func(t *testing.T) {
@@ -226,11 +265,11 @@ func TestRenderProfile(t *testing.T) {
 func TestBuildConfig(t *testing.T) {
 	t.Run("writes a profile that loads back", func(t *testing.T) {
 		// given
-		t.Setenv("OPEN_ROUTER_KEY", "sk-test")
+		t.Setenv(testKeyEnv, "sk-test")
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\n")
+		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\n"+testSOMModel+"\nOPEN_ROUTER_KEY\n")
 		// when
 		err := buildConfig(dir)
 		// then
@@ -242,6 +281,7 @@ func TestBuildConfig(t *testing.T) {
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
 		assert.Equal(t, harness.KindClaude, result.HarnessKind())
 		assert.Equal(t, 60*time.Second, result.MCPClients()[0].ToolCallTimeout)
+		assert.Equal(t, testSOMModel, result.SOMConfig().Model)
 	})
 
 	t.Run("refuses to overwrite a profile", func(t *testing.T) {
@@ -249,7 +289,7 @@ func TestBuildConfig(t *testing.T) {
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
-		answer(t, "ollama\nqwen3\nclaude\nno\n")
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
 		err := buildConfig(dir)
 		// then

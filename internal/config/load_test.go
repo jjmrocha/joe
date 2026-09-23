@@ -13,6 +13,8 @@ import (
 const (
 	testKeyEnv = "JOE_TEST_KEY"
 	testModel  = "z-ai/glm-5.3-flash"
+
+	testSOMModel = "typesafe/jev-1.13"
 )
 
 func validProfile() string {
@@ -184,6 +186,26 @@ func TestLoad(t *testing.T) {
 				content:  profileWith(`"kb-path": "~/wiki"`),
 				expected: ErrInvalidKBPath,
 			},
+			{
+				name:     "guard provider",
+				content:  profileWith(`"guard": {"provider": "typesafe", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`),
+				expected: ErrInvalidSOMProvider,
+			},
+			{
+				name:     "guard model",
+				content:  profileWith(`"guard": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": ""}`),
+				expected: ErrMissingModel,
+			},
+			{
+				name:     "guard unset api key variable",
+				content:  profileWith(`"guard": {"provider": "openrouter", "api-key-env": "JOE_TEST_UNSET", "model": "` + testSOMModel + `"}`),
+				expected: ErrMissingAPIKey,
+			},
+			{
+				name:     "guard no api key variable",
+				content:  profileWith(`"guard": {"provider": "openrouter", "model": "` + testSOMModel + `"}`),
+				expected: ErrMissingAPIKey,
+			},
 		}
 
 		for _, testCase := range testCases {
@@ -253,6 +275,34 @@ func TestLoad(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Empty(t, result.KBPath)
+	})
+
+	t.Run("carries the guard block", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		content := profileWith(`"guard": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`)
+		writeProfile(t, dir, "local", content)
+
+		t.Setenv(testKeyEnv, "sk-test")
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		require.NotNil(t, result.SOM)
+		assert.Equal(t, testSOMModel, result.SOM.Model)
+	})
+
+	t.Run("leaves guard off when the profile omits it", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		writeProfile(t, dir, "local", profileWith())
+
+		t.Setenv(testKeyEnv, "sk-test")
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		assert.Nil(t, result.SOM)
 	})
 
 	t.Run("reports a missing default profile", func(t *testing.T) {

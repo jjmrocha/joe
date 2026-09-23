@@ -6,6 +6,7 @@ var (
 	ErrProfileNotFound    = errors.New("profile not found")
 	ErrInvalidProfileName = errors.New("profile name is not a bare name")
 	ErrInvalidProvider    = errors.New("provider is not openrouter, ollama or anthropic")
+	ErrInvalidSOMProvider = errors.New("guard provider is not openrouter")
 	ErrInvalidEffort      = errors.New("effort is not off, low, medium or max")
 	ErrInvalidSkillName   = errors.New("skill name is not a bare name")
 	ErrInvalidKBPath      = errors.New("kb_path is not absolute")

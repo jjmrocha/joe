@@ -6,6 +6,7 @@ import (
 	"github.com/jjmrocha/ai-chat/chat"
 	"github.com/jjmrocha/ai-chat/ui"
 	"github.com/jjmrocha/ai-toolkit/agent"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
@@ -15,10 +16,19 @@ import (
 )
 
 func Run(ctx context.Context, cfg *config.Config) error {
-	// Initialize the LLM
+	// Initialize models
 	llmClient, err := llm.New(cfg.LLMConfig())
 	if err != nil {
 		return err
+	}
+
+	var somClient *decision.Decision
+
+	if cfg.SOM != nil {
+		somClient, err = decision.New(cfg.SOMConfig())
+		if err != nil {
+			return err
+		}
 	}
 
 	// Initialize the  skills collection
@@ -35,6 +45,15 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	// Initialize the  toolbox
 	toolBox := tools.NewToolBox()
+
+	if somClient != nil {
+		interceptor, interceptorErr := buildInterceptor(ctx, toolBox, somClient, cfg.KBPath)
+		if interceptorErr != nil {
+			return interceptorErr
+		}
+
+		toolBox.SetInterceptor(interceptor)
+	}
 
 	// Initialize the  MCP manager
 	mng := newMCPManager(toolBox, cfg)
@@ -77,6 +96,15 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		}
 
 		defer func() { _ = kbPack.Close() }()
+	}
+
+	if somClient != nil {
+		decisionPack, packErr := packs.DecisionTools(toolBox, somClient)
+		if packErr != nil {
+			return packErr
+		}
+
+		defer func() { _ = decisionPack.Close() }()
 	}
 
 	// Initialize the agent

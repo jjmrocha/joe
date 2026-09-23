@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/harness"
 	"github.com/stretchr/testify/assert"
@@ -77,6 +78,32 @@ func TestLLMConfig(t *testing.T) {
 		assert.Equal(t, llm.EffortMedium, result.Effort)
 		assert.Equal(t, "sk-test", result.APIKey)
 		assert.Empty(t, result.BaseURL)
+	})
+}
+
+func TestSOMConfig(t *testing.T) {
+	t.Run("carries every value the decision model needs", func(t *testing.T) {
+		// given
+		config := mustLoad(t, profileWith(`"guard": {"provider": "openrouter", "base-url": "http://localhost:8080", "api-key-env": "`+testKeyEnv+`", "model": "`+testSOMModel+`"}`))
+		expected := decision.Config{
+			Provider: decision.ProviderOpenRouter,
+			BaseURL:  "http://localhost:8080",
+			APIKey:   "sk-test",
+			Model:    testSOMModel,
+		}
+		// when
+		result := config.SOMConfig()
+		// then
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("returns an empty config when the profile has no guard block", func(t *testing.T) {
+		// given
+		config := mustLoad(t, profileWith())
+		// when
+		result := config.SOMConfig()
+		// then
+		assert.Equal(t, decision.Config{}, result)
 	})
 }
 

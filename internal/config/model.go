@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/go-algo/fn"
@@ -26,6 +27,7 @@ type Config struct {
 	Skills  []string       `json:"skills"`
 	MCPs    map[string]MCP `json:"mcps"`
 	MCPsOn  []string       `json:"mcps-on"`
+	SOM     *SOM           `json:"guard,omitempty"`
 }
 
 type LLM struct {
@@ -35,6 +37,13 @@ type LLM struct {
 	Model     string   `json:"model"`
 	Models    []string `json:"models"`
 	Effort    string   `json:"effort"`
+}
+
+type SOM struct {
+	Provider  string `json:"provider"`
+	BaseURL   string `json:"base-url,omitempty"`
+	APIKeyEnv string `json:"api-key-env"`
+	Model     string `json:"model"`
 }
 
 type MCP struct {
@@ -58,6 +67,19 @@ func (c *Config) LLMConfig() llm.Config {
 		Model:    c.LLM.Model,
 		Models:   c.LLM.Models,
 		Effort:   llm.Effort(c.LLM.Effort),
+	}
+}
+
+func (c *Config) SOMConfig() decision.Config {
+	if c.SOM == nil {
+		return decision.Config{}
+	}
+
+	return decision.Config{
+		Provider: decision.Provider(c.SOM.Provider),
+		BaseURL:  c.SOM.BaseURL,
+		APIKey:   os.Getenv(c.SOM.APIKeyEnv),
+		Model:    c.SOM.Model,
 	}
 }
 
