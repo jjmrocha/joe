@@ -84,7 +84,7 @@ func TestLLMConfig(t *testing.T) {
 func TestSOMConfig(t *testing.T) {
 	t.Run("carries every value the decision model needs", func(t *testing.T) {
 		// given
-		config := mustLoad(t, profileWith(`"guard": {"provider": "openrouter", "base-url": "http://localhost:8080", "api-key-env": "`+testKeyEnv+`", "model": "`+testSOMModel+`"}`))
+		config := mustLoad(t, profileWith(`"som": {"provider": "openrouter", "base-url": "http://localhost:8080", "api-key-env": "`+testKeyEnv+`", "model": "`+testSOMModel+`"}`))
 		expected := decision.Config{
 			Provider: decision.ProviderOpenRouter,
 			BaseURL:  "http://localhost:8080",

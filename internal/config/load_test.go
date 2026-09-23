@@ -188,22 +188,22 @@ func TestLoad(t *testing.T) {
 			},
 			{
 				name:     "guard provider",
-				content:  profileWith(`"guard": {"provider": "typesafe", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`),
+				content:  profileWith(`"som": {"provider": "typesafe", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`),
 				expected: ErrInvalidSOMProvider,
 			},
 			{
 				name:     "guard model",
-				content:  profileWith(`"guard": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": ""}`),
+				content:  profileWith(`"som": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": ""}`),
 				expected: ErrMissingModel,
 			},
 			{
 				name:     "guard unset api key variable",
-				content:  profileWith(`"guard": {"provider": "openrouter", "api-key-env": "JOE_TEST_UNSET", "model": "` + testSOMModel + `"}`),
+				content:  profileWith(`"som": {"provider": "openrouter", "api-key-env": "JOE_TEST_UNSET", "model": "` + testSOMModel + `"}`),
 				expected: ErrMissingAPIKey,
 			},
 			{
 				name:     "guard no api key variable",
-				content:  profileWith(`"guard": {"provider": "openrouter", "model": "` + testSOMModel + `"}`),
+				content:  profileWith(`"som": {"provider": "openrouter", "model": "` + testSOMModel + `"}`),
 				expected: ErrMissingAPIKey,
 			},
 		}
@@ -280,7 +280,7 @@ func TestLoad(t *testing.T) {
 	t.Run("carries the guard block", func(t *testing.T) {
 		// given
 		dir := configDir(t)
-		content := profileWith(`"guard": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`)
+		content := profileWith(`"som": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`)
 		writeProfile(t, dir, "local", content)
 
 		t.Setenv(testKeyEnv, "sk-test")

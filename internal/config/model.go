@@ -27,7 +27,7 @@ type Config struct {
 	Skills  []string       `json:"skills"`
 	MCPs    map[string]MCP `json:"mcps"`
 	MCPsOn  []string       `json:"mcps-on"`
-	SOM     *SOM           `json:"guard,omitempty"`
+	SOM     *SOM           `json:"som,omitempty"`
 }
 
 type LLM struct {
