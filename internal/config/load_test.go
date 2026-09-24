@@ -14,7 +14,7 @@ const (
 	testKeyEnv = "JOE_TEST_KEY"
 	testModel  = "z-ai/glm-5.3-flash"
 
-	testSOMModel = "typesafe/jev-1.13"
+	testClassifierModel = "typesafe/jev-1.13"
 )
 
 func validProfile() string {
@@ -187,23 +187,23 @@ func TestLoad(t *testing.T) {
 				expected: ErrInvalidKBPath,
 			},
 			{
-				name:     "guard provider",
-				content:  profileWith(`"som": {"provider": "typesafe", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`),
-				expected: ErrInvalidSOMProvider,
+				name:     "classifier provider",
+				content:  profileWith(`"classifier": {"provider": "typesafe", "api-key-env": "` + testKeyEnv + `", "model": "` + testClassifierModel + `"}`),
+				expected: ErrInvalidClassifierProvider,
 			},
 			{
-				name:     "guard model",
-				content:  profileWith(`"som": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": ""}`),
+				name:     "classifier model",
+				content:  profileWith(`"classifier": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": ""}`),
 				expected: ErrMissingModel,
 			},
 			{
-				name:     "guard unset api key variable",
-				content:  profileWith(`"som": {"provider": "openrouter", "api-key-env": "JOE_TEST_UNSET", "model": "` + testSOMModel + `"}`),
+				name:     "classifier unset api key variable",
+				content:  profileWith(`"classifier": {"provider": "openrouter", "api-key-env": "JOE_TEST_UNSET", "model": "` + testClassifierModel + `"}`),
 				expected: ErrMissingAPIKey,
 			},
 			{
-				name:     "guard no api key variable",
-				content:  profileWith(`"som": {"provider": "openrouter", "model": "` + testSOMModel + `"}`),
+				name:     "classifier no api key variable",
+				content:  profileWith(`"classifier": {"provider": "openrouter", "model": "` + testClassifierModel + `"}`),
 				expected: ErrMissingAPIKey,
 			},
 		}
@@ -277,10 +277,10 @@ func TestLoad(t *testing.T) {
 		assert.Empty(t, result.KBPath)
 	})
 
-	t.Run("carries the guard block", func(t *testing.T) {
+	t.Run("carries the classifier block", func(t *testing.T) {
 		// given
 		dir := configDir(t)
-		content := profileWith(`"som": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testSOMModel + `"}`)
+		content := profileWith(`"classifier": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testClassifierModel + `"}`)
 		writeProfile(t, dir, "local", content)
 
 		t.Setenv(testKeyEnv, "sk-test")
@@ -288,11 +288,11 @@ func TestLoad(t *testing.T) {
 		result, err := Load("local")
 		// then
 		require.NoError(t, err)
-		require.NotNil(t, result.SOM)
-		assert.Equal(t, testSOMModel, result.SOM.Model)
+		require.NotNil(t, result.Classifier)
+		assert.Equal(t, testClassifierModel, result.Classifier.Model)
 	})
 
-	t.Run("leaves guard off when the profile omits it", func(t *testing.T) {
+	t.Run("leaves the classifier off when the profile omits it", func(t *testing.T) {
 		// given
 		dir := configDir(t)
 		writeProfile(t, dir, "local", profileWith())
@@ -302,7 +302,7 @@ func TestLoad(t *testing.T) {
 		result, err := Load("local")
 		// then
 		require.NoError(t, err)
-		assert.Nil(t, result.SOM)
+		assert.Nil(t, result.Classifier)
 	})
 
 	t.Run("reports a missing default profile", func(t *testing.T) {

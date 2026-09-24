@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/sets"
 	"github.com/jjmrocha/joe/internal/harness"
@@ -23,8 +23,8 @@ var (
 		string(llm.EffortMax),
 	)
 
-	somProviders = sets.New(
-		string(decision.ProviderOpenRouter),
+	classifierProviders = sets.New(
+		string(classify.ProviderOpenRouter),
 	)
 )
 
@@ -45,8 +45,8 @@ func validate(cfg *Config) error {
 
 	problems = append(problems, validateLLM(cfg.LLM)...)
 
-	if cfg.SOM != nil {
-		problems = append(problems, validateSOM(cfg.SOM)...)
+	if cfg.Classifier != nil {
+		problems = append(problems, validateClassifier(cfg.Classifier)...)
 	}
 
 	for _, skillName := range cfg.Skills {
@@ -90,19 +90,19 @@ func validateLLM(l LLM) []error {
 	return problems
 }
 
-func validateSOM(s *SOM) []error {
+func validateClassifier(s *Classifier) []error {
 	var problems []error
 
-	if !somProviders.Contains(s.Provider) {
-		problems = append(problems, fmt.Errorf("guard: %w: %s", ErrInvalidSOMProvider, s.Provider))
+	if !classifierProviders.Contains(s.Provider) {
+		problems = append(problems, fmt.Errorf("classifier: %w: %s", ErrInvalidClassifierProvider, s.Provider))
 	}
 
 	if s.Model == "" {
-		problems = append(problems, fmt.Errorf("guard: %w", ErrMissingModel))
+		problems = append(problems, fmt.Errorf("classifier: %w", ErrMissingModel))
 	}
 
 	if s.APIKeyEnv == "" || os.Getenv(s.APIKeyEnv) == "" {
-		problems = append(problems, fmt.Errorf("guard: %w: %s", ErrMissingAPIKey, s.APIKeyEnv))
+		problems = append(problems, fmt.Errorf("classifier: %w: %s", ErrMissingAPIKey, s.APIKeyEnv))
 	}
 
 	return problems

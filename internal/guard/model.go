@@ -1,13 +1,13 @@
 package guard
 
 import (
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/tools"
 )
 
 type Config struct {
-	Decision *decision.Decision
-	ToolBox  *tools.ToolBox
-	RepoPath string
-	KBPath   string
+	Classifier *classify.Classifier
+	ToolBox    *tools.ToolBox
+	RepoPath   string
+	KBPath     string
 }

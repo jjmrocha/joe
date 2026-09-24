@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/harness"
@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	testModel       = "z-ai/glm-5.3-flash"
-	testKind        = "agents"
-	testProvider    = "ollama"
-	testOllamaModel = "qwen3"
-	testSOMModel    = "typesafe/jev-1.13"
-	testKeyEnv      = "OPEN_ROUTER_KEY"
+	testModel           = "z-ai/glm-5.3-flash"
+	testKind            = "agents"
+	testProvider        = "ollama"
+	testOllamaModel     = "qwen3"
+	testClassifierModel = "typesafe/jev-1.13"
+	testKeyEnv          = "OPEN_ROUTER_KEY"
 )
 
 func TestAskPath(t *testing.T) {
@@ -85,19 +85,19 @@ func TestAskProfile(t *testing.T) {
 	t.Run("collects every answer", func(t *testing.T) {
 		// given
 		dir := t.TempDir()
-		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\nyes\n" + testSOMModel + "\nOPEN_ROUTER_KEY\n"))
+		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\nyes\n" + testClassifierModel + "\nOPEN_ROUTER_KEY\n"))
 		// when
 		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
-			harness:      "claude",
-			provider:     "openrouter",
-			model:        testModel,
-			apiKeyEnv:    testKeyEnv,
-			kbPath:       dir,
-			somModel:     testSOMModel,
-			somAPIKeyEnv: testKeyEnv,
+			harness:             "claude",
+			provider:            "openrouter",
+			model:               testModel,
+			apiKeyEnv:           testKeyEnv,
+			kbPath:              dir,
+			classifierModel:     testClassifierModel,
+			classifierAPIKeyEnv: testKeyEnv,
 		}, result)
 	})
 
@@ -141,7 +141,7 @@ func TestAskProfile(t *testing.T) {
 		assert.Contains(t, out.String(), "anthropic, ollama, openrouter")
 		assert.Contains(t, out.String(), "agents, claude")
 		assert.Contains(t, out.String(), "yes, no")
-		assert.Contains(t, out.String(), "System One model")
+		assert.Contains(t, out.String(), "Classifier model")
 	})
 
 	t.Run("asks again after an answer it cannot use", func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestAskProfile(t *testing.T) {
 		assert.Contains(t, result, "Model: Harness")
 		assert.NotContains(t, result, "Model: \n\nHarness")
 		assert.Contains(t, result, "Harness [agents, claude]: \nKnowledge base")
-		assert.Contains(t, result, "Knowledge base [yes, no]: \nSystem One model")
+		assert.Contains(t, result, "Knowledge base [yes, no]: \nClassifier model")
 	})
 
 	t.Run("reports answers it cannot read", func(t *testing.T) {
@@ -229,13 +229,13 @@ func TestRenderProfile(t *testing.T) {
 		assert.NotContains(t, string(content), "api-key-env")
 		assert.NotContains(t, string(content), "base-url")
 		assert.NotContains(t, string(content), "kb-path")
-		assert.NotContains(t, string(content), `"guard"`)
+		assert.NotContains(t, string(content), `"classifier"`)
 	})
 
-	t.Run("writes the guard block the answers set", func(t *testing.T) {
+	t.Run("writes the classifier block the answers set", func(t *testing.T) {
 		// given
-		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, somModel: testSOMModel, somAPIKeyEnv: testKeyEnv}
-		expected := &config.SOM{Provider: string(decision.ProviderOpenRouter), APIKeyEnv: testKeyEnv, Model: testSOMModel}
+		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
+		expected := &config.Classifier{Provider: string(classify.ProviderOpenRouter), APIKeyEnv: testKeyEnv, Model: testClassifierModel}
 		// when
 		content, err := renderProfile(given)
 		// then
@@ -244,7 +244,7 @@ func TestRenderProfile(t *testing.T) {
 		var result config.Config
 
 		require.NoError(t, json.Unmarshal(content, &result))
-		assert.Equal(t, expected, result.SOM)
+		assert.Equal(t, expected, result.Classifier)
 	})
 
 	t.Run("writes the kb path the answers set", func(t *testing.T) {
@@ -269,7 +269,7 @@ func TestBuildConfig(t *testing.T) {
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\n"+testSOMModel+"\nOPEN_ROUTER_KEY\n")
+		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\n"+testClassifierModel+"\nOPEN_ROUTER_KEY\n")
 		// when
 		err := buildConfig(dir)
 		// then
@@ -281,7 +281,7 @@ func TestBuildConfig(t *testing.T) {
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
 		assert.Equal(t, harness.KindClaude, result.HarnessKind())
 		assert.Equal(t, 60*time.Second, result.MCPClients()[0].ToolCallTimeout)
-		assert.Equal(t, testSOMModel, result.SOMConfig().Model)
+		assert.Equal(t, testClassifierModel, result.ClassifierConfig().Model)
 	})
 
 	t.Run("refuses to overwrite a profile", func(t *testing.T) {

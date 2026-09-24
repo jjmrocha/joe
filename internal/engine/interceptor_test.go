@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/guard"
@@ -48,10 +48,10 @@ func echoBox(t *testing.T) *tools.ToolBox {
 }
 
 func TestBuildInterceptor(t *testing.T) {
-	t.Run("blocks a call the decision model rejects", func(t *testing.T) {
+	t.Run("blocks a call the classifier rejects", func(t *testing.T) {
 		// given
-		client, err := decision.New(decision.Config{
-			Provider: decision.ProviderOpenRouter,
+		client, err := classify.New(classify.Config{
+			Provider: classify.ProviderOpenRouter,
 			BaseURL:  rejectingJev(t),
 			APIKey:   "sk-test",
 			Model:    "typesafe/jev-1.13",

@@ -114,12 +114,12 @@ Harness [agents, claude]: claude
 Knowledge base [yes, no]: yes
 Knowledge base folder: /Users/you/Documents/LLM_WIKI
 
-System One model [yes, no]: yes
-System One model name: typesafe/jev-1.13
-Name of the System One API key variable: OPEN_ROUTER_KEY
+Classifier model [yes, no]: yes
+Classifier model name: typesafe/jev-1.13
+Name of the classifier API key variable: OPEN_ROUTER_KEY
 ```
 
-The API-key question is skipped on Ollama, and the folder and System One questions only
+The API-key question is skipped on Ollama, and the folder and classifier questions only
 follow a `yes`.
 
 - **`Harness`** decides which instruction files joe reads — see
@@ -129,8 +129,8 @@ follow a `yes`.
   [A knowledge base of your own](#a-knowledge-base-of-your-own). **joe does not create the
   folder**: it must already exist, and joe asks again until it does. A leading `~` is
   expanded before joe checks, and the profile stores the path in full.
-- **`System One model`** decides whether joe screens every tool call and gets the
-  `decision_*` tools — see [Configure](#configure). It runs on OpenRouter, so the key is an
+- **`Classifier model`** decides whether joe screens tool calls and gets the
+  `classify_*` tools — see [Configure](#configure). It runs on OpenRouter, so the key is an
   OpenRouter one.
 
 From your answers joe writes the profile, then clones the skills:
@@ -325,7 +325,7 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
     "github": { "command": "github-mcp-server", "args": ["stdio"], "env": ["GITHUB_TOKEN"] }
   },
   "mcps-on": ["github"],
-  "som": {
+  "classifier": {
     "provider": "openrouter",
     "api-key-env": "OPEN_ROUTER_KEY",
     "model": "typesafe/jev-1.13"
@@ -346,25 +346,30 @@ section gets no MCP servers. There is no merging between profiles and no hidden 
 | `skills` | Extra skills by name, loaded from `~/.config/joe/skills`. Cannot name one of joe's own twelve |
 | `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds — `0` or absent means no limit |
 | `mcps-on` | The servers started at launch; the rest start on first use |
-| `som` | The decision model that screens every tool call and backs the `decision_*` tools. Omit it and every call runs unchecked, with no `decision_*` tools |
-| `som.provider` | `openrouter` |
-| `som.base-url` | Overrides the provider's endpoint; omit it to use the standard one |
-| `som.api-key-env` | The **name** of the variable holding the key. Required |
-| `som.model` | The decision model, e.g. `typesafe/jev-1.13` |
+| `classifier` | The classification model that screens tool calls and backs the `classify_*` tools. Omit it and every call runs unchecked, with no `classify_*` tools |
+| `classifier.provider` | `openrouter` |
+| `classifier.base-url` | Overrides the provider's endpoint; omit it to use the standard one |
+| `classifier.api-key-env` | The **name** of the variable holding the key. Required |
+| `classifier.model` | The classification model, e.g. `typesafe/jev-1.13` |
 
 A profile that names an unknown provider, effort, harness or `mcps-on` server, a skill that
 is not a bare name or is one of joe's own twelve, a `kb-path` that is not absolute, or leaves the model empty, or names an
 API-key variable that is not set, stops joe before the session opens — and the message lists
 every fault in the file, not just the first.
 
-With `som` set, joe asks the decision model about every tool call before it runs: the tool,
+With `classifier` set, joe asks the classification model about a tool call before it runs: the tool,
 its arguments, and the rules of the session — files change only inside the repository and
 the knowledge base, nothing remote or shared changes, no secret leaves the machine. A call
-judged to break them is refused, and the model is told `rejected by joe`. If the decision
+judged to break them is refused, and the model is told `rejected by joe`. If the classification
 model errors or takes longer than five seconds, the call runs: the check fails open.
 
-The same model is offered to joe as three tools — `decision_yes_no`, `decision_choice` and
-`decision_score` — so it can hand a judgement call to a calibrated model instead of guessing.
+The first call to each tool also asks whether *any* call to that tool could break the rules. A
+tool judged unable to — `current_date`, say — is not checked again until joe exits; every other
+tool keeps having each call checked. That verdict is read from the tool's own description, so an
+MCP server can talk the model into trusting a tool it should not: only add servers you trust.
+
+The same model is offered to joe as three tools — `classify_yes_no`, `classify_choice` and
+`classify_score` — so it can hand a judgement call to a calibrated model instead of guessing.
 
 Serena is not configurable here: it always starts with joe.
 
@@ -380,7 +385,8 @@ joe validates what it can before the session opens, and the message names the fa
 | `clone skills: …` | The first-run clone of coding-skills failed; git's own message is printed above it | Check the network and `git`, then run joe again — only the clone is retried |
 | `skill is one of joe's own` | The profile's `skills` names one of the twelve | Remove it from `skills`; edit that skill in `coding-skills/` instead |
 | `api key variable is not set` | `api-key-env` names a variable with no value | `export` it, or point `api-key-env` at the one you use |
-| `som provider is not openrouter` | The profile's `som.provider` is anything else | Use `openrouter` |
+| `classifier provider is not openrouter` | The profile's `classifier.provider` is anything else | Use `openrouter` |
+| `json: unknown field "som"` | The profile predates the rename of `som` to `classifier` | Rename the key to `classifier`; its contents stay the same |
 | `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
 | `no answer to read` | Setup ran with nothing on stdin — a pipe, a redirect, or Ctrl-D at a question | Run joe from a terminal and answer the questions; nothing is left broken, the next run simply asks again |
 | `kb_path is not absolute` | The profile's `kb-path` is relative or starts with `~` | Spell the path out in full |

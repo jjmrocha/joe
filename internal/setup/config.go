@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/harness"
@@ -23,13 +23,13 @@ var (
 )
 
 type answers struct {
-	harness      string
-	provider     string
-	model        string
-	apiKeyEnv    string
-	kbPath       string
-	somModel     string
-	somAPIKeyEnv string
+	harness             string
+	provider            string
+	model               string
+	apiKeyEnv           string
+	kbPath              string
+	classifierModel     string
+	classifierAPIKeyEnv string
 }
 
 func buildConfig(dir string) error {
@@ -96,13 +96,13 @@ func askProfile(in *bufio.Reader, out io.Writer, dir string) (answers, error) {
 
 	_, _ = fmt.Fprintln(out)
 
-	somModel, somAPIKeyEnv, err := askSOM(in, out)
+	classifierModel, classifierAPIKeyEnv, err := askClassifier(in, out)
 	if err != nil {
 		return given, err
 	}
 
-	given.somModel = somModel
-	given.somAPIKeyEnv = somAPIKeyEnv
+	given.classifierModel = classifierModel
+	given.classifierAPIKeyEnv = classifierAPIKeyEnv
 
 	return given, nil
 }
@@ -120,18 +120,18 @@ func askKBPath(in *bufio.Reader, out io.Writer) (string, error) {
 	return askPath(in, out, "Knowledge base folder")
 }
 
-func askSOM(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, err error) {
-	wanted, err := choose(in, out, "System One model", []string{"yes", "no"})
+func askClassifier(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, err error) {
+	wanted, err := choose(in, out, "Classifier model", []string{"yes", "no"})
 	if err != nil || wanted == "no" {
 		return "", "", err
 	}
 
-	model, err = match(in, out, "System One model name", modelPattern)
+	model, err = match(in, out, "Classifier model name", modelPattern)
 	if err != nil {
 		return "", "", err
 	}
 
-	apiKeyEnv, err = match(in, out, "Name of the System One API key variable", keyEnvPattern)
+	apiKeyEnv, err = match(in, out, "Name of the classifier API key variable", keyEnvPattern)
 	if err != nil {
 		return "", "", err
 	}
@@ -166,11 +166,11 @@ func renderProfile(given answers) ([]byte, error) {
 		MCPsOn: []string{},
 	}
 
-	if given.somModel != "" {
-		cfg.SOM = &config.SOM{
-			Provider:  string(decision.ProviderOpenRouter),
-			APIKeyEnv: given.somAPIKeyEnv,
-			Model:     given.somModel,
+	if given.classifierModel != "" {
+		cfg.Classifier = &config.Classifier{
+			Provider:  string(classify.ProviderOpenRouter),
+			APIKeyEnv: given.classifierAPIKeyEnv,
+			Model:     given.classifierModel,
 		}
 	}
 

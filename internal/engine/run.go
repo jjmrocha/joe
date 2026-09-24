@@ -6,7 +6,7 @@ import (
 	"github.com/jjmrocha/ai-chat/chat"
 	"github.com/jjmrocha/ai-chat/ui"
 	"github.com/jjmrocha/ai-toolkit/agent"
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
@@ -22,10 +22,10 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
-	var somClient *decision.Decision
+	var classifier *classify.Classifier
 
-	if cfg.SOM != nil {
-		somClient, err = decision.New(cfg.SOMConfig())
+	if cfg.Classifier != nil {
+		classifier, err = classify.New(cfg.ClassifierConfig())
 		if err != nil {
 			return err
 		}
@@ -46,8 +46,8 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	// Initialize the  toolbox
 	toolBox := tools.NewToolBox()
 
-	if somClient != nil {
-		interceptor, interceptorErr := buildInterceptor(ctx, toolBox, somClient, cfg.KBPath)
+	if classifier != nil {
+		interceptor, interceptorErr := buildInterceptor(ctx, toolBox, classifier, cfg.KBPath)
 		if interceptorErr != nil {
 			return interceptorErr
 		}
@@ -98,13 +98,13 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		defer func() { _ = kbPack.Close() }()
 	}
 
-	if somClient != nil {
-		decisionPack, packErr := packs.DecisionTools(toolBox, somClient)
+	if classifier != nil {
+		classifyPack, packErr := packs.ClassifyTools(toolBox, classifier)
 		if packErr != nil {
 			return packErr
 		}
 
-		defer func() { _ = decisionPack.Close() }()
+		defer func() { _ = classifyPack.Close() }()
 	}
 
 	// Initialize the agent

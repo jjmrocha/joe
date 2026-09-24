@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/decision"
+	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/go-algo/fn"
@@ -21,13 +21,13 @@ var Providers = sets.New(
 )
 
 type Config struct {
-	Harness string         `json:"harness"`
-	KBPath  string         `json:"kb-path,omitempty"`
-	LLM     LLM            `json:"llm"`
-	Skills  []string       `json:"skills"`
-	MCPs    map[string]MCP `json:"mcps"`
-	MCPsOn  []string       `json:"mcps-on"`
-	SOM     *SOM           `json:"som,omitempty"`
+	Harness    string         `json:"harness"`
+	KBPath     string         `json:"kb-path,omitempty"`
+	LLM        LLM            `json:"llm"`
+	Skills     []string       `json:"skills"`
+	MCPs       map[string]MCP `json:"mcps"`
+	MCPsOn     []string       `json:"mcps-on"`
+	Classifier *Classifier    `json:"classifier,omitempty"`
 }
 
 type LLM struct {
@@ -39,7 +39,7 @@ type LLM struct {
 	Effort    string   `json:"effort"`
 }
 
-type SOM struct {
+type Classifier struct {
 	Provider  string `json:"provider"`
 	BaseURL   string `json:"base-url,omitempty"`
 	APIKeyEnv string `json:"api-key-env"`
@@ -70,16 +70,16 @@ func (c *Config) LLMConfig() llm.Config {
 	}
 }
 
-func (c *Config) SOMConfig() decision.Config {
-	if c.SOM == nil {
-		return decision.Config{}
+func (c *Config) ClassifierConfig() classify.Config {
+	if c.Classifier == nil {
+		return classify.Config{}
 	}
 
-	return decision.Config{
-		Provider: decision.Provider(c.SOM.Provider),
-		BaseURL:  c.SOM.BaseURL,
-		APIKey:   os.Getenv(c.SOM.APIKeyEnv),
-		Model:    c.SOM.Model,
+	return classify.Config{
+		Provider: classify.Provider(c.Classifier.Provider),
+		BaseURL:  c.Classifier.BaseURL,
+		APIKey:   os.Getenv(c.Classifier.APIKeyEnv),
+		Model:    c.Classifier.Model,
 	}
 }
 
