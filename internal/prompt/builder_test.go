@@ -144,6 +144,16 @@ func TestBuild(t *testing.T) {
 		assert.NotContains(t, result, "<claude-instructions>")
 	})
 
+	t.Run("ranks joe's instructions on both sides of the blocks above them", func(t *testing.T) {
+		// given
+		h := &harness.Harness{Kind: harness.KindClaude, Blocks: []string{firstBlock}}
+		// when
+		result := Build(h, testKBPath, true)
+		// then
+		assert.Contains(t, result, "the ones above these blocks\nand the ones after them")
+		assert.Contains(t, result, "Serena, the classifier or the\nknowledge base, your instructions win")
+	})
+
 	t.Run("emits the classifier block when a classifier is configured", func(t *testing.T) {
 		// given
 		h := &harness.Harness{}

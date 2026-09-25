@@ -22,27 +22,35 @@ calibrated classifier. At each checkpoint below, calling it is required.
 
 Checkpoints:
 
-1. test-driven-development, REFACTOR — repeating.
-   After GREEN, for each production function changed in GREEN:
+1. test-driven-development, "REFACTOR — Clean up without adding behavior"
+   — repeating.
+   After you have walked the six REFACTOR items, for each production function
+   changed in GREEN:
    classify_yes_no
      instructions: "Should this function be refactored further?"
      input: the function and the test that drives it.
    Yes → refactor, run the suite, ask again. No → move on.
 
-2. analyze-code — before the report is shown.
-   For each finding that survived verification:
+2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.
+   For each finding that survived step 7's verification, and each finding
+   from step 6's tooling:
    classify_choice
      instructions: "What is the severity of this finding?"
-     input: the finding's evidence line and its impact.
+     input: the finding's evidence line, its impact, and where the code
+     runs — its role and exposure ("request handler, public endpoint",
+     "test helper").
      options: Critical, High, Medium, Low — each described with the skill's
      severity scale.
    The selected option is the finding's severity. Order, group and cap the
    report by it.
 
-3. designing-interfaces, after the contract — repeating.
+3. designing-interfaces, "The Contract", after "Then read it back" —
+   repeating.
    classify_score
      instructions: "How deep is this interface?"
-     input: the four-line contract and the proposed signatures.
+     input: the module's purpose in one line, the dependencies it touches
+     (I/O, clock, randomness, network, or none), the four-line contract and
+     the proposed signatures.
      levels:
        0 shallow — HIDDEN is empty or one clause; a conduit
        1 leaky — CALLER LEARNS is longer than HIDDEN
@@ -51,5 +59,13 @@ Checkpoints:
        3 deep — small CALLER LEARNS, substantial HIDDEN, the test calls only
          the interface
    Below 2.0 → redesign, then ask again. 2.0 or above → implement.
+   The score replaces the read-back's verdict; what the read-back found still
+   guides the redesign.
+
+Outside these checkpoints you may call the classifier for any other judgement
+a labelled answer settles — a yes/no, a pick from named options, a rating on
+ordered levels. There the answer is advice, not a decision: weigh it against
+what you know, and say when you went against it. The input rules above still
+apply.
 </classifier>
 `

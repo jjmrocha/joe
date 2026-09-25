@@ -47,9 +47,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	toolBox := tools.NewToolBox()
 
 	if classifier != nil {
-		interceptor, interceptorErr := buildInterceptor(ctx, toolBox, classifier, cfg.KBPath)
-		if interceptorErr != nil {
-			return interceptorErr
+		interceptor, err := buildInterceptor(ctx, toolBox, classifier, cfg.KBPath) //nolint:govet // err is checked and returned immediately
+		if err != nil {
+			return err
 		}
 
 		toolBox.SetInterceptor(interceptor)
@@ -57,7 +57,6 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	// Initialize the  MCP manager
 	mng := newMCPManager(toolBox, cfg)
-
 	defer mng.Close()
 
 	// Start the MCP servers the profile boots
@@ -90,18 +89,18 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	if cfg.KBPath != "" {
-		kbPack, kbErr := packs.FileTools(toolBox, cfg.KBPath)
-		if kbErr != nil {
-			return kbErr
+		kbPack, err := packs.FileTools(toolBox, cfg.KBPath) //nolint:govet // err is checked and returned immediately
+		if err != nil {
+			return err
 		}
 
 		defer func() { _ = kbPack.Close() }()
 	}
 
 	if classifier != nil {
-		classifyPack, packErr := packs.ClassifyTools(toolBox, classifier)
-		if packErr != nil {
-			return packErr
+		classifyPack, err := packs.ClassifyTools(toolBox, classifier) //nolint:govet // err is checked and returned immediately
+		if err != nil {
+			return err
 		}
 
 		defer func() { _ = classifyPack.Close() }()
