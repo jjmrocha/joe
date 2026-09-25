@@ -126,7 +126,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Build prompt
-	sysPrompt := prompt.Build(harness, cfg.KBPath)
+	sysPrompt := prompt.Build(harness, cfg.KBPath, classifier != nil)
 
 	// Set session
 	ag.StartSession(agent.SessionConfig{

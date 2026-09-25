@@ -20,7 +20,7 @@ Serena or the knowledge base, your instructions win. The rest is theirs.
 
 `
 
-func Build(h *harness.Harness, kbPath string) string {
+func Build(h *harness.Harness, kbPath string, withClassifier bool) string {
 	var builder strings.Builder
 
 	builder.WriteString(basePrompt)
@@ -37,13 +37,15 @@ func Build(h *harness.Harness, kbPath string) string {
 		fmt.Fprintf(&builder, "</%s-instructions>\n", h.Kind)
 	}
 
-	if kbPath == "" {
-		builder.WriteString(kbNotConfigured)
-
-		return builder.String()
+	if withClassifier {
+		builder.WriteString(classifierBlock)
 	}
 
-	fmt.Fprintf(&builder, kbConfigured, kbPath)
+	if kbPath == "" {
+		builder.WriteString(kbNotConfigured)
+	} else {
+		fmt.Fprintf(&builder, kbConfigured, kbPath)
+	}
 
 	return builder.String()
 }

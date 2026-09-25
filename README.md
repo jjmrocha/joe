@@ -370,6 +370,9 @@ MCP server can talk the model into trusting a tool it should not: only add serve
 
 The same model is offered to joe as three tools — `classify_yes_no`, `classify_choice` and
 `classify_score` — so it can hand a judgement call to a calibrated model instead of guessing.
+joe's instructions make three of those calls required, and each is billed: whether a function
+needs more refactoring after a test goes green, the severity of each finding in a code review,
+and how deep a new interface is before it is built.
 
 Serena is not configurable here: it always starts with joe.
 
