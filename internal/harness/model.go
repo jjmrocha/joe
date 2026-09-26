@@ -6,7 +6,12 @@ type Paths struct {
 	Repo      string
 }
 
+type Block struct {
+	Path    string
+	Content string
+}
+
 type Harness struct {
 	Kind   Kind
-	Blocks []string
+	Blocks []Block
 }

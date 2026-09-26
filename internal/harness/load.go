@@ -2,12 +2,13 @@ package harness
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"regexp"
 	"strings"
 )
+
+var tags = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
 
 func Load(kind Kind, paths Paths) (*Harness, error) {
 	h := Harness{Kind: kind}
@@ -22,30 +23,26 @@ func Load(kind Kind, paths Paths) (*Harness, error) {
 			return nil, err
 		}
 
-		h.Blocks = append(h.Blocks, renderBlock(kind, path, string(content)))
+		b := Block{
+			Path:    path,
+			Content: parseContent(content),
+		}
+		h.Blocks = append(h.Blocks, b)
 	}
 
 	return &h, nil
 }
 
-var closingTags = buildClosingTags()
-
-func buildClosingTags() map[Kind]*regexp.Regexp {
-	tags := make(map[Kind]*regexp.Regexp, Kinds.Len())
-
-	for name := range Kinds.Values() {
-		tags[Kind(name)] = regexp.MustCompile(`(?i)</[ \t]*` + regexp.QuoteMeta(name))
-	}
-
-	return tags
+func parseContent(content []byte) string {
+	str := string(content)
+	body := strings.TrimRight(str, "\n")
+	return removeTags(body)
 }
 
-func renderBlock(kind Kind, path string, content string) string {
-	body := strings.TrimRight(content, "\n")
-
-	if tag, ok := closingTags[kind]; ok {
-		body = tag.ReplaceAllLiteralString(body, "&lt;/"+string(kind))
+func removeTags(content string) string {
+	for tags.MatchString(content) {
+		content = tags.ReplaceAllLiteralString(content, "")
 	}
 
-	return fmt.Sprintf("<%s file=%q>\n%s\n</%s>", kind, path, body, kind)
+	return content
 }

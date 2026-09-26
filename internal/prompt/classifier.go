@@ -13,8 +13,10 @@ calibrated classifier. At each checkpoint below, calling it is required.
   It sees nothing else — no files, no conversation. Never include secrets,
   keys or tokens; redact them.
 - Override only when you can name a specific fact that contradicts the answer.
-  "I would have decided differently" is not one. Report every override as:
+  "I would have decided differently" is not one. No fact, no override — if you
+  cannot name one, follow the answer. Report every override as:
   Classifier override — <checkpoint>: answered <answer>; I did <action> because <fact>.
+  That line, verbatim — free prose in its place is a broken report.
 - If a call fails, do not retry it. Decide yourself and report:
   Classifier unavailable — <checkpoint>: <error>.
 - A checkpoint marked as repeating is asked at most 3 times; report when the
@@ -28,7 +30,8 @@ Checkpoints:
    changed in GREEN:
    classify_yes_no
      instructions: "Should this function be refactored further?"
-     input: the function and the test that drives it.
+     input: the function and the test that drives it. One call per production
+   function — a single call naming several functions does not satisfy this.
    Yes → refactor, run the suite, ask again. No → move on.
 
 2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.
@@ -44,8 +47,9 @@ Checkpoints:
    The selected option is the finding's severity. Order, group and cap the
    report by it.
 
-3. designing-interfaces, "The Contract", after "Then read it back" —
-   repeating.
+3. designing-interfaces, when the four-line contract is written and you
+   are about to hand off to test-driven-development — before the first
+   test is written — repeating.
    classify_score
      instructions: "How deep is this interface?"
      input: the module's purpose in one line, the dependencies it touches
@@ -58,7 +62,8 @@ Checkpoints:
          CALLER LEARNS or a needed seam is missing
        3 deep — small CALLER LEARNS, substantial HIDDEN, the test calls only
          the interface
-   Below 2.0 → redesign, then ask again. 2.0 or above → implement.
+   Below 2.0 → redesign, then ask again. 2.0 or above → implement —
+   hand off to test-driven-development.
    The score replaces the read-back's verdict; what the read-back found still
    guides the redesign.
 
@@ -69,3 +74,7 @@ what you know, and say when you went against it. The input rules above still
 apply.
 </classifier>
 `
+
+func buildClassifier() string {
+	return classifierBlock
+}

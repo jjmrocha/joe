@@ -12,7 +12,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/prompt"
-	joetools "github.com/jjmrocha/joe/internal/tools"
+	"github.com/jjmrocha/joe/internal/repo"
 )
 
 func Run(ctx context.Context, cfg *config.Config) error {
@@ -62,6 +62,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	// Start the MCP servers the profile boots
 	startMCPs(ctx, mng, cfg)
 
+	// Repo name
+	repoPath, err := repo.Path(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Register tools
 	codePack, err := packs.CodingTools(ctx, toolBox)
 	if err != nil {
@@ -83,10 +89,6 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	defer func() { _ = shell.Close() }()
-
-	if err = joetools.Register(toolBox); err != nil {
-		return err
-	}
 
 	if cfg.KBPath != "" {
 		kbPack, err := packs.FileTools(toolBox, cfg.KBPath) //nolint:govet // err is checked and returned immediately
@@ -125,7 +127,13 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Build prompt
-	sysPrompt := prompt.Build(harness, cfg.KBPath, classifier != nil)
+	promptRequest := prompt.BuilderRequest{
+		Repo:           repoPath,
+		Harness:        harness,
+		KnowledgeBase:  cfg.KBPath,
+		WithClassifier: classifier != nil,
+	}
+	sysPrompt := prompt.Build(&promptRequest)
 
 	// Set session
 	ag.StartSession(agent.SessionConfig{
