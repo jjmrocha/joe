@@ -1,9 +1,6 @@
 package prompt
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 const (
 	skillsStartTag = "<skills>"
@@ -28,7 +25,7 @@ the first row that matches, top to bottom.
 | Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list | addressing-findings |
 | A review of existing code — a diff, branch, PR, module; quality, security, tech debt | analyze-code    |
 | To be guided through testing a change by hand on a local or staging environment | guiding-manual-testing |
-%s| An answer about this code base or what is documented about it, plans included | research             |
+| An answer about this code base or what is documented about it, plans included | research             |
 | A concept or term explained, with nothing to decide and nothing to change here | no skill |
 | An answer from outside this code base — best practice, library choice, "is X true?" | using-software-specialists |
 | Tests added to existing code, with no production change — "write tests for X", "cover this edge case" | writing-unit-tests |
@@ -76,7 +73,7 @@ directly when its description fits the request better than any row above.
 "Write tests for config.Load"                         → writing-unit-tests
 "Fix the nil panic in Load and add a test for it"     → using-software-specialists
 "Help me check the new setup flow on my machine"      → guiding-manual-testing
-%s"Rename cfg to conf in load.go"                       → no skill
+"Rename cfg to conf in load.go"                       → no skill
 
 ## During the work
 - The entry skill runs the work and names the other skills to load, and when.
@@ -101,7 +98,7 @@ func buildSkills(r *BuilderRequest) string {
 	builder.WriteString("\n")
 	builder.WriteString(skillsStartTag)
 	builder.WriteString("\n")
-	builder.WriteString(buildSkillsBody(r.KnowledgeBase))
+	builder.WriteString(skillsBody)
 	builder.WriteString(buildKnowledgeBase(r.KnowledgeBase))
 
 	if r.WithClassifier {
@@ -112,12 +109,4 @@ func buildSkills(r *BuilderRequest) string {
 	builder.WriteString("\n")
 
 	return builder.String()
-}
-
-func buildSkillsBody(kbPath string) string {
-	if kbPath == "" {
-		return fmt.Sprintf(skillsBody, "", "")
-	}
-
-	return fmt.Sprintf(skillsBody, kbSkillRow, kbSkillExample)
 }

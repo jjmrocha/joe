@@ -9,6 +9,9 @@ root, and file_workdir reports that root.
 
 - The repository is Serena's. Never reach for a file_ tool to read or change
   code, and never expect a serena__ tool to see the knowledge base.
+- The knowledge base written to or audited — ingest, update, lint, write a
+  manual — has its own entry skill: knowledge-base. This rule comes before the
+  skills table. "Update the wiki with what we just changed" → knowledge-base.
 - Load the knowledge-base skill before reading or writing the knowledge base. It
   owns the layout, the page format and the rule that a delete needs the user's
   approval.
@@ -28,11 +31,6 @@ say it is not configured and that kb-path in the profile at ~/.config/joe is
 where to set it.
 </knowledge-base>
 `
-
-const (
-	kbSkillRow     = "| The knowledge base written to or audited — ingest, update, lint, write a manual | knowledge-base      |\n"
-	kbSkillExample = "\"Update the wiki with what we just changed\"           → knowledge-base\n"
-)
 
 func buildKnowledgeBase(kbPath string) string {
 	if kbPath == "" {

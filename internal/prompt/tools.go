@@ -23,11 +23,6 @@ const (
 	toolsClassifierLine = `- classify_yes_no, classify_choice, classify_score: the calibrated classifier.
   When to call it is set out in the classifier rules below.
 `
-	toolsMCPLine = `- Tools from the MCP servers in the profile — web search and fetching, library
-  documentation and the like: use them when a request needs information from
-  outside the repository. Never guess a URL; use one from the user, a file or
-  a search result.
-`
 )
 
 func buildTools(r *BuilderRequest) string {
@@ -46,7 +41,6 @@ func buildTools(r *BuilderRequest) string {
 		builder.WriteString(toolsClassifierLine)
 	}
 
-	builder.WriteString(toolsMCPLine)
 	builder.WriteString(toolsEndTag)
 	builder.WriteString("\n")
 
