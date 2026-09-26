@@ -51,10 +51,9 @@ func TestLoad(t *testing.T) {
 		assert.Contains(t, result.Blocks[0].Content, "be terse")
 		assert.Contains(t, result.Blocks[1].Content, "use testify")
 		assert.Contains(t, result.Blocks[2].Content, "skip the linter")
-		assert.Equal(t, KindClaude, result.Kind)
 	})
 
-	t.Run("reads the agents files and tags them as agents", func(t *testing.T) {
+	t.Run("reads the agents files least specific first", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
 		writeFile(t, paths.ConfigDir, "AGENTS.md", "be terse")
@@ -66,7 +65,6 @@ func TestLoad(t *testing.T) {
 		require.Len(t, result.Blocks, 2)
 		assert.Contains(t, result.Blocks[0].Content, "be terse")
 		assert.Contains(t, result.Blocks[1].Content, "use testify")
-		assert.Equal(t, KindAgents, result.Kind)
 	})
 
 	t.Run("ignores the files the other kind reads", func(t *testing.T) {

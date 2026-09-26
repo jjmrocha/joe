@@ -37,8 +37,14 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
+	// Repo name
+	repoPath, err := repo.Path(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Load the  harness
-	harness, err := loadHarness(ctx, cfg)
+	harness, err := loadHarness(cfg, repoPath)
 	if err != nil {
 		return err
 	}
@@ -47,7 +53,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	toolBox := tools.NewToolBox()
 
 	if classifier != nil {
-		interceptor, err := buildInterceptor(ctx, toolBox, classifier, cfg.KBPath) //nolint:govet // err is checked and returned immediately
+		var interceptor tools.Interceptor
+
+		interceptor, err = buildInterceptor(toolBox, classifier, repoPath, cfg.KBPath)
 		if err != nil {
 			return err
 		}
@@ -61,12 +69,6 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	// Start the MCP servers the profile boots
 	startMCPs(ctx, mng, cfg)
-
-	// Repo name
-	repoPath, err := repo.Path(ctx)
-	if err != nil {
-		return err
-	}
 
 	// Register tools
 	codePack, err := packs.CodingTools(ctx, toolBox)
@@ -91,7 +93,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	defer func() { _ = shell.Close() }()
 
 	if cfg.KBPath != "" {
-		kbPack, err := packs.FileTools(toolBox, cfg.KBPath) //nolint:govet // err is checked and returned immediately
+		var kbPack packs.ToolPack
+
+		kbPack, err = packs.FileTools(toolBox, cfg.KBPath)
 		if err != nil {
 			return err
 		}
@@ -100,7 +104,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	if classifier != nil {
-		classifyPack, err := packs.ClassifyTools(toolBox, classifier) //nolint:govet // err is checked and returned immediately
+		var classifyPack packs.ToolPack
+
+		classifyPack, err = packs.ClassifyTools(toolBox, classifier)
 		if err != nil {
 			return err
 		}

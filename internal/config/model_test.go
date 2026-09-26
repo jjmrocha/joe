@@ -8,7 +8,6 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
-	"github.com/jjmrocha/joe/internal/harness"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -141,29 +140,5 @@ func TestMCPs(t *testing.T) {
 		result := config.MCPClients()
 		// then
 		assert.Empty(t, result)
-	})
-}
-
-func TestHarnessKind(t *testing.T) {
-	t.Run("carries the kind the profile names", func(t *testing.T) {
-		testCases := []struct {
-			name     string
-			harness  string
-			expected harness.Kind
-		}{
-			{name: "claude", harness: "claude", expected: harness.KindClaude},
-			{name: "agents", harness: "agents", expected: harness.KindAgents},
-		}
-
-		for _, testCase := range testCases {
-			t.Run(testCase.name, func(t *testing.T) {
-				// given
-				config := mustLoad(t, profileWith(`"harness": "`+testCase.harness+`"`))
-				// when
-				result := config.HarnessKind()
-				// then
-				assert.Equal(t, testCase.expected, result)
-			})
-		}
 	})
 }

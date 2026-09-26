@@ -3,8 +3,8 @@ package prompt
 import "strings"
 
 const (
-	skillsStartTAG = "<skills>"
-	skillsEndTAG   = "</skills>"
+	skillsStartTag = "<skills>"
+	skillsEndTag   = "</skills>"
 
 	skillsBody = `Skills are how you work, not reference material. Every request that will read,
 change, judge or document code starts with one entry skill, loaded with
@@ -97,17 +97,18 @@ directly when its description fits the request better than any row above.
 func buildSkills(r *BuilderRequest) string {
 	var builder strings.Builder
 
-	builder.WriteString(skillsStartTAG)
+	builder.WriteString("\n")
+	builder.WriteString(skillsStartTag)
 	builder.WriteString("\n")
 	builder.WriteString(skillsBody)
 	builder.WriteString(buildKnowledgeBase(r.KnowledgeBase))
 
 	if r.WithClassifier {
 		builder.WriteString(buildClassifier())
-		builder.WriteString(buildGuard())
+		builder.WriteString(buildGuard(r))
 	}
 
-	builder.WriteString(skillsEndTAG)
+	builder.WriteString(skillsEndTag)
 	builder.WriteString("\n")
 
 	return builder.String()

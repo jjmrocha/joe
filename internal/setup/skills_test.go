@@ -1,6 +1,8 @@
 package setup
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,11 +41,14 @@ func TestCloneSkills(t *testing.T) {
 		// given
 		dir := t.TempDir()
 		skillsFixture(t)
+
+		var out bytes.Buffer
 		// when
-		err := cloneSkills(dir)
+		err := cloneSkills(dir, &out)
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
+		assert.Contains(t, out.String(), "Cloning skills from "+skillsRepo)
 	})
 
 	t.Run("clones into a folder whose name starts with a dash", func(t *testing.T) {
@@ -52,7 +57,7 @@ func TestCloneSkills(t *testing.T) {
 		require.NoError(t, os.Mkdir("-config", 0o750))
 		skillsFixture(t)
 		// when
-		err := cloneSkills("-config")
+		err := cloneSkills("-config", io.Discard)
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join("-config", "coding-skills", "analyze-code", "SKILL.md"))
@@ -63,7 +68,7 @@ func TestCloneSkills(t *testing.T) {
 		dir := t.TempDir()
 		unreachableSkills(t)
 		// when
-		err := cloneSkills(dir)
+		err := cloneSkills(dir, io.Discard)
 		// then
 		require.Error(t, err)
 

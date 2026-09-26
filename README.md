@@ -193,9 +193,9 @@ libraries and frameworks. It runs through `npx`, so installing
 
 ## Using joe
 
-Run joe from the repository you want it to work on. It calls `repo_info` at the start of the
-session to find the git root and activates Serena on that path. Outside a repository — and
-when `git` is not installed at all — joe uses the current directory.
+Run joe from the repository you want it to work on. At startup joe finds the git root and
+names it in its instructions as the repository; Serena is activated on that path. Outside a
+repository — and when `git` is not installed at all — joe uses the current directory.
 
 | Command | What it does |
 |---|---|
@@ -392,7 +392,7 @@ joe validates what it can before the session opens, and the message names the fa
 | `json: unknown field "som"` | The profile predates the rename of `som` to `classifier` | Rename the key to `classifier`; its contents stay the same |
 | `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
 | `no answer to read` | Setup ran with nothing on stdin — a pipe, a redirect, or Ctrl-D at a question | Run joe from a terminal and answer the questions; nothing is left broken, the next run simply asks again |
-| `kb_path is not absolute` | The profile's `kb-path` is relative or starts with `~` | Spell the path out in full |
+| `kb-path is not absolute` | The profile's `kb-path` is relative or starts with `~` | Spell the path out in full |
 | `opening root: …` | The profile's `kb-path` names a folder that is missing or unreadable | Create it, or drop the key |
 | `harness is not claude or agents` | Unknown `harness` value | Use `claude` or `agents` |
 | `git rev-parse: …` | `git` is present but refusing — dubious ownership, unreadable `.git` | Fix the repository, or run joe somewhere else |

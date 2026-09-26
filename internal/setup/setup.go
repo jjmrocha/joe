@@ -11,7 +11,7 @@ import (
 
 const defaultProfile = "default.json"
 
-func BuildIfNeed() error {
+func BuildIfNeeded() error {
 	dir, err := config.Dir()
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func BuildIfNeed() error {
 			return err
 		}
 
-		return cloneSkills(dir)
+		return cloneSkills(dir, os.Stdout)
 	}
 
 	return nil

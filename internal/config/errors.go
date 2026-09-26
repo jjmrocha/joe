@@ -9,7 +9,7 @@ var (
 	ErrInvalidClassifierProvider = errors.New("classifier provider is not openrouter")
 	ErrInvalidEffort             = errors.New("effort is not off, low, medium or max")
 	ErrInvalidSkillName          = errors.New("skill name is not a bare name")
-	ErrInvalidKBPath             = errors.New("kb_path is not absolute")
+	ErrInvalidKBPath             = errors.New("kb-path is not absolute")
 	ErrMissingModel              = errors.New("model is not set")
 	ErrMissingAPIKey             = errors.New("api key variable is not set")
 	ErrUnknownMCP                = errors.New("mcps-on names a server that is not registered")

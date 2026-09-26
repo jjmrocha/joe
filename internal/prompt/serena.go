@@ -1,6 +1,7 @@
 package prompt
 
-const serenaBlock = `<serena>
+const serenaBlock = `
+<serena>
 - Call serena__initial_instructions at the start of a session and follow it —
   the tool descriptions alone do not convey the workflow.
 - Call serena__activate_project before any symbolic work, passing the

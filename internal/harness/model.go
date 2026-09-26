@@ -12,6 +12,5 @@ type Block struct {
 }
 
 type Harness struct {
-	Kind   Kind
 	Blocks []Block
 }

@@ -42,7 +42,7 @@ func NewInterceptor(cfg Config) (tools.Interceptor, error) {
 			return nil
 		}
 
-		callState, err := stateBuilder(stateBuildRequest{
+		callState, err := buildState(stateBuildRequest{
 			Tool:     tool,
 			Call:     call,
 			RepoPath: cfg.RepoPath,

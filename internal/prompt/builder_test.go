@@ -4,20 +4,22 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jjmrocha/joe/internal/guard"
 	"github.com/jjmrocha/joe/internal/harness"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	testRepoPath = "/src/joe"
-	testKBPath   = "/srv/wiki"
-	testContent  = "be terse"
+	testRepoPath  = "/src/joe"
+	testKBPath    = "/srv/wiki"
+	testContent   = "be terse"
+	testBlockPath = "/a/CLAUDE.md"
 )
 
 func testRequest(blocks ...harness.Block) *BuilderRequest {
 	return &BuilderRequest{
-		Harness: &harness.Harness{Kind: harness.KindClaude, Blocks: blocks},
+		Harness: &harness.Harness{Blocks: blocks},
 		Repo:    testRepoPath,
 	}
 }
@@ -46,7 +48,7 @@ func TestBuild(t *testing.T) {
 
 	t.Run("puts the role, joe's instructions and the user's instructions in that order", func(t *testing.T) {
 		// given
-		request := testRequest(harness.Block{Path: "/a/CLAUDE.md", Content: testContent})
+		request := testRequest(harness.Block{Path: testBlockPath, Content: testContent})
 		// when
 		result := Build(request)
 		// then
@@ -184,7 +186,32 @@ func TestBuild(t *testing.T) {
 		result := Build(request)
 		// then
 		assert.Equal(t, 1, strings.Count(result, "<guard>"))
-		assert.Contains(t, result, "rejected by joe")
+		assert.Contains(t, result, guard.ErrToolCallRejected.Error())
+	})
+
+	t.Run("states the constraints the guard enforces", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			kbPath string
+		}{
+			{name: "with a knowledge base", kbPath: testKBPath},
+			{name: "without a knowledge base"},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				// given
+				request := testRequest()
+				request.WithClassifier = true
+				request.KnowledgeBase = testCase.kbPath
+				// when
+				result := Build(request)
+				// then
+				for _, expected := range guard.Constraints(testRepoPath, testCase.kbPath) {
+					assertInOrder(t, result, "<guard>", "- "+expected+"\n", "</guard>")
+				}
+			})
+		}
 	})
 
 	t.Run("omits the guard when none is configured", func(t *testing.T) {
@@ -194,6 +221,31 @@ func TestBuild(t *testing.T) {
 		result := Build(request)
 		// then
 		assert.NotContains(t, result, "<guard>")
+	})
+
+	t.Run("separates sibling sections with one blank line", func(t *testing.T) {
+		// given
+		request := testRequest(harness.Block{Path: testBlockPath, Content: testContent})
+		request.KnowledgeBase = testKBPath
+		request.WithClassifier = true
+		expected := []string{
+			"</role>\n\n<instructions>",
+			"</locations>\n\n<serena>",
+			"</serena>\n\n<skills>",
+			"</knowledge-base>\n\n<classifier>",
+			"</classifier>\n\n<guard>",
+			"</skills>\n\n<other-repositories>",
+			"</other-repositories>\n\n<working-with-user>",
+			"</instructions>\n\n<user-instructions>",
+		}
+		// when
+		result := Build(request)
+		// then
+		for _, separator := range expected {
+			assert.Contains(t, result, separator)
+		}
+
+		assert.NotContains(t, result, "\n\n\n")
 	})
 
 	t.Run("omits the user's instructions when the harness has no blocks", func(t *testing.T) {
@@ -233,7 +285,7 @@ func TestBuild(t *testing.T) {
 
 	t.Run("ranks joe's instructions above the user's on joe's own concerns", func(t *testing.T) {
 		// given
-		request := testRequest(harness.Block{Path: "/a/CLAUDE.md", Content: testContent})
+		request := testRequest(harness.Block{Path: testBlockPath, Content: testContent})
 		// when
 		result := Build(request)
 		// then

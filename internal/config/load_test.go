@@ -72,7 +72,7 @@ func TestLoad(t *testing.T) {
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
 		assert.Equal(t, []string{"removing-ai-tells"}, result.Skills)
 		assert.Equal(t, []string{"context7"}, result.MCPsOn)
-		assert.Equal(t, "claude", result.Harness)
+		assert.Equal(t, harness.KindClaude, result.Harness)
 	})
 
 	t.Run("reports a missing named profile", func(t *testing.T) {

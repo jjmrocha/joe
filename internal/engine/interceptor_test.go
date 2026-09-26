@@ -60,7 +60,7 @@ func TestBuildInterceptor(t *testing.T) {
 
 		toolBox := echoBox(t)
 
-		interceptor, err := buildInterceptor(t.Context(), toolBox, client, "")
+		interceptor, err := buildInterceptor(toolBox, client, "/src/joe", "")
 		require.NoError(t, err)
 
 		toolBox.SetInterceptor(interceptor)

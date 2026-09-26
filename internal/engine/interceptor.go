@@ -1,20 +1,12 @@
 package engine
 
 import (
-	"context"
-
 	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/guard"
-	"github.com/jjmrocha/joe/internal/repo"
 )
 
-func buildInterceptor(ctx context.Context, tb *tools.ToolBox, model *classify.Classifier, kbPath string) (tools.Interceptor, error) {
-	repoPath, err := repo.Path(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func buildInterceptor(tb *tools.ToolBox, model *classify.Classifier, repoPath, kbPath string) (tools.Interceptor, error) {
 	guardConfig := guard.Config{
 		Classifier: model,
 		ToolBox:    tb,

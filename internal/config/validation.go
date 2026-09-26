@@ -35,7 +35,7 @@ func validName(name string) bool {
 func validate(cfg *Config) error {
 	var problems []error
 
-	if _, err := harness.ParseKind(cfg.Harness); err != nil {
+	if _, err := harness.ParseKind(string(cfg.Harness)); err != nil {
 		problems = append(problems, err)
 	}
 

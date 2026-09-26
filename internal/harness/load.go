@@ -11,7 +11,7 @@ import (
 var tags = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
 
 func Load(kind Kind, paths Paths) (*Harness, error) {
-	h := Harness{Kind: kind}
+	var h Harness
 
 	for _, path := range kind.files(paths) {
 		content, err := os.ReadFile(path) //nolint:gosec // kind.files builds every path from fixed names and caller roots

@@ -208,7 +208,7 @@ func TestRenderProfile(t *testing.T) {
 		var result config.Config
 
 		require.NoError(t, json.Unmarshal(content, &result))
-		assert.Equal(t, "claude", result.Harness)
+		assert.Equal(t, harness.KindClaude, result.Harness)
 		assert.Equal(t, "openrouter", result.LLM.Provider)
 		assert.Equal(t, testKeyEnv, result.LLM.APIKeyEnv)
 		assert.Equal(t, testModel, result.LLM.Model)
@@ -279,7 +279,7 @@ func TestBuildConfig(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, llm.ProviderOpenRouter, result.LLMConfig().Provider)
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
-		assert.Equal(t, harness.KindClaude, result.HarnessKind())
+		assert.Equal(t, harness.KindClaude, result.Harness)
 		assert.Equal(t, 60*time.Second, result.MCPClients()[0].ToolCallTimeout)
 		assert.Equal(t, testClassifierModel, result.ClassifierConfig().Model)
 	})

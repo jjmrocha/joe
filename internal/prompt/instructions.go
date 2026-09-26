@@ -5,14 +5,15 @@ import (
 )
 
 const (
-	instructionsStartTAG = "<instructions>"
-	instructionsEndTAG   = "</instructions>"
+	instructionsStartTag = "<instructions>"
+	instructionsEndTag   = "</instructions>"
 )
 
 func buildInstructions(r *BuilderRequest) string {
 	var builder strings.Builder
 
-	builder.WriteString(instructionsStartTAG)
+	builder.WriteString("\n")
+	builder.WriteString(instructionsStartTag)
 	builder.WriteString("\n")
 
 	builder.WriteString(buildLocations(r.Repo, r.KnowledgeBase))
@@ -21,7 +22,7 @@ func buildInstructions(r *BuilderRequest) string {
 	builder.WriteString(buildOtherRepositories())
 	builder.WriteString(buildWorkingWithUser())
 
-	builder.WriteString(instructionsEndTAG)
+	builder.WriteString(instructionsEndTag)
 	builder.WriteString("\n")
 
 	return builder.String()

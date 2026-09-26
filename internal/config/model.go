@@ -21,7 +21,7 @@ var Providers = sets.New(
 )
 
 type Config struct {
-	Harness    string         `json:"harness"`
+	Harness    harness.Kind   `json:"harness"`
 	KBPath     string         `json:"kb-path,omitempty"`
 	LLM        LLM            `json:"llm"`
 	Skills     []string       `json:"skills"`
@@ -51,12 +51,6 @@ type MCP struct {
 	Args    []string `json:"args"`
 	Env     []string `json:"env,omitempty"`
 	Timeout uint     `json:"timeout,omitempty"`
-}
-
-func (c *Config) HarnessKind() harness.Kind {
-	kind, _ := harness.ParseKind(c.Harness)
-
-	return kind
 }
 
 func (c *Config) LLMConfig() llm.Config {

@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	if err := setup.BuildIfNeed(); err != nil {
+	if err := setup.BuildIfNeeded(); err != nil {
 		log.Fatal(err)
 	}
 

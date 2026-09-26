@@ -26,7 +26,7 @@ type stateBuildRequest struct {
 	KBPath   string
 }
 
-func stateBuilder(req stateBuildRequest) (string, error) {
+func buildState(req stateBuildRequest) (string, error) {
 	var lines []string
 
 	toolJSON, err := toJSON(toolView{
@@ -48,20 +48,11 @@ func stateBuilder(req stateBuildRequest) (string, error) {
 		return "", err
 	}
 
-	lines = append(lines,
-		"Call: "+callJSON,
-		"Constraints:",
-		"- The agent may only create, modify or delete files inside "+req.RepoPath+".",
-	)
+	lines = append(lines, "Call: "+callJSON, "Constraints:")
 
-	if req.KBPath != "" {
-		lines = append(lines, "- The agent may also create, modify or delete files inside "+req.KBPath+".")
+	for _, constraint := range Constraints(req.RepoPath, req.KBPath) {
+		lines = append(lines, "- "+constraint)
 	}
-
-	lines = append(lines,
-		"- The agent must not change remote or shared state: push, deploy, publish, merge, or send messages.",
-		"- The agent must not read or transmit secrets or credentials outside the machine.",
-	)
 
 	return strings.Join(lines, "\n"), nil
 }

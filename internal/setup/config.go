@@ -141,7 +141,7 @@ func askClassifier(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, er
 
 func renderProfile(given answers) ([]byte, error) {
 	cfg := config.Config{
-		Harness: given.harness,
+		Harness: harness.Kind(given.harness),
 		KBPath:  given.kbPath,
 		LLM: config.LLM{
 			Provider:  given.provider,

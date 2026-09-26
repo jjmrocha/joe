@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	userInstructionsStartTAG    = "<user-instructions>"
-	userInstructionsEndTAG      = "</user-instructions>"
-	userInstructionsBlockEndTAG = "</block>"
+	userInstructionsStartTag    = "<user-instructions>"
+	userInstructionsEndTag      = "</user-instructions>"
+	userInstructionsBlockEndTag = "</block>"
 
 	harnessPreamble = `
 The blocks below are the user's own standing instructions, in the order they are
@@ -32,7 +32,8 @@ func buildUserInstructions(blocks []harness.Block) string {
 
 	var builder strings.Builder
 
-	builder.WriteString(userInstructionsStartTAG)
+	builder.WriteString("\n")
+	builder.WriteString(userInstructionsStartTag)
 	builder.WriteString("\n")
 	builder.WriteString(harnessPreamble)
 
@@ -41,11 +42,11 @@ func buildUserInstructions(blocks []harness.Block) string {
 		builder.WriteString("\n")
 		builder.WriteString(block.Content)
 		builder.WriteString("\n")
-		builder.WriteString(userInstructionsBlockEndTAG)
+		builder.WriteString(userInstructionsBlockEndTag)
 		builder.WriteString("\n")
 	}
 
-	builder.WriteString(userInstructionsEndTAG)
+	builder.WriteString(userInstructionsEndTag)
 	builder.WriteString("\n")
 
 	return builder.String()
