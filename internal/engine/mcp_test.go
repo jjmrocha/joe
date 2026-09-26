@@ -1,12 +1,55 @@
 package engine
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jjmrocha/ai-toolkit/tools"
+	"github.com/jjmrocha/joe/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const testKeyEnv = "JOE_TEST_KEY"
+
+func testProfile(skills string) string {
+	return `{
+  "harness": "claude",
+  "llm": {
+    "provider": "openrouter",
+    "api-key-env": "` + testKeyEnv + `",
+    "model": "z-ai/glm-5.3-flash",
+    "effort": "medium"
+  },
+  "skills": ` + skills + `,
+  "mcps": {},
+  "mcps-on": []
+}`
+}
+
+func testConfig(t *testing.T, profile string) *config.Config {
+	t.Helper()
+	t.Setenv(testKeyEnv, "sk-test")
+
+	base := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", base)
+
+	dir := filepath.Join(base, "joe")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatalf("MkdirAll(%s): %v", dir, err)
+	}
+
+	path := filepath.Join(dir, "local.json")
+	if err := os.WriteFile(path, []byte(profile), 0o600); err != nil {
+		t.Fatalf("WriteFile(%s): %v", path, err)
+	}
+
+	cfg, err := config.Load("local")
+	require.NoError(t, err)
+
+	return cfg
+}
 
 func statusNames(t *testing.T, cfg string) []string {
 	t.Helper()

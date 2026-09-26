@@ -1,4 +1,4 @@
-package engine
+package skills
 
 import (
 	"os"
@@ -64,12 +64,12 @@ func writeSkill(t *testing.T, dir, name string) {
 	}
 }
 
-func TestNewSkillCollection(t *testing.T) {
+func TestCollection(t *testing.T) {
 	t.Run("reports every missing skill in one pass", func(t *testing.T) {
 		// given
 		cfg := testConfig(t, testProfile(`[]`))
 		// when
-		_, err := newSkillCollection(cfg)
+		_, err := Collection(cfg)
 		// then
 		require.Error(t, err)
 
@@ -82,7 +82,7 @@ func TestNewSkillCollection(t *testing.T) {
 		// given
 		cfg := testConfig(t, testProfile(`["removing-ai-tells"]`))
 		// when
-		_, err := newSkillCollection(cfg)
+		_, err := Collection(cfg)
 		// then
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "removing-ai-tells")
@@ -104,7 +104,7 @@ func TestNewSkillCollection(t *testing.T) {
 
 		writeSkill(t, skillsDir, "removing-ai-tells")
 		// when
-		result, err := newSkillCollection(cfg)
+		result, err := Collection(cfg)
 		// then
 		require.NoError(t, err)
 
@@ -129,7 +129,7 @@ func TestNewSkillCollection(t *testing.T) {
 
 		writeSkill(t, skillsDir, "brainstorm")
 		// when
-		_, err = newSkillCollection(cfg)
+		_, err = Collection(cfg)
 		// then
 		require.ErrorIs(t, err, ErrReservedSkill)
 		assert.Contains(t, err.Error(), "brainstorm")

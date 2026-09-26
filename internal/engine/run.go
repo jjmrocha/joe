@@ -11,8 +11,10 @@ import (
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
+	"github.com/jjmrocha/joe/internal/guard"
 	"github.com/jjmrocha/joe/internal/prompt"
 	"github.com/jjmrocha/joe/internal/repo"
+	"github.com/jjmrocha/joe/internal/skills"
 )
 
 func Run(ctx context.Context, cfg *config.Config) error {
@@ -32,7 +34,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// Initialize the  skills collection
-	skills, err := newSkillCollection(cfg)
+	skillCollection, err := skills.Collection(cfg)
 	if err != nil {
 		return err
 	}
@@ -55,7 +57,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	if classifier != nil {
 		var interceptor tools.Interceptor
 
-		interceptor, err = buildInterceptor(toolBox, classifier, repoPath, cfg.KBPath)
+		interceptor, err = guard.NewInterceptor(guard.Config{
+			Classifier: classifier,
+			ToolBox:    toolBox,
+			RepoPath:   repoPath,
+			KBPath:     cfg.KBPath,
+		})
 		if err != nil {
 			return err
 		}
@@ -129,7 +136,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		chat.WithModelCommand(),
 		chat.WithEffortCommand(),
 		chat.WithCompactCommand(),
-		chat.WithSkills(skills),
+		chat.WithSkills(skillCollection),
 	)
 
 	// Build prompt
@@ -144,7 +151,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	// Set session
 	ag.StartSession(agent.SessionConfig{
 		Prompt:  sysPrompt,
-		Skills:  skills,
+		Skills:  skillCollection,
 		ToolBox: toolBox,
 	})
 

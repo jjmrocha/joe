@@ -1,4 +1,4 @@
-package engine
+package skills
 
 import (
 	"errors"
@@ -26,7 +26,7 @@ var skillNames = []string{
 	"writing-unit-tests",
 }
 
-func newSkillCollection(cfg *config.Config) (*skills.Collection, error) {
+func Collection(cfg *config.Config) (*skills.Collection, error) {
 	skillCollection := skills.NewCollection()
 
 	codingSkillsDir, err := config.CodingSkillsDir()
