@@ -12,6 +12,10 @@ calibrated classifier. At each checkpoint below, calling it is required.
 - Input: the smallest self-contained context that lets the classifier decide.
   It sees nothing else — no files, no conversation. Never include secrets,
   keys or tokens; redact them.
+- What a checkpoint names as input — source, a contract, an evidence line —
+  goes in verbatim, labels included; never described or summarised. Leave
+  out test results, lint status and your own verdict: the classifier judges
+  the artifact, not your opinion of it.
 - Override only when you can name a specific fact that contradicts the answer.
   "I would have decided differently" is not one. No fact, no override — if you
   cannot name one, follow the answer. Report every override as:
@@ -33,8 +37,9 @@ Checkpoints:
    changed in GREEN:
    classify_yes_no
      instructions: "Should this function be refactored further?"
-     input: the function and the test that drives it. One call per production
-   function — a single call naming several functions does not satisfy this.
+     input: the function's source and the source of the tests that drive it,
+   both verbatim. One call per production function — a single call naming
+   several functions does not satisfy this.
    Yes → refactor, run the suite, ask again. No → move on.
 
 2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.
@@ -56,7 +61,8 @@ Checkpoints:
    classify_score
      instructions: "How deep is this interface?"
      input: the module's purpose in one line, the dependencies it touches
-     (I/O, clock, randomness, network, or none), the four-line contract and
+     (I/O, clock, randomness, network, or none), the four-line contract
+     verbatim with its CALLER LEARNS, HIDDEN, SEAM and TEST CALLS labels, and
      the proposed signatures.
      levels:
        0 shallow — HIDDEN is empty or one clause; a conduit
