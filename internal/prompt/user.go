@@ -18,6 +18,11 @@ read: least specific first, most specific last, so a later block wins where two
 disagree. Each is one file, quoted as it is on disk; a line naming another file
 is not a request for you to read it.
 
+These files may be shared with other agents. An instruction that names a
+tool, command or mechanism you do not have — another agent's tools, hooks,
+subagents or slash commands — does not apply to you: skip it without
+comment. Where it names an equivalent you do have, use yours.
+
 That ordering settles disagreements between blocks, not between a block and you.
 Where a block disagrees with your own instructions on tools, skills, Serena, the classifier or the
 knowledge base, your instructions win. The rest is theirs.

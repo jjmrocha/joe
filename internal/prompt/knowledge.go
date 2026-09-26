@@ -22,13 +22,17 @@ root, and file_workdir reports that root.
 
 const kbNotConfigured = `
 <knowledge-base>
-No knowledge base is configured and the file_ tools are not registered. Do not
-load the knowledge-base skill — not even when the skill table above routes a
-request to it — and do not guess a path. If a request needs the knowledge base,
+No knowledge base is configured: the file_ tools are not registered and the
+knowledge-base skill does not apply. If a request needs the knowledge base,
 say it is not configured and that kb-path in the profile at ~/.config/joe is
 where to set it.
 </knowledge-base>
 `
+
+const (
+	kbSkillRow     = "| The knowledge base written to or audited — ingest, update, lint, write a manual | knowledge-base      |\n"
+	kbSkillExample = "\"Update the wiki with what we just changed\"           → knowledge-base\n"
+)
 
 func buildKnowledgeBase(kbPath string) string {
 	if kbPath == "" {

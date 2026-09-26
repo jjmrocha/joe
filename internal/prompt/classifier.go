@@ -21,6 +21,9 @@ calibrated classifier. At each checkpoint below, calling it is required.
   Classifier unavailable — <checkpoint>: <error>.
 - A checkpoint marked as repeating is asked at most 3 times; report when the
   cap stops it.
+- Before you move past a checkpoint, write:
+  Classifier — <checkpoint>: <n> calls for <n> <functions|findings|interfaces>.
+  The two numbers must match; if they do not, make the missing calls first.
 
 Checkpoints:
 

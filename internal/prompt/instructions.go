@@ -17,6 +17,14 @@ func buildInstructions(r *BuilderRequest) string {
 	builder.WriteString("\n")
 
 	builder.WriteString(buildLocations(r.Repo, r.KnowledgeBase))
+	builder.WriteString(buildBoundaries(r.Repo, r.KnowledgeBase))
+
+	if r.WithClassifier {
+		builder.WriteString(buildGuard())
+	}
+
+	builder.WriteString(buildSequence())
+	builder.WriteString(buildTools(r))
 	builder.WriteString(buildSerena())
 	builder.WriteString(buildSkills(r))
 	builder.WriteString(buildOtherRepositories())
