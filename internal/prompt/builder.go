@@ -3,6 +3,7 @@ package prompt
 import (
 	"strings"
 
+	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/joe/internal/harness"
 )
 
@@ -11,6 +12,7 @@ type BuilderRequest struct {
 	Repo           string
 	KnowledgeBase  string
 	WithClassifier bool
+	Tools          []mcp.Instruction
 }
 
 func Build(r *BuilderRequest) string {

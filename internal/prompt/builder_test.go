@@ -3,9 +3,11 @@ package prompt
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/joe/internal/guard"
 	"github.com/jjmrocha/joe/internal/harness"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +49,7 @@ func TestBuild(t *testing.T) {
 		}
 	})
 
-	t.Run("includes the guard, the classifier and its tools when the classifier is on", func(t *testing.T) {
+	t.Run("includes the guard and the classifier when the classifier is on", func(t *testing.T) {
 		// given
 		request := newRequest("", true)
 		// when
@@ -56,10 +58,9 @@ func TestBuild(t *testing.T) {
 		assert.Contains(t, result, "<guard>")
 		assert.Contains(t, result, fmt.Sprintf("%q", guard.ErrToolCallRejected.Error()))
 		assert.Contains(t, result, "<classifier>")
-		assert.Contains(t, result, "- classify_yes_no, classify_choice, classify_score:")
 	})
 
-	t.Run("leaves out the guard, the classifier and its tools when the classifier is off", func(t *testing.T) {
+	t.Run("leaves out the guard and the classifier when the classifier is off", func(t *testing.T) {
 		// given
 		request := newRequest("", false)
 		// when
@@ -67,21 +68,19 @@ func TestBuild(t *testing.T) {
 		// then
 		assert.NotContains(t, result, "<guard>")
 		assert.NotContains(t, result, "<classifier>")
-		assert.NotContains(t, result, "- classify_yes_no")
 	})
 
-	t.Run("describes the knowledge base and its tools when one is configured", func(t *testing.T) {
+	t.Run("describes the knowledge base when one is configured", func(t *testing.T) {
 		// given
 		request := newRequest(testKBPath, false)
 		// when
 		result := Build(request)
 		// then
 		assert.Contains(t, result, kbConfigured)
-		assert.Contains(t, result, "- file_:")
 		assert.NotContains(t, result, kbNotConfigured)
 	})
 
-	t.Run("says no knowledge base is configured and offers no file tools", func(t *testing.T) {
+	t.Run("says no knowledge base is configured", func(t *testing.T) {
 		// given
 		request := newRequest("", false)
 		// when
@@ -89,8 +88,56 @@ func TestBuild(t *testing.T) {
 		// then
 		assert.Contains(t, result, kbNotConfigured)
 		assert.NotContains(t, result, kbConfigured)
-		assert.NotContains(t, result, "- file_:")
 		assert.NotContains(t, result, "→ knowledge-base")
+	})
+
+	t.Run("renders each tool's instructions under its name, in name order", func(t *testing.T) {
+		// given
+		request := newRequest("", false)
+		request.Tools = []mcp.Instruction{
+			{Name: "shell", Text: "Run commands."},
+			{Name: "date", Text: "Ask for the date."},
+		}
+		// when
+		result := Build(request)
+		// then
+		expected := "<tools>\n" +
+			"<tool-instructions name=\"date\">\nAsk for the date.\n</tool-instructions>\n" +
+			"<tool-instructions name=\"shell\">\nRun commands.\n</tool-instructions>\n" +
+			"</tools>\n"
+		assert.Contains(t, result, expected)
+	})
+
+	t.Run("leaves the tools it was given in their order", func(t *testing.T) {
+		// given
+		request := newRequest("", false)
+		request.Tools = []mcp.Instruction{
+			{Name: "shell", Text: "Run commands."},
+			{Name: "date", Text: "Ask for the date."},
+		}
+		expected := slices.Clone(request.Tools)
+		// when
+		Build(request)
+		// then
+		assert.Equal(t, expected, request.Tools)
+	})
+
+	t.Run("renders an empty tools block when no tool sent instructions", func(t *testing.T) {
+		// given
+		request := newRequest("", false)
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "<tools>\n</tools>\n")
+	})
+
+	t.Run("does not send the model to fetch Serena's manual", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, true)
+		// when
+		result := Build(request)
+		// then
+		assert.NotContains(t, result, "initial_instructions")
 	})
 
 	t.Run("adds no user instructions when there are no files", func(t *testing.T) {

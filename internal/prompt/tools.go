@@ -1,29 +1,17 @@
 package prompt
 
-import "strings"
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/jjmrocha/ai-toolkit/mcp"
+)
 
 const (
-	toolsStartTag = "<tools>"
-	toolsEndTag   = "</tools>"
-
-	toolsCoreLines = `- serena__: read, search and edit code in the repository. The Serena rules
-  follow below.
-- shell_run: building, testing, linting, git and other terminal work in the
-  repository — not reading or editing code; use serena__ for that. Take the
-  commands from the user's instructions, then the repository's README,
-  Makefile or CI config; never guess one, and ask when none is found.
-- skill_load, skill_load_file, skill_execute_file: load a skill, read the files
-  it ships, run a script it ships.
-- current_date, current_time, time_zone: call them before you write or
-  compare a date or time — a last_updated field, a changelog entry, a
-  deadline. Never write one from memory.
-`
-	toolsKnowledgeBaseLine = `- file_: the knowledge base only, never code. The knowledge-base rules follow
-  below.
-`
-	toolsClassifierLine = `- classify_yes_no, classify_choice, classify_score: the calibrated classifier.
-  When to call it is set out in the classifier rules below.
-`
+	toolsStartTag          = "<tools>"
+	toolsEndTag            = "</tools>"
+	toolInstructionsEndTag = "</tool-instructions>"
 )
 
 func buildTools(r *BuilderRequest) string {
@@ -32,14 +20,18 @@ func buildTools(r *BuilderRequest) string {
 	builder.WriteString("\n")
 	builder.WriteString(toolsStartTag)
 	builder.WriteString("\n")
-	builder.WriteString(toolsCoreLines)
 
-	if r.KnowledgeBase != "" {
-		builder.WriteString(toolsKnowledgeBaseLine)
-	}
+	instructions := slices.SortedFunc(slices.Values(r.Tools), func(a, b mcp.Instruction) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
-	if r.WithClassifier {
-		builder.WriteString(toolsClassifierLine)
+	for _, instruction := range instructions {
+		fmt.Fprintf(&builder, "<tool-instructions name=%q>", instruction.Name)
+		builder.WriteString("\n")
+		builder.WriteString(instruction.Text)
+		builder.WriteString("\n")
+		builder.WriteString(toolInstructionsEndTag)
+		builder.WriteString("\n")
 	}
 
 	builder.WriteString(toolsEndTag)

@@ -85,6 +85,8 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	defer func() { _ = codePack.Close() }()
 
+	toolPacks := []packs.ToolPack{codePack}
+
 	datePack, err := packs.DateTools(toolBox)
 	if err != nil {
 		return err
@@ -92,12 +94,16 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	defer func() { _ = datePack.Close() }()
 
+	toolPacks = append(toolPacks, datePack)
+
 	shell, err := packs.ShellTools(toolBox)
 	if err != nil {
 		return err
 	}
 
 	defer func() { _ = shell.Close() }()
+
+	toolPacks = append(toolPacks, shell)
 
 	if cfg.KBPath != "" {
 		var kbPack packs.ToolPack
@@ -108,6 +114,8 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		}
 
 		defer func() { _ = kbPack.Close() }()
+
+		toolPacks = append(toolPacks, kbPack)
 	}
 
 	if classifier != nil {
@@ -119,6 +127,8 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		}
 
 		defer func() { _ = classifyPack.Close() }()
+
+		toolPacks = append(toolPacks, classifyPack)
 	}
 
 	// Initialize the agent
@@ -140,11 +150,13 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Build prompt
+	toolInstructions := toolInstructions(ctx, toolPacks, mng)
 	promptRequest := prompt.BuilderRequest{
 		Repo:           repoPath,
 		Harness:        harness,
 		KnowledgeBase:  cfg.KBPath,
 		WithClassifier: classifier != nil,
+		Tools:          toolInstructions,
 	}
 	sysPrompt := prompt.Build(&promptRequest)
 
