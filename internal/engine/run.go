@@ -78,7 +78,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	startMCPs(ctx, mng, cfg)
 
 	// Register tools
-	codePack, err := packs.CodingTools(ctx, toolBox)
+	codePack, err := packs.CodingTools(ctx, toolBox, repoPath)
 	if err != nil {
 		return err
 	}

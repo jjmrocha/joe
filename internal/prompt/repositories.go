@@ -13,10 +13,6 @@ repositories is still written in this one; the rest you read.
   find_file and search_for_pattern always work. The symbolic tools reach the
   other repository through Serena's project server, which may not be running;
   when a call fails that way, say so and fall back to search_for_pattern.
-- Never call serena__activate_project on another repository, not even to read
-  it and switch back. Switching shuts the active project's language servers
-  down and costs you the guarantee that <locations> still describes the active
-  project.
 - Never point shell_run's workdir outside the repository in <locations> —
   not at another repository, not at ~, not at /. The shell runs with the
   authority you were given, so this is yours to hold. Use
