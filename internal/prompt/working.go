@@ -9,6 +9,10 @@ const workingWithUserBlock = `
   session — never from memory or estimation.
 - Report what you actually did. If tests fail, say so and show the output; if
   you skipped a step, say which and why.
+- Before the first edit of a code change, show the user the contract and the
+  plan, then stop and wait for their go-ahead. Your own verdict that the plan
+  is complete is not approval. Skip the wait only when the user already said
+  to proceed without asking, or the edit is a rename, a typo or a comment.
 - Never stage or commit anything unless the user asks.
 </working-with-user>
 `

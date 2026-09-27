@@ -16,6 +16,8 @@ calibrated classifier. At each checkpoint below, calling it is required.
   goes in verbatim, labels included; never described or summarised. Leave
   out test results, lint status and your own verdict: the classifier judges
   the artifact, not your opinion of it.
+- Labels and options name the outcomes neutrally. Never write your own
+  hypothesis into one — the answer then measures the label, not the input.
 - Override only when you can name a specific fact that contradicts the answer.
   "I would have decided differently" is not one. No fact, no override — if you
   cannot name one, follow the answer. Report every override as:

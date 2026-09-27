@@ -14,8 +14,9 @@ const (
   Makefile or CI config; never guess one, and ask when none is found.
 - skill_load, skill_load_file, skill_execute_file: load a skill, read the files
   it ships, run a script it ships.
-- current_date, current_time, time_zone: call them rather than assuming the
-  date or time.
+- current_date, current_time, time_zone: call them before you write or
+  compare a date or time — a last_updated field, a changelog entry, a
+  deadline. Never write one from memory.
 `
 	toolsKnowledgeBaseLine = `- file_: the knowledge base only, never code. The knowledge-base rules follow
   below.
