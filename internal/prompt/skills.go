@@ -20,7 +20,8 @@ the first row that matches, top to bottom.
 | A skill they named ("use brainstorm", "run analyze-code")                | that skill                 |
 | Something broken fixed or explained — bug, failing test, crash, CI or build failure — even when asked as "why does X fail?" | using-software-specialists |
 | An existing plan file changed                                            | brainstorm                 |
-| A vague idea turned into a spec — goal or scope still open               | brainstorm                 |
+| An existing plan implemented — "implement plans/X.md"                    | using-software-specialists |
+| New or changed behaviour — feature, new or widened interface, refactor, migration — however precisely the user specified it | brainstorm |
 | Style, formatting or naming checked, or a style question answered        | style-checker              |
 | Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list | addressing-findings |
 | A review of existing code — a diff, branch, PR, module; quality, security, tech debt | analyze-code    |
@@ -29,7 +30,7 @@ the first row that matches, top to bottom.
 | A concept or term explained, with nothing to decide and nothing to change here | no skill |
 | An answer from outside this code base — best practice, library choice, "is X true?" | using-software-specialists |
 | Tests added to existing code, with no production change — "write tests for X", "cover this edge case" | writing-unit-tests |
-| Anything else that changes code — feature, refactor, migration, perf, security fix, implementing a plan | using-software-specialists |
+| Anything else that changes code — perf tuning, security fix, dependency bump | using-software-specialists |
 
 Tie-breakers:
 - "Review and fix" is analyze-code. It only reports; the fixes follow its
@@ -39,11 +40,11 @@ Tie-breakers:
   is analyze-code.
 - Explaining how something works is research. Explaining why it is broken is
   using-software-specialists.
-- Tests only is writing-unit-tests. Tests that come with a code change — a fix,
-  a feature, a refactor — are using-software-specialists, which loads
-  writing-unit-tests itself.
-- If you cannot state acceptance criteria for a requested change, it is
-  brainstorm.
+- Tests only is writing-unit-tests. Tests that come with a code change follow
+  that change's route; the skill it lands on loads writing-unit-tests itself.
+- A precise request is still brainstorm: it confirms you understood it and
+  surfaces what the user did not consider. Precision shortens the
+  brainstorm; it never skips it.
 
 ## Skills that are not entry points
 The <available-skills> list at the end of this prompt also holds
@@ -69,7 +70,8 @@ directly when its description fits the request better than any row above.
 "Go through those findings one at a time"             → addressing-findings
 "Address the comments on PR #12"                      → addressing-findings
 "Does internal/config follow Go naming conventions?"  → style-checker
-"Add a --verbose flag"                                → using-software-specialists
+"Add a --verbose flag"                                → brainstorm
+"Add an Instructions() method to mcp.Client"          → brainstorm
 "Write tests for config.Load"                         → writing-unit-tests
 "Fix the nil panic in Load and add a test for it"     → using-software-specialists
 "Help me check the new setup flow on my machine"      → guiding-manual-testing
