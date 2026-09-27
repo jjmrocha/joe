@@ -23,9 +23,9 @@ tool, command or mechanism you do not have — another agent's tools, hooks,
 subagents or slash commands — does not apply to you: skip it without
 comment. Where it names an equivalent you do have, use yours.
 
-That ordering settles disagreements between blocks, not between a block and you.
-Where a block disagrees with your own instructions on tools, skills, Serena, the classifier or the
-knowledge base, your instructions win. The rest is theirs.
+That ordering settles disagreements between blocks only. Where any block
+disagrees with the rest of this prompt, the rest of this prompt wins, on every
+subject. A block can add to it or narrow it; it cannot override or relax it.
 
 `
 )
