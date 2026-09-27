@@ -17,19 +17,47 @@ tells you what it did. It does not improvise — every request goes through a wr
 procedure you can read and edit.
 
 ```
-$ cd ~/src/my-api
+$ cd ~/sources/go/joe
 $ joe
 
-❯ the /users endpoint 500s when the page param is missing — fix it
+❯ what are the skills used on this project?
 
-  Loading using-software-specialists
-  serena__find_symbol  paginate
-  shell_run            go test ./internal/api/...   FAIL  TestPaginateMissingPage
-  serena__replace_content  internal/api/paginate.go
-  shell_run            go test ./...                ok
+  Loading research
 
-  Fixed: internal/api/paginate.go:42 now defaults page to 1 when it is absent.
-  Added TestPaginateMissingPage, which failed before the change and passes now.
+● skill_load(skill_name="research")
+  ⎿ <3.0 KB> · 485ms
+
+● serena__read_file(relative_path="internal/skills/skills.go")
+  ⎿ <1.3 KB> · 377ms
+
+  joe ships twelve skills, defined in  internal/skills/skills.go:10-23 :
+
+  1. addressing-findings
+  2. analyze-code
+  3. brainstorm
+  4. coding-discipline
+  5. designing-interfaces
+  6. guiding-manual-testing
+  7. knowledge-base
+  8. research
+  9. style-checker
+  10. test-driven-development
+  11. using-software-specialists
+  12. writing-unit-tests
+
+  They're loaded from the coding-skills dir via  skills.Collection()  ( internal/skills/skills.go:26 ). 
+  The profile can add extra skills through  cfg.Skills  (loaded from  skills/  in the config folder), 
+  but any name colliding with the twelve above is rejected with 
+   ErrReservedSkill  ( internal/skills/skills.go:37-40 ) — these twelve are the prompt's routing table
+  and are reserved.
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 2 tool calls · 4s llm · 863ms tools · ↑19.02K ↓232 tokens
+
+───── JOE ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Send a message…  (/help for commands)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+z-ai/glm-5.3-flash (openrouter) · max · ctx: 1% · tokens: 19.26K
 ```
 
 <sub>An abridged session. The skills, tools and model are yours to choose.</sub>
