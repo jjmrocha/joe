@@ -1,13 +1,6 @@
 <div align="center">
 
-```
-    ╔═══╗ ╔═══════╗ ╔═══════╗ 
-    ╚═╗ ║ ║ ╔═══╗ ║ ║ ╔═════╝ 
-      ║ ║ ║ ║   ║ ║ ║ ╚═══╗   
-╔═╗   ║ ║ ║ ║   ║ ║ ║ ╔═══╝   
-║ ╚═══╝ ║ ║ ╚═══╝ ║ ║ ╚═════╗ 
-╚═══════╝ ╚═══════╝ ╚═══════╝ 
-```
+<img src="logo.svg" alt="joe" width="360">
 
 **The opinionated coding agent for your terminal.**
 
