@@ -55,12 +55,10 @@ $ joe
  2 tool calls · 4s llm · 863ms tools · ↑19.02K ↓232 tokens
 
 ───── JOE ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-  Send a message…  (/help for commands)
+
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 z-ai/glm-5.3-flash (openrouter) · max · ctx: 1% · tokens: 19.26K
 ```
-
-<sub>An abridged session. The skills, tools and model are yours to choose.</sub>
 
 Named after [Joe Armstrong](https://en.wikipedia.org/wiki/Joe_Armstrong_(programmer)),
 creator of Erlang.
@@ -135,9 +133,6 @@ export OPEN_ROUTER_KEY=sk-...    # put this in your shell profile
 
 Copy `./bin/joe` onto your `PATH` to run it as `joe` from anywhere. joe never stores the key:
 the profile holds the *name* of the variable, and joe reads it at startup.
-
-> `go install github.com/jjmrocha/joe/cmd@latest` works too, but names the binary `cmd`,
-> after its directory.
 
 ### 3. Run it
 
