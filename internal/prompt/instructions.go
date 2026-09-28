@@ -23,10 +23,15 @@ func buildInstructions(r *BuilderRequest) string {
 		builder.WriteString(buildGuard())
 	}
 
-	builder.WriteString(buildSequence())
 	builder.WriteString(buildTools(r))
 	builder.WriteString(buildSerena())
 	builder.WriteString(buildSkills(r))
+	builder.WriteString(buildKnowledgeBase(r.KnowledgeBase))
+
+	if r.WithClassifier {
+		builder.WriteString(buildClassifier())
+	}
+
 	builder.WriteString(buildOtherRepositories())
 	builder.WriteString(buildWorkingWithUser())
 

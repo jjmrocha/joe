@@ -1,37 +1,38 @@
 package prompt
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 const (
 	skillsStartTag = "<skills>"
 	skillsEndTag   = "</skills>"
 
-	skillsBody = `Skills are how you work, not reference material. Every request that will read,
-change, judge or document code starts with one entry skill, loaded with
-skill_load before you explore anything. Announce every skill you load, entry or
-not: "Loading <skill>".
+	routesWantsHeader = "The user wants..."
+	routesLoadHeader  = "Load"
+
+	skillsIntro = `Skills are how you work, not reference material. Every request, in this order:
+
+1. Route it with the table below: load the entry skill, or none.
+2. Follow the loaded skill.
+
+Every request that will read, change, judge or document code starts with one
+entry skill, loaded with skill_load before you explore anything. Only a rename,
+a typo or a comment-only edit skips the table; "too small to need a skill" is
+not otherwise an exemption.
+
+Announce the route before loading the entry skill:
+"Route: <the row, in a few words> → Loading <skill>". Announce every other skill
+you load: "Loading <skill>".
 
 ## Pick the entry skill
-Route on what the user wants to end up with, not on the words they use. Take
-the first row that matches, top to bottom.
+Route on what the user wants to end up with, not on the words they use. Rows run
+from specific to general: take the first that matches, top to bottom.
 
-| The user wants...                                                       | Load                       |
-|--------------------------------------------------------------------------|----------------------------|
-| A skill they named ("use brainstorm", "run analyze-code")                | that skill                 |
-| Something broken fixed or explained — bug, failing test, crash, CI or build failure — even when asked as "why does X fail?" | using-software-specialists |
-| An existing plan file changed                                            | brainstorm                 |
-| An existing plan implemented — "implement plans/X.md"                    | using-software-specialists |
-| New or changed behaviour — feature, new or widened interface, refactor, migration — however precisely the user specified it | brainstorm |
-| Style, formatting or naming checked, or a style question answered        | style-checker              |
-| Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list | addressing-findings |
-| A review of existing code — a diff, branch, PR, module; quality, security, tech debt | analyze-code    |
-| To be guided through testing a change by hand on a local or staging environment | guiding-manual-testing |
-| An answer about this code base or what is documented about it, plans included | research             |
-| A concept or term explained, with nothing to decide and nothing to change here | no skill |
-| An answer from outside this code base — best practice, library choice, "is X true?" | using-software-specialists |
-| Tests added to existing code, with no production change — "write tests for X", "cover this edge case" | writing-unit-tests |
-| Anything else that changes code — perf tuning, security fix, dependency bump | using-software-specialists |
+`
 
+	tieBreakers = `
 Tie-breakers:
 - "Review and fix" is analyze-code. It only reports; the fixes follow its
   Suggested Next Actions. Going through the findings it reported, one by one,
@@ -45,70 +46,198 @@ Tie-breakers:
 - A precise request is still brainstorm: it confirms you understood it and
   surfaces what the user did not consider. Precision shortens the
   brainstorm; it never skips it.
+`
 
+	nonEntrySkills = `
 ## Skills that are not entry points
-The <available-skills> list at the end of this prompt also holds
-coding-discipline, designing-interfaces and test-driven-development. The entry
-skills load them at the step that needs them. Their descriptions say when they
-apply inside that workflow — they are never a reason to load one first.
-"Implement X" and "fix X" go to using-software-specialists, even though
-test-driven-development's description names them.
+coding-discipline, designing-interfaces and test-driven-development are never
+entry skills. The entry skills load them at the step that needs them.
 
-A skill in that list not named in this section was added by the user. Load it
-directly when its description fits the request better than any row above.
+For every skill named in <skills>, the table decides the entry. Their
+descriptions in <available-skills> only say when a step inside another skill
+applies — never a reason to load one first:
+- "Implement X" and "fix X" go to using-software-specialists, even though
+  test-driven-development's description names them.
+- writing-unit-tests is an entry only for tests with no production change. Its
+  "when modifying code" clause is a step inside another skill.
 
+A skill in <available-skills> not named anywhere in <skills> was added by the user.
+Descriptions route only those: load one directly when its description fits the
+request better than any row above.
+`
+
+	examplesHeading = `
 ## Examples
-"How does session compaction work?"                   → research
-"Is there a plan for PROJ-1234?"                      → research
-"Why does TestLoad fail on CI?"                       → using-software-specialists
-"Which Go TUI library should we use?"                 → using-software-specialists
-"What is the difference between a mutex and a channel?" → no skill
-"I'd like plugin support, not sure what shape yet"    → brainstorm
-"Add a rollback step to plans/proj-12.md"             → brainstorm
-"Implement plans/proj-12.md"                          → using-software-specialists
-"Review my branch before I open the PR"               → analyze-code
-"Go through those findings one at a time"             → addressing-findings
-"Address the comments on PR #12"                      → addressing-findings
-"Does internal/config follow Go naming conventions?"  → style-checker
-"Add a --verbose flag"                                → brainstorm
-"Add an Instructions() method to mcp.Client"          → brainstorm
-"Write tests for config.Load"                         → writing-unit-tests
-"Fix the nil panic in Load and add a test for it"     → using-software-specialists
-"Help me check the new setup flow on my machine"      → guiding-manual-testing
-"Rename cfg to conf in load.go"                       → no skill
+`
 
+	followUps = `
+Follow-ups:
+(after research) "ok, now fix it"                    → using-software-specialists
+(after analyze-code) "go through them"               → addressing-findings
+(during brainstorm) "what about rate limits?"        → stay in brainstorm
+`
+
+	duringTheWork = `
 ## During the work
+- This prompt's routing and rules win over a loaded skill. A skill's
+  "When NOT to Use", or a step that contradicts this prompt, does not send you
+  elsewhere or override it — follow this prompt, and the rest of the skill as
+  written.
 - The entry skill runs the work and names the other skills to load, and when.
   Do not load them ahead of it.
 - When a skill step says to load another skill, load it at that step.
   Skipping it is the same failure as skipping the entry skill.
-- When a skill hands off — analyze-code to using-software-specialists,
-  addressing-findings to using-software-specialists, guiding-manual-testing to
-  using-software-specialists, brainstorm to planning — load the skill it names.
+- When a skill hands off — analyze-code to addressing-findings or to
+  using-software-specialists, addressing-findings to using-software-specialists,
+  guiding-manual-testing to using-software-specialists, brainstorm to
+  planning — load the skill it names.
+- Apply each fix approved in addressing-findings through
+  using-software-specialists' Implementation phase: coding-discipline,
+  test-driven-development, and designing-interfaces when an interface changes.
 - A follow-up that continues the same work stays in the loaded skill. Route
   again only when the request changes kind — research turning into "now fix it".
 - A skill lists the files it ships. Read the ones it tells you to with
   skill_load_file — naming a reference file is not reading it.
-- Only a rename, a typo or a comment-only edit skips the table. "Too small to
-  need a skill" is not otherwise an exemption.
 `
 )
 
+const (
+	skillAddressingFindings       = "addressing-findings"
+	skillAnalyzeCode              = "analyze-code"
+	skillBrainstorm               = "brainstorm"
+	skillGuidingManualTesting     = "guiding-manual-testing"
+	skillKnowledgeBase            = "knowledge-base"
+	skillResearch                 = "research"
+	skillStyleChecker             = "style-checker"
+	skillUsingSoftwareSpecialists = "using-software-specialists"
+	skillWritingUnitTests         = "writing-unit-tests"
+	noSkill                       = "no skill"
+)
+
+type route struct {
+	wants  string
+	load   string
+	needKB bool
+}
+
+var routes = []route{
+	{wants: `A skill they named ("use brainstorm", "run analyze-code") — if it is coding-discipline, designing-interfaces or test-driven-development, route with the rows below and load the named skill at its step`, load: "that skill"},
+	{wants: "The knowledge base written to or audited — ingest, update, lint, write a manual", load: skillKnowledgeBase, needKB: true},
+	{wants: "Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list", load: skillAddressingFindings},
+	{wants: "A review of existing code — a diff, branch, PR, module; quality, security, tech debt", load: skillAnalyzeCode},
+	{wants: "To be guided through testing a change by hand on a local or staging environment", load: skillGuidingManualTesting},
+	{wants: "Style, formatting or naming checked, or a style question answered", load: skillStyleChecker},
+	{wants: `Tests added to existing code, with no production change — "write tests for X", "cover this edge case"`, load: skillWritingUnitTests},
+	{wants: `Something broken fixed or explained — bug, failing test, crash, vulnerability, CI or build failure — even when asked as "why does X fail?"`, load: skillUsingSoftwareSpecialists},
+	{wants: "An existing plan file changed", load: skillBrainstorm},
+	{wants: `An existing plan implemented — "implement plans/X.md"`, load: skillUsingSoftwareSpecialists},
+	{wants: "A new capability, a change callers will see, or a restructuring — feature, new or widened interface, flag, contract change, refactor, migration — however precisely the user specified it", load: skillBrainstorm},
+	{wants: "Any other code change — perf tuning, dependency bump", load: skillUsingSoftwareSpecialists},
+	{wants: "An answer about this code base or what is documented about it, plans included", load: skillResearch},
+	{wants: `An answer from outside this code base — best practice, library choice, "is X true?"`, load: skillUsingSoftwareSpecialists},
+	{wants: "A concept or term explained, with nothing to decide and nothing to change here", load: noSkill},
+}
+
+type example struct {
+	request string
+	route   string
+	needKB  bool
+}
+
+var examples = []example{
+	{request: `"How does Load resolve the profile?"`, route: skillResearch},
+	{request: `"Why does Load pick the wrong profile?"`, route: skillUsingSoftwareSpecialists},
+	{request: `"Is there a plan for PROJ-1234?"`, route: skillResearch},
+	{request: `"Why does TestLoad fail on CI?"`, route: skillUsingSoftwareSpecialists},
+	{request: `"Fix the SQL injection in the search handler"`, route: skillUsingSoftwareSpecialists},
+	{request: `"Fix the nil panic in Load and add a test for it"`, route: skillUsingSoftwareSpecialists},
+	{request: `"Bump golang.org/x/net to v0.40"`, route: skillUsingSoftwareSpecialists},
+	{request: `"Which Go TUI library should we use?"`, route: skillUsingSoftwareSpecialists},
+	{request: `"What is the difference between a mutex and a channel?"`, route: noSkill},
+	{request: `"I'd like plugin support, not sure what shape yet"`, route: skillBrainstorm},
+	{request: `"Add a --verbose flag"`, route: skillBrainstorm},
+	{request: `"Add an Instructions() method to mcp.Client"`, route: skillBrainstorm},
+	{request: `"Refactor Load into smaller functions"`, route: skillBrainstorm},
+	{request: `"Use TDD to add a --verbose flag"`, route: "brainstorm, test-driven-development at its step"},
+	{request: `"Add a rollback step to plans/proj-12.md"`, route: skillBrainstorm},
+	{request: `"Implement plans/proj-12.md"`, route: skillUsingSoftwareSpecialists},
+	{request: `"Review my branch before I open the PR"`, route: skillAnalyzeCode},
+	{request: `"Review PR #12 and fix what you find"`, route: skillAnalyzeCode},
+	{request: `"Go through those findings one at a time"`, route: skillAddressingFindings},
+	{request: `"Address the comments on PR #12"`, route: skillAddressingFindings},
+	{request: `"Does internal/config follow Go naming conventions?"`, route: skillStyleChecker},
+	{request: `"Write tests for config.Load"`, route: skillWritingUnitTests},
+	{request: `"Cover the empty-profile edge case in load_test"`, route: skillWritingUnitTests},
+	{request: `"Help me check the new setup flow on my machine"`, route: skillGuidingManualTesting},
+	{request: `"Update the wiki with what we just changed"`, route: skillKnowledgeBase, needKB: true},
+	{request: `"Write a manual for running joe"`, route: skillKnowledgeBase, needKB: true},
+	{request: `"Rename cfg to conf in load.go"`, route: noSkill},
+}
+
 func buildSkills(r *BuilderRequest) string {
+	withKB := r.KnowledgeBase != ""
+
 	var builder strings.Builder
 
 	builder.WriteString("\n")
 	builder.WriteString(skillsStartTag)
 	builder.WriteString("\n")
-	builder.WriteString(skillsBody)
-	builder.WriteString(buildKnowledgeBase(r.KnowledgeBase))
-
-	if r.WithClassifier {
-		builder.WriteString(buildClassifier())
-	}
-
+	builder.WriteString(skillsIntro)
+	writeRoutes(&builder, withKB)
+	builder.WriteString(tieBreakers)
+	builder.WriteString(nonEntrySkills)
+	builder.WriteString(examplesHeading)
+	writeExamples(&builder, withKB)
+	builder.WriteString(followUps)
+	builder.WriteString(duringTheWork)
 	builder.WriteString(skillsEndTag)
 	builder.WriteString("\n")
 
 	return builder.String()
+}
+
+func writeRoutes(builder *strings.Builder, withKB bool) {
+	writeRow(builder, routesWantsHeader, routesLoadHeader)
+	builder.WriteString("|---|---|\n")
+
+	for _, row := range included(routes, withKB, func(r route) bool { return r.needKB }) {
+		writeRow(builder, row.wants, row.load)
+	}
+}
+
+func writeRow(builder *strings.Builder, wants, load string) {
+	builder.WriteString("| " + wants + " | " + load + " |\n")
+}
+
+func writeExamples(builder *strings.Builder, withKB bool) {
+	rows := included(examples, withKB, func(e example) bool { return e.needKB })
+
+	requestWidth := 0
+	for _, row := range rows {
+		requestWidth = max(requestWidth, width(row.request))
+	}
+
+	for _, row := range rows {
+		builder.WriteString(pad(row.request, requestWidth) + " → " + row.route + "\n")
+	}
+}
+
+func included[T any](items []T, withKB bool, needKB func(T) bool) []T {
+	var kept []T
+
+	for _, item := range items {
+		if withKB || !needKB(item) {
+			kept = append(kept, item)
+		}
+	}
+
+	return kept
+}
+
+func pad(text string, to int) string {
+	return text + strings.Repeat(" ", to-width(text))
+}
+
+func width(text string) int {
+	return utf8.RuneCountInString(text)
 }

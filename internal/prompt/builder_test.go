@@ -91,6 +91,48 @@ func TestBuild(t *testing.T) {
 		assert.NotContains(t, result, "→ knowledge-base")
 	})
 
+	t.Run("routes to the knowledge-base skill from the table when one is configured", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		// when
+		result := Build(request)
+		// then
+		skillsEnd := strings.Index(result, "</skills>")
+		for _, row := range routes {
+			if row.needKB {
+				kbRow := strings.Index(result, row.wants)
+				assert.Positive(t, kbRow)
+				assert.Less(t, kbRow, skillsEnd)
+			}
+		}
+		assert.Contains(t, result, "→ knowledge-base")
+	})
+
+	t.Run("leaves the knowledge-base route out when none is configured", func(t *testing.T) {
+		// given
+		request := newRequest("", false)
+		// when
+		result := Build(request)
+		// then
+		for _, row := range routes {
+			if row.needKB {
+				assert.NotContains(t, result, row.wants)
+			}
+		}
+	})
+
+	t.Run("places the knowledge base and the classifier after the skills block", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, true)
+		// when
+		result := Build(request)
+		// then
+		skillsEnd := strings.Index(result, "</skills>")
+		assert.Positive(t, skillsEnd)
+		assert.Less(t, skillsEnd, strings.Index(result, "<knowledge-base>"))
+		assert.Less(t, skillsEnd, strings.Index(result, "<classifier>"))
+	})
+
 	t.Run("renders each tool's instructions under its name, in name order", func(t *testing.T) {
 		// given
 		request := newRequest("", false)

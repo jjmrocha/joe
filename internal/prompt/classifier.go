@@ -45,8 +45,7 @@ Checkpoints:
    Yes → refactor, run the suite, ask again. No → move on.
 
 2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.
-   For each finding that survived step 7's verification, and each finding
-   from step 6's tooling:
+   For each finding that survived step 7's verification:
    classify_choice
      instructions: "What is the severity of this finding?"
      input: the finding's evidence line, its impact, and where the code
@@ -56,6 +55,10 @@ Checkpoints:
      severity scale.
    The selected option is the finding's severity. Order, group and cap the
    report by it.
+   Skip the call, and keep the skill's severity, for a finding whose severity
+   the skill sets by rule — intent conformance (step 2), a breaking change
+   (step 3), convention drift or duplication (step 4), a hardcoded secret —
+   and for step 6's tooling output. Count only the findings you call for.
 
 3. designing-interfaces, when the four-line contract is written and you
    are about to hand off to test-driven-development — before the first
