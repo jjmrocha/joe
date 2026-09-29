@@ -261,13 +261,12 @@ func read(in *bufio.Reader, out io.Writer, prompt string) (string, error) {
 
 func intro(out io.Writer, dir string) error {
 	_, err := fmt.Fprintf(out, `
-     ╔═══╗ ╔═══════╗ ╔═══════╗ 
-     ╚═╗ ║ ║ ╔═══╗ ║ ║ ╔═════╝ 
-       ║ ║ ║ ║   ║ ║ ║ ╚═══╗   
- ╔═╗   ║ ║ ║ ║   ║ ║ ║ ╔═══╝   
- ║ ╚═══╝ ║ ║ ╚═══╝ ║ ║ ╚═════╗ 
- ╚═══════╝ ╚═══════╝ ╚═══════╝ 
- The opinionated coding agent
+    ╔═══╗ ╔═══════╗ ╔═══════╗ 
+    ╚═╗ ║ ║ ╔═══╗ ║ ║ ╔═════╝ 
+      ║ ║ ║ ║   ║ ║ ║ ╚═══╗   
+╔═╗   ║ ║ ║ ║   ║ ║ ║ ╔═══╝   
+║ ╚═══╝ ║ ║ ╚═══╝ ║ ║ ╚═════╗ 
+╚═══════╝ ╚═══════╝ ╚═══════╝
 
 First run: a few questions to set up your profile, saved to
 

@@ -123,10 +123,10 @@ func TestAskProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		result := out.String()
-		assert.Contains(t, result, "The opinionated coding agent for your terminal")
+		assert.Contains(t, result, "First run: a few questions to set up your profile")
 		assert.Contains(t, result, filepath.Join(dir, defaultProfile))
 		assert.Contains(t, result, filepath.Join(dir, "coding-skills"))
-		assert.Less(t, strings.Index(result, "The opinionated"), strings.Index(result, "Provider"))
+		assert.Less(t, strings.Index(result, "First run"), strings.Index(result, "Provider"))
 	})
 
 	t.Run("lists the options it accepts", func(t *testing.T) {
