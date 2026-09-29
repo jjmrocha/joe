@@ -79,57 +79,32 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	startMCPs(ctx, mcpManager, cfg)
 
 	// Register tools
-	codePack, err := packs.CodingTools(ctx, toolBox, repoPath)
-	if err != nil {
+	var toolPacks packSet
+
+	defer toolPacks.close()
+
+	if err = toolPacks.add(packs.CodingTools(ctx, toolBox, repoPath)); err != nil {
 		return fmt.Errorf("coding tools: %w", err)
 	}
 
-	defer func() { _ = codePack.Close() }()
-
-	toolPacks := []packs.ToolPack{codePack}
-
-	datePack, err := packs.DateTools(toolBox)
-	if err != nil {
+	if err = toolPacks.add(packs.DateTools(toolBox)); err != nil {
 		return fmt.Errorf("date tools: %w", err)
 	}
 
-	defer func() { _ = datePack.Close() }()
-
-	toolPacks = append(toolPacks, datePack)
-
-	shell, err := packs.ShellTools(toolBox)
-	if err != nil {
+	if err = toolPacks.add(packs.ShellTools(toolBox)); err != nil {
 		return fmt.Errorf("shell tools: %w", err)
 	}
 
-	defer func() { _ = shell.Close() }()
-
-	toolPacks = append(toolPacks, shell)
-
 	if cfg.KBPath != "" {
-		var kbPack packs.ToolPack
-
-		kbPack, err = packs.FileTools(toolBox, cfg.KBPath)
-		if err != nil {
+		if err = toolPacks.add(packs.FileTools(toolBox, cfg.KBPath)); err != nil {
 			return fmt.Errorf("knowledge-base tools: %w", err)
 		}
-
-		defer func() { _ = kbPack.Close() }()
-
-		toolPacks = append(toolPacks, kbPack)
 	}
 
 	if classifier != nil {
-		var classifyPack packs.ToolPack
-
-		classifyPack, err = packs.ClassifyTools(toolBox, classifier)
-		if err != nil {
+		if err = toolPacks.add(packs.ClassifyTools(toolBox, classifier)); err != nil {
 			return fmt.Errorf("classify tools: %w", err)
 		}
-
-		defer func() { _ = classifyPack.Close() }()
-
-		toolPacks = append(toolPacks, classifyPack)
 	}
 
 	// Initialize the agent
@@ -151,15 +126,13 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Build prompt
-	instructions := toolInstructions(ctx, toolPacks, mcpManager)
-	promptRequest := prompt.Request{
+	sysPrompt := prompt.Build(prompt.Request{
 		RepoPath:         repoPath,
 		Harness:          instructionFiles,
 		KBPath:           cfg.KBPath,
 		WithClassifier:   classifier != nil,
-		ToolInstructions: instructions,
-	}
-	sysPrompt := prompt.Build(promptRequest)
+		ToolInstructions: toolInstructions(ctx, toolPacks, mcpManager),
+	})
 
 	// Set session
 	codingAgent.StartSession(agent.SessionConfig{
