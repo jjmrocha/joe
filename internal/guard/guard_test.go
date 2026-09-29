@@ -253,7 +253,7 @@ func TestNewInterceptor(t *testing.T) {
 
 		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		expected := map[string]string{
-			questionID:     "Does this tool call violate any of the constraints?",
+			callQuestionID: "Does this tool call violate any of the constraints?",
 			toolQuestionID: "Could any call to this tool, with any arguments, violate any of the constraints?",
 		}
 		// when
@@ -272,7 +272,7 @@ func TestNewInterceptor(t *testing.T) {
 		// given
 		var requests []sentRequest
 
-		classifier := fakeJev(t, scripted(map[string]float64{questionID: 0.1, toolQuestionID: 0.19}, &requests))
+		classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.19}, &requests))
 		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		require.NoError(t, interceptor(t.Context(), shellCall("date")))
 		// when
@@ -296,11 +296,11 @@ func TestNewInterceptor(t *testing.T) {
 				// given
 				var requests []sentRequest
 
-				classifier := fakeJev(t, scripted(map[string]float64{questionID: 0.1, toolQuestionID: testCase.toolSafe}, &requests))
+				classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: testCase.toolSafe}, &requests))
 				interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 				require.NoError(t, interceptor(t.Context(), shellCall("go build ./...")))
 
-				expected := []string{questionID}
+				expected := []string{callQuestionID}
 				// when
 				err := interceptor(t.Context(), shellCall("go test ./..."))
 				// then
@@ -315,11 +315,11 @@ func TestNewInterceptor(t *testing.T) {
 		// given
 		var requests []sentRequest
 
-		classifier := fakeJev(t, scripted(map[string]float64{questionID: 0.93, toolQuestionID: 0.05}, &requests))
+		classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.93, toolQuestionID: 0.05}, &requests))
 		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		require.ErrorIs(t, interceptor(t.Context(), shellCall("git push --force origin main")), ErrToolCallRejected)
 
-		expected := []string{questionID}
+		expected := []string{callQuestionID}
 		// when
 		err := interceptor(t.Context(), shellCall("git push --force origin main"))
 		// then
@@ -336,13 +336,13 @@ func TestNewInterceptor(t *testing.T) {
 			{
 				name: "error status",
 				handler: func(requests *[]sentRequest) http.HandlerFunc {
-					return failingFirst(scripted(map[string]float64{questionID: 0.1, toolQuestionID: 0.05}, requests))
+					return failingFirst(scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.05}, requests))
 				},
 			},
 			{
 				name: "missing tool answer",
 				handler: func(requests *[]sentRequest) http.HandlerFunc {
-					return scripted(map[string]float64{questionID: 0.1}, requests)
+					return scripted(map[string]float64{callQuestionID: 0.1}, requests)
 				},
 			},
 		}
@@ -356,7 +356,7 @@ func TestNewInterceptor(t *testing.T) {
 				interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 				require.NoError(t, interceptor(t.Context(), shellCall("go build ./...")))
 
-				expected := []string{toolQuestionID, questionID}
+				expected := []string{toolQuestionID, callQuestionID}
 				// when
 				err := interceptor(t.Context(), shellCall("go test ./..."))
 				// then

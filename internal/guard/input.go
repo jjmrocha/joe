@@ -19,20 +19,13 @@ type callView struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
-type stateBuildRequest struct {
-	Tool     llm.Tool
-	Call     llm.ToolCall
-	RepoPath string
-	KBPath   string
-}
-
-func buildState(req stateBuildRequest) (string, error) {
+func classifierInput(tool llm.Tool, call llm.ToolCall, constraints []string) (string, error) {
 	var lines []string
 
 	toolJSON, err := toJSON(toolView{
-		Name:        req.Tool.Name,
-		Description: req.Tool.Description,
-		Schema:      req.Tool.Schema,
+		Name:        tool.Name,
+		Description: tool.Description,
+		Schema:      tool.Schema,
 	})
 	if err != nil {
 		return "", err
@@ -41,8 +34,8 @@ func buildState(req stateBuildRequest) (string, error) {
 	lines = append(lines, "Tool: "+toolJSON)
 
 	callJSON, err := toJSON(callView{
-		Name:      req.Call.Name,
-		Arguments: req.Call.Arguments,
+		Name:      call.Name,
+		Arguments: call.Arguments,
 	})
 	if err != nil {
 		return "", err
@@ -50,7 +43,7 @@ func buildState(req stateBuildRequest) (string, error) {
 
 	lines = append(lines, "Call: "+callJSON, "Constraints:")
 
-	for _, constraint := range Constraints(req.RepoPath, req.KBPath) {
+	for _, constraint := range constraints {
 		lines = append(lines, "- "+constraint)
 	}
 

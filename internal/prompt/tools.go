@@ -14,14 +14,14 @@ const (
 	toolInstructionsEndTag = "</tool-instructions>"
 )
 
-func buildTools(r *BuilderRequest) string {
+func buildTools(r Request) string {
 	var builder strings.Builder
 
 	builder.WriteString("\n")
 	builder.WriteString(toolsStartTag)
 	builder.WriteString("\n")
 
-	instructions := slices.SortedFunc(slices.Values(r.Tools), func(a, b mcp.Instruction) int {
+	instructions := slices.SortedFunc(slices.Values(r.ToolInstructions), func(a, b mcp.Instruction) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 

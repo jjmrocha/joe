@@ -11,12 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildSkills(t *testing.T) {
+func TestCreateSkillsDir(t *testing.T) {
 	t.Run("creates an empty skills folder", func(t *testing.T) {
 		// given
 		dir := t.TempDir()
 		// when
-		err := buildSkills(dir)
+		err := createSkillsDir(dir)
 		// then
 		require.NoError(t, err)
 
@@ -30,7 +30,7 @@ func TestBuildSkills(t *testing.T) {
 		blocked := filepath.Join(t.TempDir(), "blocked")
 		require.NoError(t, os.WriteFile(blocked, nil, 0o600))
 		// when
-		err := buildSkills(blocked)
+		err := createSkillsDir(blocked)
 		// then
 		assert.Error(t, err)
 	})
@@ -44,7 +44,7 @@ func TestCloneSkills(t *testing.T) {
 
 		var out bytes.Buffer
 		// when
-		err := cloneSkills(dir, &out)
+		err := cloneSkills(t.Context(), dir, &out)
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
@@ -57,7 +57,7 @@ func TestCloneSkills(t *testing.T) {
 		require.NoError(t, os.Mkdir("-config", 0o750))
 		skillsFixture(t)
 		// when
-		err := cloneSkills("-config", io.Discard)
+		err := cloneSkills(t.Context(), "-config", io.Discard)
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join("-config", "coding-skills", "analyze-code", "SKILL.md"))
@@ -68,7 +68,7 @@ func TestCloneSkills(t *testing.T) {
 		dir := t.TempDir()
 		unreachableSkills(t)
 		// when
-		err := cloneSkills(dir, io.Discard)
+		err := cloneSkills(t.Context(), dir, io.Discard)
 		// then
 		require.Error(t, err)
 

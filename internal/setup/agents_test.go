@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildHarness(t *testing.T) {
+func TestCreateAgentsFile(t *testing.T) {
 	t.Run("creates an empty agents file", func(t *testing.T) {
 		// given
 		dir := t.TempDir()
 		// when
-		err := buildHarness(dir)
+		err := createAgentsFile(dir)
 		// then
 		require.NoError(t, err)
 
@@ -28,7 +28,7 @@ func TestBuildHarness(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("be terse"), 0o600))
 		// when
-		err := buildHarness(dir)
+		err := createAgentsFile(dir)
 		// then
 		require.NoError(t, err)
 

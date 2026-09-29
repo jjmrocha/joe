@@ -10,14 +10,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/go-algo/fn"
-	"github.com/jjmrocha/go-algo/sets"
 	"github.com/jjmrocha/joe/internal/harness"
-)
-
-var Providers = sets.New(
-	string(llm.ProviderOpenRouter),
-	string(llm.ProviderOllama),
-	string(llm.ProviderAnthropic),
 )
 
 type Config struct {
@@ -31,19 +24,19 @@ type Config struct {
 }
 
 type LLM struct {
-	Provider  string   `json:"provider"`
-	BaseURL   string   `json:"base-url,omitempty"`
-	APIKeyEnv string   `json:"api-key-env,omitempty"`
-	Model     string   `json:"model"`
-	Models    []string `json:"models"`
-	Effort    string   `json:"effort"`
+	Provider  llm.Provider `json:"provider"`
+	BaseURL   string       `json:"base-url,omitempty"`
+	APIKeyEnv string       `json:"api-key-env,omitempty"`
+	Model     string       `json:"model"`
+	Models    []string     `json:"models"`
+	Effort    llm.Effort   `json:"effort"`
 }
 
 type Classifier struct {
-	Provider  string `json:"provider"`
-	BaseURL   string `json:"base-url,omitempty"`
-	APIKeyEnv string `json:"api-key-env"`
-	Model     string `json:"model"`
+	Provider  classify.Provider `json:"provider"`
+	BaseURL   string            `json:"base-url,omitempty"`
+	APIKeyEnv string            `json:"api-key-env"`
+	Model     string            `json:"model"`
 }
 
 type MCP struct {
@@ -55,12 +48,12 @@ type MCP struct {
 
 func (c *Config) LLMConfig() llm.Config {
 	return llm.Config{
-		Provider: llm.Provider(c.LLM.Provider),
+		Provider: c.LLM.Provider,
 		BaseURL:  c.LLM.BaseURL,
 		APIKey:   os.Getenv(c.LLM.APIKeyEnv),
 		Model:    c.LLM.Model,
 		Models:   c.LLM.Models,
-		Effort:   llm.Effort(c.LLM.Effort),
+		Effort:   c.LLM.Effort,
 	}
 }
 
@@ -70,7 +63,7 @@ func (c *Config) ClassifierConfig() classify.Config {
 	}
 
 	return classify.Config{
-		Provider: classify.Provider(c.Classifier.Provider),
+		Provider: c.Classifier.Provider,
 		BaseURL:  c.Classifier.BaseURL,
 		APIKey:   os.Getenv(c.Classifier.APIKeyEnv),
 		Model:    c.Classifier.Model,
@@ -78,12 +71,8 @@ func (c *Config) ClassifierConfig() classify.Config {
 }
 
 func (c *Config) MCPClients() []mcp.ClientConfig {
-	return clientConfigs(c.MCPs)
-}
-
-func clientConfigs(entries map[string]MCP) []mcp.ClientConfig {
-	return fn.Map(slices.Sorted(maps.Keys(entries)), func(name string) mcp.ClientConfig {
-		entry := entries[name]
+	return fn.Map(slices.Sorted(maps.Keys(c.MCPs)), func(name string) mcp.ClientConfig {
+		entry := c.MCPs[name]
 
 		return mcp.ClientConfig{
 			Name:            name,

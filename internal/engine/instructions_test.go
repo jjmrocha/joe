@@ -41,9 +41,9 @@ func TestToolInstructions(t *testing.T) {
 		require.NoError(t, err)
 		shellInstruction, err := shellPack.Instructions(ctx)
 		require.NoError(t, err)
-		mng := mcp.NewManager(toolBox)
+		mcpManager := mcp.NewManager(toolBox)
 		// when
-		result := toolInstructions(ctx, []packs.ToolPack{datePack, silentPack{}, shellPack}, mng)
+		result := toolInstructions(ctx, []packs.ToolPack{datePack, silentPack{}, shellPack}, mcpManager)
 		// then
 		expected := []mcp.Instruction{*dateInstruction, *shellInstruction}
 		assert.Equal(t, expected, result)
@@ -51,18 +51,18 @@ func TestToolInstructions(t *testing.T) {
 
 	t.Run("returns nothing when no pack or MCP has instructions", func(t *testing.T) {
 		// given
-		mng := mcp.NewManager(tools.NewToolBox())
+		mcpManager := mcp.NewManager(tools.NewToolBox())
 		// when
-		result := toolInstructions(context.Background(), []packs.ToolPack{silentPack{}}, mng)
+		result := toolInstructions(context.Background(), []packs.ToolPack{silentPack{}}, mcpManager)
 		// then
 		assert.Empty(t, result)
 	})
 
 	t.Run("leaves out a pack whose instructions fail", func(t *testing.T) {
 		// given
-		mng := mcp.NewManager(tools.NewToolBox())
+		mcpManager := mcp.NewManager(tools.NewToolBox())
 		// when
-		result := toolInstructions(context.Background(), []packs.ToolPack{failingPack{}}, mng)
+		result := toolInstructions(context.Background(), []packs.ToolPack{failingPack{}}, mcpManager)
 		// then
 		assert.Empty(t, result)
 	})

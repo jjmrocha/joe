@@ -5,26 +5,25 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestKinds(t *testing.T) {
 	t.Run("holds every kind joe accepts", func(t *testing.T) {
 		// given
-		expected := []string{string(KindAgents), string(KindClaude)}
+		expected := []Kind{KindAgents, KindClaude}
 		// when
 		result := slices.Sorted(Kinds.Values())
 		// then
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("agrees with what ParseKind accepts", func(t *testing.T) {
-		for name := range Kinds.Values() {
-			t.Run(name, func(t *testing.T) {
+	t.Run("agrees with what Validate accepts", func(t *testing.T) {
+		for kind := range Kinds.Values() {
+			t.Run(string(kind), func(t *testing.T) {
 				// given
-				value := name
+				value := kind
 				// when
-				_, err := ParseKind(value)
+				err := value.Validate()
 				// then
 				assert.NoError(t, err)
 			})
@@ -32,15 +31,14 @@ func TestKinds(t *testing.T) {
 	})
 }
 
-func TestParseKind(t *testing.T) {
+func TestValidate(t *testing.T) {
 	t.Run("accepts the kinds joe knows", func(t *testing.T) {
 		testCases := []struct {
-			name     string
-			value    string
-			expected Kind
+			name  string
+			value Kind
 		}{
-			{name: "claude", value: "claude", expected: KindClaude},
-			{name: "agents", value: "agents", expected: KindAgents},
+			{name: "claude", value: KindClaude},
+			{name: "agents", value: KindAgents},
 		}
 
 		for _, testCase := range testCases {
@@ -48,10 +46,9 @@ func TestParseKind(t *testing.T) {
 				// given
 				value := testCase.value
 				// when
-				result, err := ParseKind(value)
+				err := value.Validate()
 				// then
-				require.NoError(t, err)
-				assert.Equal(t, testCase.expected, result)
+				assert.NoError(t, err)
 			})
 		}
 	})
@@ -59,7 +56,7 @@ func TestParseKind(t *testing.T) {
 	t.Run("rejects any other value", func(t *testing.T) {
 		testCases := []struct {
 			name  string
-			value string
+			value Kind
 		}{
 			{name: "empty", value: ""},
 			{name: "unknown", value: "codex"},
@@ -71,7 +68,7 @@ func TestParseKind(t *testing.T) {
 				// given
 				value := testCase.value
 				// when
-				_, err := ParseKind(value)
+				err := value.Validate()
 				// then
 				assert.ErrorIs(t, err, ErrInvalidKind)
 			})

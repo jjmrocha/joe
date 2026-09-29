@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jjmrocha/ai-chat/chat"
 	"github.com/jjmrocha/ai-chat/ui"
@@ -21,7 +22,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	// Initialize models
 	llmClient, err := llm.New(cfg.LLMConfig())
 	if err != nil {
-		return err
+		return fmt.Errorf("model: %w", err)
 	}
 
 	var classifier *classify.Classifier
@@ -29,14 +30,14 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	if cfg.Classifier != nil {
 		classifier, err = classify.New(cfg.ClassifierConfig())
 		if err != nil {
-			return err
+			return fmt.Errorf("classifier: %w", err)
 		}
 	}
 
 	// Initialize the  skills collection
-	skillCollection, err := skills.Collection(cfg)
+	skillCollection, err := skills.Load(cfg.Skills)
 	if err != nil {
-		return err
+		return fmt.Errorf("skills: %w", err)
 	}
 
 	// Repo name
@@ -46,9 +47,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// Load the  harness
-	harness, err := loadHarness(cfg, repoPath)
+	instructionFiles, err := loadHarness(cfg, repoPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("harness: %w", err)
 	}
 
 	// Initialize the  toolbox
@@ -64,23 +65,23 @@ func Run(ctx context.Context, cfg *config.Config) error {
 			KBPath:     cfg.KBPath,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("guard: %w", err)
 		}
 
 		toolBox.SetInterceptor(interceptor)
 	}
 
 	// Initialize the  MCP manager
-	mng := newMCPManager(toolBox, cfg)
-	defer mng.Close()
+	mcpManager := newMCPManager(toolBox, cfg)
+	defer mcpManager.Close()
 
 	// Start the MCP servers the profile boots
-	startMCPs(ctx, mng, cfg)
+	startMCPs(ctx, mcpManager, cfg)
 
 	// Register tools
 	codePack, err := packs.CodingTools(ctx, toolBox, repoPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("coding tools: %w", err)
 	}
 
 	defer func() { _ = codePack.Close() }()
@@ -89,7 +90,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	datePack, err := packs.DateTools(toolBox)
 	if err != nil {
-		return err
+		return fmt.Errorf("date tools: %w", err)
 	}
 
 	defer func() { _ = datePack.Close() }()
@@ -98,7 +99,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	shell, err := packs.ShellTools(toolBox)
 	if err != nil {
-		return err
+		return fmt.Errorf("shell tools: %w", err)
 	}
 
 	defer func() { _ = shell.Close() }()
@@ -110,7 +111,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 		kbPack, err = packs.FileTools(toolBox, cfg.KBPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("knowledge-base tools: %w", err)
 		}
 
 		defer func() { _ = kbPack.Close() }()
@@ -123,7 +124,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 		classifyPack, err = packs.ClassifyTools(toolBox, classifier)
 		if err != nil {
-			return err
+			return fmt.Errorf("classify tools: %w", err)
 		}
 
 		defer func() { _ = classifyPack.Close() }()
@@ -132,16 +133,16 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// Initialize the agent
-	ag, err := agent.New(agent.Config{}, llmClient)
+	codingAgent, err := agent.New(agent.Config{}, llmClient)
 	if err != nil {
-		return err
+		return fmt.Errorf("agent: %w", err)
 	}
 
-	defer ag.Close()
+	defer codingAgent.Close()
 
 	// Initialize the chat
-	chatAgent := chat.New("JOE", ag,
-		chat.WithMCP(mng),
+	chatAgent := chat.New("JOE", codingAgent,
+		chat.WithMCP(mcpManager),
 		chat.WithClearCommand(),
 		chat.WithModelCommand(),
 		chat.WithEffortCommand(),
@@ -150,18 +151,18 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Build prompt
-	toolInstructions := toolInstructions(ctx, toolPacks, mng)
-	promptRequest := prompt.BuilderRequest{
-		Repo:           repoPath,
-		Harness:        harness,
-		KnowledgeBase:  cfg.KBPath,
-		WithClassifier: classifier != nil,
-		Tools:          toolInstructions,
+	instructions := toolInstructions(ctx, toolPacks, mcpManager)
+	promptRequest := prompt.Request{
+		RepoPath:         repoPath,
+		Harness:          instructionFiles,
+		KBPath:           cfg.KBPath,
+		WithClassifier:   classifier != nil,
+		ToolInstructions: instructions,
 	}
-	sysPrompt := prompt.Build(&promptRequest)
+	sysPrompt := prompt.Build(promptRequest)
 
 	// Set session
-	ag.StartSession(agent.SessionConfig{
+	codingAgent.StartSession(agent.SessionConfig{
 		Prompt:  sysPrompt,
 		Skills:  skillCollection,
 		ToolBox: toolBox,

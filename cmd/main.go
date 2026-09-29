@@ -11,13 +11,13 @@ import (
 )
 
 func main() {
-	if err := setup.BuildIfNeeded(); err != nil {
+	ctx := context.Background()
+
+	if err := setup.BuildIfNeeded(ctx); err != nil {
 		log.Fatal(err)
 	}
 
-	ctx := context.Background()
-
-	profile := "default"
+	profile := config.DefaultProfile
 	if len(os.Args) > 1 {
 		profile = os.Args[1]
 	}

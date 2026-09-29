@@ -10,7 +10,7 @@ import (
 )
 
 func Load(name string) (*Config, error) {
-	if !validName(name) {
+	if !isBareName(name) {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidProfileName, name)
 	}
 
@@ -19,9 +19,9 @@ func Load(name string) (*Config, error) {
 		return nil, err
 	}
 
-	cfgPath := filepath.Join(dir, name+".json")
+	cfgPath := filepath.Join(dir, ProfileFile(name))
 
-	cfgFile, err := os.Open(cfgPath) //nolint:gosec // name passed validName, so cfgPath cannot escape Dir()
+	cfgFile, err := os.Open(cfgPath) //nolint:gosec // name passed isBareName, so cfgPath cannot escape Dir()
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, fmt.Errorf("%w: %s", ErrProfileNotFound, cfgPath)

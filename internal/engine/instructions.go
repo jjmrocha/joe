@@ -9,8 +9,8 @@ import (
 	"github.com/jjmrocha/ai-toolkit/packs"
 )
 
-func toolInstructions(ctx context.Context, toolPacks []packs.ToolPack, mng *mcp.Manager) []mcp.Instruction {
-	instructions := mng.Instructions()
+func toolInstructions(ctx context.Context, toolPacks []packs.ToolPack, mcpManager *mcp.Manager) []mcp.Instruction {
+	instructions := mcpManager.Instructions()
 
 	for _, pack := range toolPacks {
 		instruction, err := pack.Instructions(ctx)

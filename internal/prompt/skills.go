@@ -3,6 +3,8 @@ package prompt
 import (
 	"strings"
 	"unicode/utf8"
+
+	"github.com/jjmrocha/joe/internal/skills"
 )
 
 const (
@@ -101,18 +103,7 @@ Follow-ups:
 `
 )
 
-const (
-	skillAddressingFindings       = "addressing-findings"
-	skillAnalyzeCode              = "analyze-code"
-	skillBrainstorm               = "brainstorm"
-	skillGuidingManualTesting     = "guiding-manual-testing"
-	skillKnowledgeBase            = "knowledge-base"
-	skillResearch                 = "research"
-	skillStyleChecker             = "style-checker"
-	skillUsingSoftwareSpecialists = "using-software-specialists"
-	skillWritingUnitTests         = "writing-unit-tests"
-	noSkill                       = "no skill"
-)
+const noSkill = "no skill"
 
 type route struct {
 	wants  string
@@ -122,19 +113,19 @@ type route struct {
 
 var routes = []route{
 	{wants: `A skill they named ("use brainstorm", "run analyze-code") — if it is coding-discipline, designing-interfaces or test-driven-development, route with the rows below and load the named skill at its step`, load: "that skill"},
-	{wants: "The knowledge base written to or audited — ingest, update, lint, write a manual", load: skillKnowledgeBase, needKB: true},
-	{wants: "Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list", load: skillAddressingFindings},
-	{wants: "A review of existing code — a diff, branch, PR, module; quality, security, tech debt", load: skillAnalyzeCode},
-	{wants: "To be guided through testing a change by hand on a local or staging environment", load: skillGuidingManualTesting},
-	{wants: "Style, formatting or naming checked, or a style question answered", load: skillStyleChecker},
-	{wants: `Tests added to existing code, with no production change — "write tests for X", "cover this edge case"`, load: skillWritingUnitTests},
-	{wants: `Something broken fixed or explained — bug, failing test, crash, vulnerability, CI or build failure — even when asked as "why does X fail?"`, load: skillUsingSoftwareSpecialists},
-	{wants: "An existing plan file changed", load: skillBrainstorm},
-	{wants: `An existing plan implemented — "implement plans/X.md"`, load: skillUsingSoftwareSpecialists},
-	{wants: "A new capability, a change callers will see, or a restructuring — feature, new or widened interface, flag, contract change, refactor, migration — however precisely the user specified it", load: skillBrainstorm},
-	{wants: "Any other code change — perf tuning, dependency bump", load: skillUsingSoftwareSpecialists},
-	{wants: "An answer about this code base or what is documented about it, plans included", load: skillResearch},
-	{wants: `An answer from outside this code base — best practice, library choice, "is X true?"`, load: skillUsingSoftwareSpecialists},
+	{wants: "The knowledge base written to or audited — ingest, update, lint, write a manual", load: skills.KnowledgeBase, needKB: true},
+	{wants: "Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list", load: skills.AddressingFindings},
+	{wants: "A review of existing code — a diff, branch, PR, module; quality, security, tech debt", load: skills.AnalyzeCode},
+	{wants: "To be guided through testing a change by hand on a local or staging environment", load: skills.GuidingManualTesting},
+	{wants: "Style, formatting or naming checked, or a style question answered", load: skills.StyleChecker},
+	{wants: `Tests added to existing code, with no production change — "write tests for X", "cover this edge case"`, load: skills.WritingUnitTests},
+	{wants: `Something broken fixed or explained — bug, failing test, crash, vulnerability, CI or build failure — even when asked as "why does X fail?"`, load: skills.UsingSoftwareSpecialists},
+	{wants: "An existing plan file changed", load: skills.Brainstorm},
+	{wants: `An existing plan implemented — "implement plans/X.md"`, load: skills.UsingSoftwareSpecialists},
+	{wants: "A new capability, a change callers will see, or a restructuring — feature, new or widened interface, flag, contract change, refactor, migration — however precisely the user specified it", load: skills.Brainstorm},
+	{wants: "Any other code change — perf tuning, dependency bump", load: skills.UsingSoftwareSpecialists},
+	{wants: "An answer about this code base or what is documented about it, plans included", load: skills.Research},
+	{wants: `An answer from outside this code base — best practice, library choice, "is X true?"`, load: skills.UsingSoftwareSpecialists},
 	{wants: "A concept or term explained, with nothing to decide and nothing to change here", load: noSkill},
 }
 
@@ -145,37 +136,37 @@ type example struct {
 }
 
 var examples = []example{
-	{request: `"How does Load resolve the profile?"`, route: skillResearch},
-	{request: `"Why does Load pick the wrong profile?"`, route: skillUsingSoftwareSpecialists},
-	{request: `"Is there a plan for PROJ-1234?"`, route: skillResearch},
-	{request: `"Why does TestLoad fail on CI?"`, route: skillUsingSoftwareSpecialists},
-	{request: `"Fix the SQL injection in the search handler"`, route: skillUsingSoftwareSpecialists},
-	{request: `"Fix the nil panic in Load and add a test for it"`, route: skillUsingSoftwareSpecialists},
-	{request: `"Bump golang.org/x/net to v0.40"`, route: skillUsingSoftwareSpecialists},
-	{request: `"Which Go TUI library should we use?"`, route: skillUsingSoftwareSpecialists},
+	{request: `"How does Load resolve the profile?"`, route: skills.Research},
+	{request: `"Why does Load pick the wrong profile?"`, route: skills.UsingSoftwareSpecialists},
+	{request: `"Is there a plan for PROJ-1234?"`, route: skills.Research},
+	{request: `"Why does TestLoad fail on CI?"`, route: skills.UsingSoftwareSpecialists},
+	{request: `"Fix the SQL injection in the search handler"`, route: skills.UsingSoftwareSpecialists},
+	{request: `"Fix the nil panic in Load and add a test for it"`, route: skills.UsingSoftwareSpecialists},
+	{request: `"Bump golang.org/x/net to v0.40"`, route: skills.UsingSoftwareSpecialists},
+	{request: `"Which Go TUI library should we use?"`, route: skills.UsingSoftwareSpecialists},
 	{request: `"What is the difference between a mutex and a channel?"`, route: noSkill},
-	{request: `"I'd like plugin support, not sure what shape yet"`, route: skillBrainstorm},
-	{request: `"Add a --verbose flag"`, route: skillBrainstorm},
-	{request: `"Add an Instructions() method to mcp.Client"`, route: skillBrainstorm},
-	{request: `"Refactor Load into smaller functions"`, route: skillBrainstorm},
+	{request: `"I'd like plugin support, not sure what shape yet"`, route: skills.Brainstorm},
+	{request: `"Add a --verbose flag"`, route: skills.Brainstorm},
+	{request: `"Add an Instructions() method to mcp.Client"`, route: skills.Brainstorm},
+	{request: `"Refactor Load into smaller functions"`, route: skills.Brainstorm},
 	{request: `"Use TDD to add a --verbose flag"`, route: "brainstorm, test-driven-development at its step"},
-	{request: `"Add a rollback step to plans/proj-12.md"`, route: skillBrainstorm},
-	{request: `"Implement plans/proj-12.md"`, route: skillUsingSoftwareSpecialists},
-	{request: `"Review my branch before I open the PR"`, route: skillAnalyzeCode},
-	{request: `"Review PR #12 and fix what you find"`, route: skillAnalyzeCode},
-	{request: `"Go through those findings one at a time"`, route: skillAddressingFindings},
-	{request: `"Address the comments on PR #12"`, route: skillAddressingFindings},
-	{request: `"Does internal/config follow Go naming conventions?"`, route: skillStyleChecker},
-	{request: `"Write tests for config.Load"`, route: skillWritingUnitTests},
-	{request: `"Cover the empty-profile edge case in load_test"`, route: skillWritingUnitTests},
-	{request: `"Help me check the new setup flow on my machine"`, route: skillGuidingManualTesting},
-	{request: `"Update the wiki with what we just changed"`, route: skillKnowledgeBase, needKB: true},
-	{request: `"Write a manual for running joe"`, route: skillKnowledgeBase, needKB: true},
+	{request: `"Add a rollback step to plans/proj-12.md"`, route: skills.Brainstorm},
+	{request: `"Implement plans/proj-12.md"`, route: skills.UsingSoftwareSpecialists},
+	{request: `"Review my branch before I open the PR"`, route: skills.AnalyzeCode},
+	{request: `"Review PR #12 and fix what you find"`, route: skills.AnalyzeCode},
+	{request: `"Go through those findings one at a time"`, route: skills.AddressingFindings},
+	{request: `"Address the comments on PR #12"`, route: skills.AddressingFindings},
+	{request: `"Does internal/config follow Go naming conventions?"`, route: skills.StyleChecker},
+	{request: `"Write tests for config.Load"`, route: skills.WritingUnitTests},
+	{request: `"Cover the empty-profile edge case in load_test"`, route: skills.WritingUnitTests},
+	{request: `"Help me check the new setup flow on my machine"`, route: skills.GuidingManualTesting},
+	{request: `"Update the wiki with what we just changed"`, route: skills.KnowledgeBase, needKB: true},
+	{request: `"Write a manual for running joe"`, route: skills.KnowledgeBase, needKB: true},
 	{request: `"Rename cfg to conf in load.go"`, route: noSkill},
 }
 
-func buildSkills(r *BuilderRequest) string {
-	withKB := r.KnowledgeBase != ""
+func buildSkills(r Request) string {
+	withKB := r.KBPath != ""
 
 	var builder strings.Builder
 

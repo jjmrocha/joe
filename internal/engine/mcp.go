@@ -12,16 +12,16 @@ import (
 )
 
 func newMCPManager(tb *tools.ToolBox, cfg *config.Config) *mcp.Manager {
-	mng := mcp.NewManager(tb)
+	mcpManager := mcp.NewManager(tb)
 
-	fn.ForEach(cfg.MCPClients(), mng.Register)
+	fn.ForEach(cfg.MCPClients(), mcpManager.Register)
 
-	return mng
+	return mcpManager
 }
 
-func startMCPs(ctx context.Context, mng *mcp.Manager, cfg *config.Config) {
+func startMCPs(ctx context.Context, mcpManager *mcp.Manager, cfg *config.Config) {
 	fn.ForEach(cfg.MCPsOn, func(name string) {
-		if err := mng.Start(ctx, name); err != nil {
+		if err := mcpManager.Start(ctx, name); err != nil {
 			fmt.Fprintf(os.Stderr, "starting mcp %s: %v\n", name, err)
 		}
 	})

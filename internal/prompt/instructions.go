@@ -9,15 +9,15 @@ const (
 	instructionsEndTag   = "</instructions>"
 )
 
-func buildInstructions(r *BuilderRequest) string {
+func buildInstructions(r Request) string {
 	var builder strings.Builder
 
 	builder.WriteString("\n")
 	builder.WriteString(instructionsStartTag)
 	builder.WriteString("\n")
 
-	builder.WriteString(buildLocations(r.Repo, r.KnowledgeBase))
-	builder.WriteString(buildBoundaries(r.Repo, r.KnowledgeBase))
+	builder.WriteString(buildLocations(r.RepoPath, r.KBPath))
+	builder.WriteString(buildBoundaries(r.RepoPath, r.KBPath))
 
 	if r.WithClassifier {
 		builder.WriteString(buildGuard())
@@ -26,7 +26,7 @@ func buildInstructions(r *BuilderRequest) string {
 	builder.WriteString(buildTools(r))
 	builder.WriteString(buildSerena())
 	builder.WriteString(buildSkills(r))
-	builder.WriteString(buildKnowledgeBase(r.KnowledgeBase))
+	builder.WriteString(buildKnowledgeBase(r.KBPath))
 
 	if r.WithClassifier {
 		builder.WriteString(buildClassifier())

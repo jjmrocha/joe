@@ -7,15 +7,15 @@ import (
 	"github.com/jjmrocha/joe/internal/harness"
 )
 
-type BuilderRequest struct {
-	Harness        *harness.Harness
-	Repo           string
-	KnowledgeBase  string
-	WithClassifier bool
-	Tools          []mcp.Instruction
+type Request struct {
+	Harness          *harness.Harness
+	RepoPath         string
+	KBPath           string
+	WithClassifier   bool
+	ToolInstructions []mcp.Instruction
 }
 
-func Build(r *BuilderRequest) string {
+func Build(r Request) string {
 	var builder strings.Builder
 
 	builder.WriteString(buildRole())

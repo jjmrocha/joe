@@ -13,7 +13,7 @@ import (
 func Path(ctx context.Context) (string, error) {
 	out, err := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
-		if noRepository(err) {
+		if isOutsideRepository(err) {
 			return os.Getwd()
 		}
 
@@ -28,7 +28,7 @@ func Path(ctx context.Context) (string, error) {
 	return repoPath, nil
 }
 
-func noRepository(err error) bool {
+func isOutsideRepository(err error) bool {
 	if errors.Is(err, exec.ErrNotFound) {
 		return true
 	}

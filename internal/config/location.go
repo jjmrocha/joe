@@ -5,6 +5,16 @@ import (
 	"path/filepath"
 )
 
+const (
+	DefaultProfile     = "default"
+	SkillsFolder       = "skills"
+	CodingSkillsFolder = "coding-skills"
+)
+
+func ProfileFile(name string) string {
+	return name + ".json"
+}
+
 func Dir() (string, error) {
 	if base := os.Getenv("XDG_CONFIG_HOME"); base != "" {
 		return filepath.Join(base, "joe"), nil
@@ -24,7 +34,7 @@ func SkillsDir() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, "skills"), nil
+	return filepath.Join(dir, SkillsFolder), nil
 }
 
 func CodingSkillsDir() (string, error) {
@@ -33,5 +43,5 @@ func CodingSkillsDir() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, "coding-skills"), nil
+	return filepath.Join(dir, CodingSkillsFolder), nil
 }

@@ -209,11 +209,11 @@ func TestRenderProfile(t *testing.T) {
 
 		require.NoError(t, json.Unmarshal(content, &result))
 		assert.Equal(t, harness.KindClaude, result.Harness)
-		assert.Equal(t, "openrouter", result.LLM.Provider)
+		assert.Equal(t, llm.ProviderOpenRouter, result.LLM.Provider)
 		assert.Equal(t, testKeyEnv, result.LLM.APIKeyEnv)
 		assert.Equal(t, testModel, result.LLM.Model)
 		assert.Equal(t, []string{testModel}, result.LLM.Models)
-		assert.Equal(t, string(llm.EffortMedium), result.LLM.Effort)
+		assert.Equal(t, llm.EffortMedium, result.LLM.Effort)
 		assert.Empty(t, result.Skills)
 		assert.Empty(t, result.MCPsOn)
 		assert.ElementsMatch(t, []string{"context7", "donsetch"}, names(result.MCPClients()))
@@ -235,7 +235,7 @@ func TestRenderProfile(t *testing.T) {
 	t.Run("writes the classifier block the answers set", func(t *testing.T) {
 		// given
 		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
-		expected := &config.Classifier{Provider: string(classify.ProviderOpenRouter), APIKeyEnv: testKeyEnv, Model: testClassifierModel}
+		expected := &config.Classifier{Provider: classify.ProviderOpenRouter, APIKeyEnv: testKeyEnv, Model: testClassifierModel}
 		// when
 		content, err := renderProfile(given)
 		// then
@@ -262,7 +262,7 @@ func TestRenderProfile(t *testing.T) {
 	})
 }
 
-func TestBuildConfig(t *testing.T) {
+func TestWriteProfile(t *testing.T) {
 	t.Run("writes a profile that loads back", func(t *testing.T) {
 		// given
 		t.Setenv(testKeyEnv, "sk-test")
@@ -271,7 +271,7 @@ func TestBuildConfig(t *testing.T) {
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\n"+testClassifierModel+"\nOPEN_ROUTER_KEY\n")
 		// when
-		err := buildConfig(dir)
+		err := writeProfile(dir)
 		// then
 		require.NoError(t, err)
 
@@ -291,7 +291,7 @@ func TestBuildConfig(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := buildConfig(dir)
+		err := writeProfile(dir)
 		// then
 		assert.Error(t, err)
 	})

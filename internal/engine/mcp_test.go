@@ -54,11 +54,11 @@ func testConfig(t *testing.T, profile string) *config.Config {
 func statusNames(t *testing.T, cfg string) []string {
 	t.Helper()
 
-	mng := newMCPManager(tools.NewToolBox(), testConfig(t, cfg))
-	t.Cleanup(mng.Close)
+	mcpManager := newMCPManager(tools.NewToolBox(), testConfig(t, cfg))
+	t.Cleanup(mcpManager.Close)
 
 	names := make([]string, 0)
-	for _, status := range mng.Status() {
+	for _, status := range mcpManager.Status() {
 		names = append(names, status.Name)
 		assert.False(t, status.Active)
 	}
@@ -66,7 +66,7 @@ func statusNames(t *testing.T, cfg string) []string {
 	return names
 }
 
-func TestNewMcpManager(t *testing.T) {
+func TestNewMCPManager(t *testing.T) {
 	t.Run("registers every server the profile names", func(t *testing.T) {
 		// given
 		profile := `{
@@ -107,12 +107,12 @@ func TestStartMCPs(t *testing.T) {
 }`
 		cfg := testConfig(t, profile)
 
-		mng := newMCPManager(tools.NewToolBox(), cfg)
-		t.Cleanup(mng.Close)
+		mcpManager := newMCPManager(tools.NewToolBox(), cfg)
+		t.Cleanup(mcpManager.Close)
 		// when
-		startMCPs(t.Context(), mng, cfg)
+		startMCPs(t.Context(), mcpManager, cfg)
 		// then
-		result := mng.Status()
+		result := mcpManager.Status()
 		require.Len(t, result, 1)
 		assert.Equal(t, "broken", result[0].Name)
 		assert.False(t, result[0].Active)

@@ -14,24 +14,23 @@ const (
 	KindAgents Kind = "agents"
 )
 
-var Kinds = sets.New(
-	string(KindClaude),
-	string(KindAgents),
-)
+const AgentsFile = "AGENTS.md"
 
-func ParseKind(value string) (Kind, error) {
-	if !Kinds.Contains(value) {
-		return "", fmt.Errorf("%w: %s", ErrInvalidKind, value)
+var Kinds = sets.New(KindClaude, KindAgents)
+
+func (k Kind) Validate() error {
+	if !Kinds.Contains(k) {
+		return fmt.Errorf("%w: %s", ErrInvalidKind, k)
 	}
 
-	return Kind(value), nil
+	return nil
 }
 
 func (k Kind) files(paths Paths) []string {
 	if k == KindAgents {
 		return []string{
-			filepath.Join(paths.ConfigDir, "AGENTS.md"),
-			filepath.Join(paths.Repo, "AGENTS.md"),
+			filepath.Join(paths.ConfigDir, AgentsFile),
+			filepath.Join(paths.Repo, AgentsFile),
 			filepath.Join(paths.Repo, "AGENTS.local.md"),
 		}
 	}

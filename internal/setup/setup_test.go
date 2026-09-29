@@ -98,7 +98,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		skillsFixture(t)
 		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.DirExists(t, filepath.Join(dir, "skills"))
@@ -114,7 +114,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.NoFileExists(t, filepath.Join(dir, "AGENTS.md"))
@@ -128,7 +128,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join(dir, "default.json"))
@@ -144,7 +144,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("be terse"), 0o600))
 		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		require.NoError(t, err)
 
@@ -160,7 +160,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
@@ -173,7 +173,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "coding-skills"), 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		assert.NoError(t, err)
 	})
@@ -184,7 +184,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		unreachableSkills(t)
 		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		require.Error(t, err)
 		assert.FileExists(t, filepath.Join(dir, "default.json"))
@@ -198,7 +198,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		require.NoError(t, os.WriteFile(blocked, nil, 0o600))
 		t.Setenv("XDG_CONFIG_HOME", blocked)
 		// when
-		err := BuildIfNeeded()
+		err := BuildIfNeeded(t.Context())
 		// then
 		assert.Error(t, err)
 	})
@@ -214,5 +214,27 @@ func TestBuild(t *testing.T) {
 		// then
 		assert.ErrorIs(t, err, ErrNoAnswer)
 		assert.NoFileExists(t, filepath.Join(dir, "AGENTS.md"))
+	})
+}
+
+func TestCreateConfigDir(t *testing.T) {
+	t.Run("creates the folder", func(t *testing.T) {
+		// given
+		dir := filepath.Join(t.TempDir(), "joe")
+		// when
+		err := createConfigDir(dir)
+		// then
+		require.NoError(t, err)
+		assert.DirExists(t, dir)
+	})
+
+	t.Run("reports a folder it cannot create", func(t *testing.T) {
+		// given
+		blocked := filepath.Join(t.TempDir(), "blocked")
+		require.NoError(t, os.WriteFile(blocked, nil, 0o600))
+		// when
+		err := createConfigDir(filepath.Join(blocked, "joe"))
+		// then
+		assert.Error(t, err)
 	})
 }

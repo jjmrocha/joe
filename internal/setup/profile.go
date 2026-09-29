@@ -13,6 +13,7 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
+	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/harness"
 )
@@ -23,8 +24,8 @@ var (
 )
 
 type answers struct {
-	harness             string
-	provider            string
+	harness             harness.Kind
+	provider            llm.Provider
 	model               string
 	apiKeyEnv           string
 	kbPath              string
@@ -32,7 +33,7 @@ type answers struct {
 	classifierAPIKeyEnv string
 }
 
-func buildConfig(dir string) error {
+func writeProfile(dir string) error {
 	reader := bufio.NewReader(os.Stdin)
 
 	given, err := askProfile(reader, os.Stdout, dir)
@@ -51,64 +52,52 @@ func buildConfig(dir string) error {
 func askProfile(in *bufio.Reader, out io.Writer, dir string) (answers, error) {
 	var given answers
 
-	if err := intro(out, dir); err != nil {
-		return given, err
-	}
-
-	provider, err := choose(in, out, "Provider", slices.Sorted(config.Providers.Values()))
+	err := printIntro(out, dir)
 	if err != nil {
 		return given, err
 	}
 
-	given.provider = provider
-
-	model, err := match(in, out, "Model", modelPattern)
+	given.provider, err = askChoice(in, out, "Provider", slices.Sorted(config.Providers.Values()))
 	if err != nil {
 		return given, err
 	}
 
-	given.model = model
+	given.model, err = askMatching(in, out, "Model", modelPattern)
+	if err != nil {
+		return given, err
+	}
 
-	if provider != string(llm.ProviderOllama) {
-		keyEnv, keyErr := match(in, out, "Name of the API key variable", keyEnvPattern)
-		if keyErr != nil {
-			return given, keyErr
+	if given.provider != llm.ProviderOllama {
+		given.apiKeyEnv, err = askMatching(in, out, "Name of the API key variable", keyEnvPattern)
+		if err != nil {
+			return given, err
 		}
-
-		given.apiKeyEnv = keyEnv
 	}
 
-	kind, err := choose(in, out, "Harness", slices.Sorted(harness.Kinds.Values()))
+	given.harness, err = askChoice(in, out, "Harness", slices.Sorted(harness.Kinds.Values()))
 	if err != nil {
 		return given, err
 	}
-
-	given.harness = kind
 
 	_, _ = fmt.Fprintln(out)
 
-	kbPath, err := askKBPath(in, out)
+	given.kbPath, err = askKBPath(in, out)
 	if err != nil {
 		return given, err
 	}
-
-	given.kbPath = kbPath
 
 	_, _ = fmt.Fprintln(out)
 
-	classifierModel, classifierAPIKeyEnv, err := askClassifier(in, out)
+	given.classifierModel, given.classifierAPIKeyEnv, err = askClassifier(in, out)
 	if err != nil {
 		return given, err
 	}
-
-	given.classifierModel = classifierModel
-	given.classifierAPIKeyEnv = classifierAPIKeyEnv
 
 	return given, nil
 }
 
 func askKBPath(in *bufio.Reader, out io.Writer) (string, error) {
-	wanted, err := choose(in, out, "Knowledge base", []string{"yes", "no"})
+	wanted, err := askChoice(in, out, "Knowledge base", []string{"yes", "no"})
 	if err != nil {
 		return "", err
 	}
@@ -121,17 +110,17 @@ func askKBPath(in *bufio.Reader, out io.Writer) (string, error) {
 }
 
 func askClassifier(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, err error) {
-	wanted, err := choose(in, out, "Classifier model", []string{"yes", "no"})
+	wanted, err := askChoice(in, out, "Classifier model", []string{"yes", "no"})
 	if err != nil || wanted == "no" {
 		return "", "", err
 	}
 
-	model, err = match(in, out, "Classifier model name", modelPattern)
+	model, err = askMatching(in, out, "Classifier model name", modelPattern)
 	if err != nil {
 		return "", "", err
 	}
 
-	apiKeyEnv, err = match(in, out, "Name of the classifier API key variable", keyEnvPattern)
+	apiKeyEnv, err = askMatching(in, out, "Name of the classifier API key variable", keyEnvPattern)
 	if err != nil {
 		return "", "", err
 	}
@@ -141,14 +130,14 @@ func askClassifier(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, er
 
 func renderProfile(given answers) ([]byte, error) {
 	cfg := config.Config{
-		Harness: harness.Kind(given.harness),
+		Harness: given.harness,
 		KBPath:  given.kbPath,
 		LLM: config.LLM{
 			Provider:  given.provider,
 			APIKeyEnv: given.apiKeyEnv,
 			Model:     given.model,
 			Models:    []string{given.model},
-			Effort:    string(llm.EffortMedium),
+			Effort:    llm.EffortMedium,
 		},
 		Skills: []string{},
 		MCPs: map[string]config.MCP{
@@ -168,7 +157,7 @@ func renderProfile(given answers) ([]byte, error) {
 
 	if given.classifierModel != "" {
 		cfg.Classifier = &config.Classifier{
-			Provider:  string(classify.ProviderOpenRouter),
+			Provider:  classify.ProviderOpenRouter,
 			APIKeyEnv: given.classifierAPIKeyEnv,
 			Model:     given.classifierModel,
 		}
@@ -177,20 +166,21 @@ func renderProfile(given answers) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "  ")
 }
 
-func choose(in *bufio.Reader, out io.Writer, question string, options []string) (string, error) {
-	prompt := fmt.Sprintf("%s [%s]: ", question, strings.Join(options, ", "))
+func askChoice[T ~string](in *bufio.Reader, out io.Writer, question string, options []T) (T, error) {
+	names := strings.Join(fn.Map(options, func(option T) string { return string(option) }), ", ")
+	prompt := fmt.Sprintf("%s [%s]: ", question, names)
 
 	for {
-		answer, err := read(in, out, prompt)
+		answer, err := readAnswer(in, out, prompt)
 		if err != nil {
 			return "", err
 		}
 
-		if slices.Contains(options, answer) {
-			return answer, nil
+		if slices.Contains(options, T(answer)) {
+			return T(answer), nil
 		}
 
-		_, _ = fmt.Fprintf(out, "%q is not one of: %s\n", answer, strings.Join(options, ", "))
+		_, _ = fmt.Fprintf(out, "%q is not one of: %s\n", answer, names)
 	}
 }
 
@@ -198,7 +188,7 @@ func askPath(in *bufio.Reader, out io.Writer, question string) (string, error) {
 	prompt := question + ": "
 
 	for {
-		answer, err := read(in, out, prompt)
+		answer, err := readAnswer(in, out, prompt)
 		if err != nil {
 			return "", err
 		}
@@ -231,11 +221,11 @@ func isDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-func match(in *bufio.Reader, out io.Writer, question string, pattern *regexp.Regexp) (string, error) {
+func askMatching(in *bufio.Reader, out io.Writer, question string, pattern *regexp.Regexp) (string, error) {
 	prompt := question + ": "
 
 	for {
-		answer, err := read(in, out, prompt)
+		answer, err := readAnswer(in, out, prompt)
 		if err != nil {
 			return "", err
 		}
@@ -248,7 +238,7 @@ func match(in *bufio.Reader, out io.Writer, question string, pattern *regexp.Reg
 	}
 }
 
-func read(in *bufio.Reader, out io.Writer, prompt string) (string, error) {
+func readAnswer(in *bufio.Reader, out io.Writer, prompt string) (string, error) {
 	_, _ = fmt.Fprint(out, prompt)
 
 	line, err := in.ReadString('\n')
@@ -259,7 +249,7 @@ func read(in *bufio.Reader, out io.Writer, prompt string) (string, error) {
 	return strings.TrimSpace(line), nil
 }
 
-func intro(out io.Writer, dir string) error {
+func printIntro(out io.Writer, dir string) error {
 	_, err := fmt.Fprintf(out, `
     ╔═══╗ ╔═══════╗ ╔═══════╗ 
     ╚═╗ ║ ║ ╔═══╗ ║ ║ ╔═════╝ 
@@ -276,7 +266,7 @@ which you can edit later. Then joe clones its skills into
 
   %s
 
-`, filepath.Join(dir, defaultProfile), filepath.Join(dir, "coding-skills"))
+`, filepath.Join(dir, defaultProfile), filepath.Join(dir, config.CodingSkillsFolder))
 
 	return err
 }

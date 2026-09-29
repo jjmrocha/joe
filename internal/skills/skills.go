@@ -6,28 +6,43 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/jjmrocha/ai-toolkit/skills"
+	toolkitskills "github.com/jjmrocha/ai-toolkit/skills"
 	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
 )
 
+const (
+	AddressingFindings       = "addressing-findings"
+	AnalyzeCode              = "analyze-code"
+	Brainstorm               = "brainstorm"
+	CodingDiscipline         = "coding-discipline"
+	DesigningInterfaces      = "designing-interfaces"
+	GuidingManualTesting     = "guiding-manual-testing"
+	KnowledgeBase            = "knowledge-base"
+	Research                 = "research"
+	StyleChecker             = "style-checker"
+	TestDrivenDevelopment    = "test-driven-development"
+	UsingSoftwareSpecialists = "using-software-specialists"
+	WritingUnitTests         = "writing-unit-tests"
+)
+
 var skillNames = []string{
-	"addressing-findings",
-	"analyze-code",
-	"brainstorm",
-	"coding-discipline",
-	"designing-interfaces",
-	"guiding-manual-testing",
-	"knowledge-base",
-	"research",
-	"style-checker",
-	"test-driven-development",
-	"using-software-specialists",
-	"writing-unit-tests",
+	AddressingFindings,
+	AnalyzeCode,
+	Brainstorm,
+	CodingDiscipline,
+	DesigningInterfaces,
+	GuidingManualTesting,
+	KnowledgeBase,
+	Research,
+	StyleChecker,
+	TestDrivenDevelopment,
+	UsingSoftwareSpecialists,
+	WritingUnitTests,
 }
 
-func Collection(cfg *config.Config) (*skills.Collection, error) {
-	skillCollection := skills.NewCollection()
+func Load(extra []string) (*toolkitskills.Collection, error) {
+	skillCollection := toolkitskills.NewCollection()
 
 	codingSkillsDir, err := config.CodingSkillsDir()
 	if err != nil {
@@ -43,7 +58,7 @@ func Collection(cfg *config.Config) (*skills.Collection, error) {
 		return skillCollection.Add(filepath.Join(codingSkillsDir, skillName))
 	})
 
-	extraProblems := fn.Map(cfg.Skills, func(skillName string) error {
+	extraProblems := fn.Map(extra, func(skillName string) error {
 		if slices.Contains(skillNames, skillName) {
 			return fmt.Errorf("%w: %s", ErrReservedSkill, skillName)
 		}

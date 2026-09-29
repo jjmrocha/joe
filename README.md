@@ -14,7 +14,7 @@
 
 joe works in one repository at a time: it reads the code, changes it, runs the tests and
 tells you what it did. It does not improvise. Every request goes through a written
-procedure you can read and edit.
+procedure.
 
 ```
 $ cd ~/sources/go/joe
@@ -30,7 +30,7 @@ $ joe
 ● serena__read_file(relative_path="internal/skills/skills.go")
   ⎿ <1.3 KB> · 377ms
 
-  joe ships twelve skills, defined in  internal/skills/skills.go:10-23 :
+  joe ships twelve skills, defined in  internal/skills/skills.go:14-27 :
 
   1. addressing-findings
   2. analyze-code
@@ -45,7 +45,7 @@ $ joe
   11. using-software-specialists
   12. writing-unit-tests
 
-  They're loaded from the coding-skills dir via  skills.Collection()  ( internal/skills/skills.go:26 ). 
+  They're loaded from the coding-skills dir via  skills.Load()  ( internal/skills/skills.go:44 ). 
   The profile can add extra skills through  cfg.Skills  (loaded from  skills/  in the config folder), 
   but any name colliding with the twelve above is rejected with 
    ErrReservedSkill  ( internal/skills/skills.go:37-40 ) — these twelve are the prompt's routing table
@@ -70,7 +70,7 @@ creator of Erlang.
 Every request is routed to a skill (a written procedure for that kind of work) before joe
 touches anything. A bug gets the debugging procedure, a new feature starts by pinning down
 requirements, a review follows the review checklist. The twelve skills live in [coding-skills](https://github.com/jjmrocha/coding-skills), cloned into
-your config folder on first run. **Edit a skill and you change how joe works.**
+your config folder on first run.
 
 joe reads code by symbol, through [Serena](https://github.com/oraios/serena): it looks up a
 function, its body and its references instead of grepping and guessing, and edits at the
@@ -195,8 +195,8 @@ again without asking.
 `style-checker`, `test-driven-development`, `using-software-specialists`,
 `writing-unit-tests`.
 
-Each loads from `~/.config/joe/coding-skills/<name>/SKILL.md`. Edit them there; joe never
-touches the clone again. To pick up upstream changes, merged with your edits:
+Each loads from `~/.config/joe/coding-skills/<name>/SKILL.md`. joe never updates the clone
+itself. To pick up upstream changes:
 
 ```bash
 git -C ~/.config/joe/coding-skills pull
@@ -207,9 +207,9 @@ git -C ~/.config/joe/coding-skills pull
 <details>
 <summary>Optional: web search and library documentation</summary>
 
-The default profile registers two MCP servers. Both start the first time joe uses them, not
-at launch, so a missing one costs nothing until a request needs it. `/mcp` lists them and
-their state.
+The default profile registers two MCP servers and starts neither: a server runs only when
+it is listed in `mcps-on` or you start it with `/mcp on <name>`, so a missing one costs
+nothing until you turn it on. `/mcp` lists them and their state.
 
 - [DonSeTch](https://github.com/dondai44423/donsetch) does web search, page fetching and
   crawling. Without it joe works fine offline; a request that needs the web fails when the
@@ -253,8 +253,8 @@ verbatim, least specific first, skipping any that are absent. Which three depend
 | `claude` | `~/.claude/CLAUDE.md`, `<repo>/CLAUDE.md`, `<repo>/CLAUDE.local.md` |
 | `agents` | `~/.config/joe/AGENTS.md`, `<repo>/AGENTS.md`, `<repo>/AGENTS.local.md` |
 
-A later file wins where two disagree. joe's own instructions win over all of them on tools,
-skills, Serena, the classifier and the knowledge base. The rest is yours.
+A later file wins where two disagree. joe's own instructions win over all of them, on every
+subject: your files can add to them or narrow them, not override or relax them.
 
 Imports are not followed: a line like `@RTK.md` is passed through as text, and joe never
 opens the file it names.
@@ -335,7 +335,7 @@ seconds, the call runs. It is a second line of defence, not a sandbox.
 
 Some tools earn trust. The first call to each tool also asks whether *any* call to that
 tool could break the rules. A tool judged unable to (`current_date`, say) is not checked
-again for the rest of the session. That verdict is read from the tool's own description, so
+again until joe exits; `/clear` does not reset it. That verdict is read from the tool's own description, so
 an MCP server can talk the model into trusting a tool it should not: **only add MCP servers
 you trust.**
 
@@ -406,8 +406,8 @@ the next run ask the setup questions again.
 | `llm.models` | The models `/model` switches between |
 | `llm.effort` | `off`, `low`, `medium` or `max`: how much the model reasons before answering |
 | `skills` | Extra skills by name, loaded from `~/.config/joe/skills`. Cannot name one of joe's own twelve |
-| `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds (`0` or absent means no limit) |
-| `mcps-on` | The servers started at launch; the rest start on first use |
+| `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds (`0` or absent means 60) |
+| `mcps-on` | The servers started at launch; start the rest with `/mcp on <name>` |
 | `classifier` | The classification model behind the guard and the `classify_*` tools. Omit it for neither |
 | `classifier.provider` | `openrouter` |
 | `classifier.base-url` | Overrides the provider's endpoint; omit it for the standard one |
@@ -429,19 +429,17 @@ Serena is not configurable: it always starts with joe.
 |---|---|---|
 | `skill folder not found: …` | One of the twelve is missing from `~/.config/joe/coding-skills`, or an extra from `~/.config/joe/skills` | After upgrading joe, run `git -C ~/.config/joe/coding-skills pull`: a newer joe can need a skill your clone predates. Otherwise restore it, or delete `coding-skills/` and joe clones it again. Every missing one is listed at once |
 | `clone skills: …` | The first-run clone of coding-skills failed; git's own message is printed above it | Check the network and `git`, then run joe again. Only the clone is retried |
-| `skill is one of joe's own` | The profile's `skills` names one of the twelve | Remove it from `skills`; edit that skill in `coding-skills/` instead |
+| `skill is one of joe's own` | The profile's `skills` names one of the twelve | Remove it from `skills` |
 | `api key variable is not set` | `api-key-env` names a variable with no value | `export` it, or point `api-key-env` at the one you use |
 | `classifier provider is not openrouter` | `classifier.provider` is anything else | Use `openrouter` |
-| `json: unknown field "som"` | The profile predates the rename of `som` to `classifier` | Rename the key to `classifier`; its contents stay the same |
 | `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
 | `no answer to read` | Setup ran with nothing on stdin: a pipe, a redirect, or Ctrl-D at a question | Run joe from a terminal; nothing is left broken, the next run asks again |
 | `kb-path is not absolute` | `kb-path` is relative or starts with `~` | Spell the path out in full |
 | `opening root: …` | `kb-path` names a folder that is missing or unreadable | Create it, or drop the key |
 | `harness is not claude or agents` | Unknown `harness` value | Use `claude` or `agents` |
 | `git rev-parse: …` | `git` is present but refusing (dubious ownership, unreadable `.git`) | Fix the repository, or run joe somewhere else |
+| `coding tools: …` | Serena failed to start, usually because `uvx` is not on `PATH` | Install [uv](https://github.com/astral-sh/uv) and check `uvx` runs |
 
-- When Serena fails to start, the error does not name it: it surfaces as an error from the
-  coding tool pack at launch. The usual cause is `uvx` missing from `PATH`.
 - An `mcps-on` server that fails to start does not stop joe. The failure prints before
   the chat opens, `/mcp` shows the server as `off`, and `/mcp on <name>` retries it.
 - To start over, delete `~/.config/joe` (or just its `default.json`) and run joe
@@ -459,16 +457,16 @@ Serena is not configurable: it always starts with joe.
 |---|---|
 | `build` | Build joe into `./bin` |
 | `clean` | Remove `./bin` |
-| `test` | Run all tests |
+| `test` | Run all tests with the race detector |
 | `bench` | Run benchmarks |
 | `lint` | Run golangci-lint |
 | `deps` | Update dependencies |
 | `tidy` | Tidy `go.mod` |
 
-CI runs `go test -race ./...`, `golangci-lint` and `govulncheck` on every push and pull
-request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Run the `-race` form before
-pushing; `make test` does not. golangci-lint must be v2.13.2 or newer; earlier releases are
-built with an older Go and refuse this module.
+CI runs `go test -race ./...`, `golangci-lint`, `govulncheck` and a gitleaks secret scan on
+every push and pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+golangci-lint must be v2.13.2 or newer; earlier releases are built with an older Go and
+refuse this module.
 
 ## License
 

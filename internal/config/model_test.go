@@ -50,7 +50,7 @@ func mustLoad(t *testing.T, content string) *Config {
 func TestProviders(t *testing.T) {
 	t.Run("holds every provider joe accepts", func(t *testing.T) {
 		// given
-		expected := []string{"anthropic", "ollama", "openrouter"}
+		expected := []llm.Provider{llm.ProviderAnthropic, llm.ProviderOllama, llm.ProviderOpenRouter}
 		// when
 		result := slices.Sorted(Providers.Values())
 		// then
@@ -106,7 +106,7 @@ func TestClassifierConfig(t *testing.T) {
 	})
 }
 
-func TestMCPs(t *testing.T) {
+func TestMCPClients(t *testing.T) {
 	t.Run("converts every entry into a client config", func(t *testing.T) {
 		// given
 		content := profileWith(`"mcps": {"github": {"command": "github-mcp-server", "args": ["stdio"], "env": ["GITHUB_TOKEN"], "timeout": 90}}`)

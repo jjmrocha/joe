@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var tags = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
+var closingTagPattern = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
 
 func Load(kind Kind, paths Paths) (*Harness, error) {
 	var h Harness
@@ -23,25 +23,24 @@ func Load(kind Kind, paths Paths) (*Harness, error) {
 			return nil, err
 		}
 
-		b := Block{
+		h.Blocks = append(h.Blocks, Block{
 			Path:    path,
-			Content: parseContent(content),
-		}
-		h.Blocks = append(h.Blocks, b)
+			Content: sanitize(content),
+		})
 	}
 
 	return &h, nil
 }
 
-func parseContent(content []byte) string {
+func sanitize(content []byte) string {
 	str := string(content)
 	body := strings.TrimRight(str, "\n")
-	return removeTags(body)
+	return stripClosingTags(body)
 }
 
-func removeTags(content string) string {
-	for tags.MatchString(content) {
-		content = tags.ReplaceAllLiteralString(content, "")
+func stripClosingTags(content string) string {
+	for closingTagPattern.MatchString(content) {
+		content = closingTagPattern.ReplaceAllLiteralString(content, "")
 	}
 
 	return content

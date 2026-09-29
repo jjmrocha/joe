@@ -10,32 +10,25 @@ import (
 	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/sets"
-	"github.com/jjmrocha/joe/internal/harness"
 )
 
 var bareNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
-var (
-	efforts = sets.New(
-		string(llm.EffortOff),
-		string(llm.EffortLow),
-		string(llm.EffortMedium),
-		string(llm.EffortMax),
-	)
+var Providers = sets.New(llm.ProviderOpenRouter, llm.ProviderOllama, llm.ProviderAnthropic)
 
-	classifierProviders = sets.New(
-		string(classify.ProviderOpenRouter),
-	)
+var (
+	efforts             = sets.New(llm.EffortOff, llm.EffortLow, llm.EffortMedium, llm.EffortMax)
+	classifierProviders = sets.New(classify.ProviderOpenRouter)
 )
 
-func validName(name string) bool {
+func isBareName(name string) bool {
 	return bareNamePattern.MatchString(name)
 }
 
 func validate(cfg *Config) error {
 	var problems []error
 
-	if _, err := harness.ParseKind(string(cfg.Harness)); err != nil {
+	if err := cfg.Harness.Validate(); err != nil {
 		problems = append(problems, err)
 	}
 
@@ -50,7 +43,7 @@ func validate(cfg *Config) error {
 	}
 
 	for _, skillName := range cfg.Skills {
-		if !validName(skillName) {
+		if !isBareName(skillName) {
 			problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidSkillName, skillName))
 		}
 	}
@@ -64,45 +57,45 @@ func validate(cfg *Config) error {
 	return errors.Join(problems...)
 }
 
-func validateLLM(l LLM) []error {
+func validateLLM(cfg LLM) []error {
 	var problems []error
 
-	if !Providers.Contains(l.Provider) {
-		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidProvider, l.Provider))
+	if !Providers.Contains(cfg.Provider) {
+		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidProvider, cfg.Provider))
 	}
 
-	if !efforts.Contains(l.Effort) {
-		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidEffort, l.Effort))
+	if !efforts.Contains(cfg.Effort) {
+		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidEffort, cfg.Effort))
 	}
 
-	if l.Model == "" {
+	if cfg.Model == "" {
 		problems = append(problems, ErrMissingModel)
 	}
 
-	if l.Provider == string(llm.ProviderOllama) {
+	if cfg.Provider == llm.ProviderOllama {
 		return problems
 	}
 
-	if l.APIKeyEnv == "" || os.Getenv(l.APIKeyEnv) == "" {
-		problems = append(problems, fmt.Errorf("%w: %s", ErrMissingAPIKey, l.APIKeyEnv))
+	if cfg.APIKeyEnv == "" || os.Getenv(cfg.APIKeyEnv) == "" {
+		problems = append(problems, fmt.Errorf("%w: %s", ErrMissingAPIKey, cfg.APIKeyEnv))
 	}
 
 	return problems
 }
 
-func validateClassifier(s *Classifier) []error {
+func validateClassifier(cfg *Classifier) []error {
 	var problems []error
 
-	if !classifierProviders.Contains(s.Provider) {
-		problems = append(problems, fmt.Errorf("classifier: %w: %s", ErrInvalidClassifierProvider, s.Provider))
+	if !classifierProviders.Contains(cfg.Provider) {
+		problems = append(problems, fmt.Errorf("classifier: %w: %s", ErrInvalidClassifierProvider, cfg.Provider))
 	}
 
-	if s.Model == "" {
+	if cfg.Model == "" {
 		problems = append(problems, fmt.Errorf("classifier: %w", ErrMissingModel))
 	}
 
-	if s.APIKeyEnv == "" || os.Getenv(s.APIKeyEnv) == "" {
-		problems = append(problems, fmt.Errorf("classifier: %w: %s", ErrMissingAPIKey, s.APIKeyEnv))
+	if cfg.APIKeyEnv == "" || os.Getenv(cfg.APIKeyEnv) == "" {
+		problems = append(problems, fmt.Errorf("classifier: %w: %s", ErrMissingAPIKey, cfg.APIKeyEnv))
 	}
 
 	return problems

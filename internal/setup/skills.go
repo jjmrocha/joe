@@ -1,20 +1,23 @@
 package setup
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/jjmrocha/joe/internal/config"
 )
 
 var skillsRepo = "https://github.com/jjmrocha/coding-skills.git"
 
-func buildSkills(dir string) error {
-	return os.MkdirAll(filepath.Join(dir, "skills"), 0o750)
+func createSkillsDir(dir string) error {
+	return os.MkdirAll(filepath.Join(dir, config.SkillsFolder), 0o750)
 }
 
-func cloneSkills(dir string, out io.Writer) error {
+func cloneSkills(ctx context.Context, dir string, out io.Writer) error {
 	_, _ = fmt.Fprintf(out, "Cloning skills from %s …\n", skillsRepo)
 
 	tmp, err := os.MkdirTemp(dir, "coding-skills.tmp-")
@@ -22,7 +25,7 @@ func cloneSkills(dir string, out io.Writer) error {
 		return fmt.Errorf("clone skills: %w", err)
 	}
 
-	cmd := exec.Command("git", "clone", "--quiet", "--", skillsRepo, tmp) //nolint:gosec // fixed git subcommand; the url is skillsRepo and the target is a folder we just created
+	cmd := exec.CommandContext(ctx, "git", "clone", "--quiet", "--", skillsRepo, tmp) //nolint:gosec // fixed git subcommand; the url is skillsRepo and the target is a folder we just created
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 
@@ -32,7 +35,7 @@ func cloneSkills(dir string, out io.Writer) error {
 		return fmt.Errorf("clone skills: %w", err)
 	}
 
-	if err := os.Rename(tmp, filepath.Join(dir, "coding-skills")); err != nil {
+	if err := os.Rename(tmp, filepath.Join(dir, config.CodingSkillsFolder)); err != nil {
 		_ = os.RemoveAll(tmp)
 
 		return fmt.Errorf("clone skills: %w", err)

@@ -64,12 +64,12 @@ func writeSkill(t *testing.T, dir, name string) {
 	}
 }
 
-func TestCollection(t *testing.T) {
+func TestLoad(t *testing.T) {
 	t.Run("reports every missing skill in one pass", func(t *testing.T) {
 		// given
 		cfg := testConfig(t, testProfile(`[]`))
 		// when
-		_, err := Collection(cfg)
+		_, err := Load(cfg.Skills)
 		// then
 		require.Error(t, err)
 
@@ -82,7 +82,7 @@ func TestCollection(t *testing.T) {
 		// given
 		cfg := testConfig(t, testProfile(`["removing-ai-tells"]`))
 		// when
-		_, err := Collection(cfg)
+		_, err := Load(cfg.Skills)
 		// then
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "removing-ai-tells")
@@ -104,7 +104,7 @@ func TestCollection(t *testing.T) {
 
 		writeSkill(t, skillsDir, "removing-ai-tells")
 		// when
-		result, err := Collection(cfg)
+		result, err := Load(cfg.Skills)
 		// then
 		require.NoError(t, err)
 
@@ -129,7 +129,7 @@ func TestCollection(t *testing.T) {
 
 		writeSkill(t, skillsDir, "brainstorm")
 		// when
-		_, err = Collection(cfg)
+		_, err = Load(cfg.Skills)
 		// then
 		require.ErrorIs(t, err, ErrReservedSkill)
 		assert.Contains(t, err.Error(), "brainstorm")
