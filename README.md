@@ -373,20 +373,31 @@ the next run ask the setup questions again.
 ```json
 {
   "harness": "claude",
-  "kb-path": "/Users/you/Documents/LLM_WIKI",
+  "kb-path": "/Users/you/Documents/JOE_KB",
   "llm": {
     "provider": "openrouter",
     "api-key-env": "OPEN_ROUTER_KEY",
     "model": "z-ai/glm-5.3-flash",
-    "models": ["z-ai/glm-5.3-flash", "deepseek/deepseek-v4-pro"],
-    "effort": "medium"
+    "models": [
+      "z-ai/glm-5.3-flash",
+      "z-ai/glm-5.3"
+    ],
+    "effort": "max"
   },
-  "skills": ["removing-ai-tells"],
+  "skills": [],
   "mcps": {
-    "context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": 60 },
-    "github": { "command": "github-mcp-server", "args": ["stdio"], "env": ["GITHUB_TOKEN"] }
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "timeout": 60
+    },
+    "donsetch": {
+      "command": "donsetch",
+      "args": ["mcp", "--supervised"],
+      "timeout": 900
+    }
   },
-  "mcps-on": ["github"],
+  "mcps-on": [],
   "classifier": {
     "provider": "openrouter",
     "api-key-env": "OPEN_ROUTER_KEY",
