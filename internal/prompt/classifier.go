@@ -38,10 +38,20 @@ Checkpoints:
    After you have walked the six REFACTOR items, for each production function
    changed in GREEN:
    classify_yes_no
-     instructions: "Should this function be refactored further?"
+     instructions: "Would a senior software engineer refactor this function
+     further? Judge it against these principles:
+       - Duplication: the same knowledge expressed in two places.
+       - Naming: each name says what it is, not how it works.
+       - Cognitive complexity: nesting depth, branch count, boolean
+         operators per condition; the function reads top-to-bottom in
+         one screen.
+       - Single responsibility: the function does one thing.
+       - No side effects: no mutation of arguments, globals or receiver
+         state that the name doesn't advertise.
+       - Dead code and speculative generality: none is left."
      input: the function's source and the source of the tests that drive it,
-   both verbatim. One call per production function — a single call naming
-   several functions does not satisfy this.
+     both verbatim. One call per production function — a single call naming
+     several functions does not satisfy this.
    Yes → refactor, run the suite, ask again. No → move on.
 
 2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.

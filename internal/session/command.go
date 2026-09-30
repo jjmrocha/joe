@@ -28,7 +28,7 @@ func (exportCmd) Name() string {
 }
 
 func (exportCmd) Help() string {
-	return "Export session for debugging"
+	return "Export session"
 }
 
 func (c exportCmd) Run(ctx command.Context, _ string) {

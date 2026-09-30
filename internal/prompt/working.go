@@ -13,8 +13,12 @@ const workingWithUserBlock = `
   the plan, and the designing-interfaces contract when the change adds or
   widens an interface, then stop and wait for their go-ahead. Your own verdict
   that the plan is complete is not approval. Skip the wait only when the user
-  already said to proceed without asking, or the edit is one the skills table
-  exempts.
+  already said to proceed without asking, or the edit is a rename, a typo, or
+  a change to a code comment — text inside a string, a prompt or a document
+  is a code change.
+- An answer to your question is input, not a go-ahead. When the user suggests
+  wording or direction ("something like…", "maybe…", "I don't know exactly"),
+  show the exact text you would write and wait.
 - Never stage or commit anything unless the user asks.
 </working-with-user>
 `

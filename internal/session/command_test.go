@@ -119,7 +119,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		result := []string{cmd.Name(), cmd.Help()}
 		// then
-		assert.Equal(t, []string{"export", "Export session for debugging"}, result)
+		assert.Equal(t, []string{"export", "Export session"}, result)
 	})
 
 	t.Run("reports the token of the exported session", func(t *testing.T) {
