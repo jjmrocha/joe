@@ -57,3 +57,15 @@ func TestCodingSkillsDir(t *testing.T) {
 		assert.Equal(t, filepath.Join(dir, "coding-skills"), result)
 	})
 }
+
+func TestSessionsDir(t *testing.T) {
+	t.Run("sits inside the config folder", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		// when
+		result, err := SessionsDir()
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(dir, "sessions"), result)
+	})
+}

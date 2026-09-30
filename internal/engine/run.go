@@ -15,6 +15,7 @@ import (
 	"github.com/jjmrocha/joe/internal/guard"
 	"github.com/jjmrocha/joe/internal/prompt"
 	"github.com/jjmrocha/joe/internal/repo"
+	"github.com/jjmrocha/joe/internal/session"
 	"github.com/jjmrocha/joe/internal/skills"
 )
 
@@ -123,6 +124,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		chat.WithEffortCommand(),
 		chat.WithCompactCommand(),
 		chat.WithSkills(skillCollection),
+		chat.WithCommand(session.ExportCommand(codingAgent, repoPath)),
 	)
 
 	// Build prompt

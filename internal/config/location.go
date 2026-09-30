@@ -9,6 +9,7 @@ const (
 	DefaultProfile     = "default"
 	SkillsFolder       = "skills"
 	CodingSkillsFolder = "coding-skills"
+	SessionsFolder     = "sessions"
 )
 
 func ProfileFile(name string) string {
@@ -44,4 +45,13 @@ func CodingSkillsDir() (string, error) {
 	}
 
 	return filepath.Join(dir, CodingSkillsFolder), nil
+}
+
+func SessionsDir() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, SessionsFolder), nil
 }
