@@ -15,6 +15,7 @@ const (
 	blockThreshold    = 0.8
 	toolSafeThreshold = 0.2
 	classifyTimeout   = 5 * time.Second
+	maxInputBytes     = 64_000
 	callQuestionID    = "violates"
 	toolQuestionID    = "tool-safe"
 	cacheCapacity     = 256
@@ -47,6 +48,10 @@ func NewInterceptor(cfg Config) (tools.Interceptor, error) {
 		input, err := classifierInput(tool, call, constraints)
 		if err != nil {
 			return nil
+		}
+
+		if len(input) > maxInputBytes {
+			return ErrToolCallTooLarge
 		}
 
 		questions := map[string]classify.Question{callQuestionID: callQuestion}

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -149,6 +150,18 @@ func shellBox(t *testing.T) *tools.ToolBox {
 
 func shellCall(command string) llm.ToolCall {
 	return llm.ToolCall{ID: "call-1", Name: "shell_run", Arguments: map[string]any{"command": command}}
+}
+
+func shellCallOfInputSize(t *testing.T, size int) llm.ToolCall {
+	t.Helper()
+
+	tool, found := shellBox(t).Tool("shell_run")
+	require.True(t, found)
+
+	input, err := classifierInput(tool, shellCall(""), Constraints(testRepoPath, testKBPath))
+	require.NoError(t, err)
+
+	return shellCall(strings.Repeat("a", size-len(input)))
 }
 
 func TestNewInterceptor(t *testing.T) {
@@ -421,5 +434,43 @@ Constraints:
 				assert.Equal(t, testCase.expected, sent.State)
 			})
 		}
+	})
+
+	t.Run("rejects a call too big to classify without asking", func(t *testing.T) {
+		// given
+		var sent sentRequest
+
+		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		// when
+		result := interceptor(t.Context(), shellCallOfInputSize(t, maxInputBytes+1))
+		// then
+		require.ErrorIs(t, result, ErrToolCallTooLarge)
+		assert.Empty(t, sent.State)
+	})
+
+	t.Run("classifies a call exactly at the size limit", func(t *testing.T) {
+		// given
+		var sent sentRequest
+
+		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		// when
+		result := interceptor(t.Context(), shellCallOfInputSize(t, maxInputBytes))
+		// then
+		require.NoError(t, result)
+		assert.Len(t, sent.State, maxInputBytes)
+	})
+
+	t.Run("allows a call too big to classify to a tool judged safe", func(t *testing.T) {
+		// given
+		var requests []sentRequest
+
+		classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.1}, &requests))
+		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		require.NoError(t, interceptor(t.Context(), shellCall("date")))
+		// when
+		result := interceptor(t.Context(), shellCallOfInputSize(t, maxInputBytes+1))
+		// then
+		require.NoError(t, result)
+		assert.Len(t, requests, 1)
 	})
 }
