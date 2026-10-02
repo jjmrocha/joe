@@ -12,6 +12,7 @@ import (
 type Source interface {
 	Messages() []llm.Message
 	ModelInfo(ctx context.Context) *agent.ModelInfo
+	SessionID() string
 }
 
 type exportCmd struct {

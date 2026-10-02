@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"github.com/jjmrocha/ai-toolkit/llm"
-	"github.com/jjmrocha/go-algo/token"
 	"github.com/jjmrocha/joe/internal/config"
 	"go.yaml.in/yaml/v3"
 )
 
 func export(ctx context.Context, src Source, repoPath string, msgs []llm.Message) (string, error) {
 	session := file{
-		Session:  token.New(),
+		Session:  src.SessionID(),
 		Exported: time.Now().UTC().Truncate(time.Second),
 		Repo:     repoPath,
 		Messages: toMessages(msgs),
@@ -44,9 +43,7 @@ func write(session *file) error {
 		return err
 	}
 
-	path := filepath.Join(dir, session.Session+".yaml")
-
-	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // the name is a generated token under the sessions folder
+	out, err := os.CreateTemp(dir, session.Session+".*.tmp")
 	if err != nil {
 		return err
 	}
@@ -55,8 +52,12 @@ func write(session *file) error {
 	encoder.SetIndent(2)
 
 	err = errors.Join(encoder.Encode(session), encoder.Close(), out.Close())
+	if err == nil {
+		err = os.Rename(out.Name(), filepath.Join(dir, session.Session+".yaml"))
+	}
+
 	if err != nil {
-		_ = os.Remove(path)
+		_ = os.Remove(out.Name())
 	}
 
 	return err

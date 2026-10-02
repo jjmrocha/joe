@@ -11,6 +11,7 @@ import (
 	"github.com/jjmrocha/ai-chat/command"
 	"github.com/jjmrocha/ai-toolkit/agent"
 	"github.com/jjmrocha/ai-toolkit/llm"
+	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/go-algo/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,8 +26,13 @@ const (
 var _ Source = (*agent.Agent)(nil)
 
 type fakeSource struct {
+	id       string
 	messages []llm.Message
 	info     *agent.ModelInfo
+}
+
+func (f fakeSource) SessionID() string {
+	return f.id
 }
 
 func (f fakeSource) Messages() []llm.Message {
@@ -87,7 +93,11 @@ func conversation() []llm.Message {
 	}
 }
 
-func runExport(t *testing.T, src Source) (*fakeContext, string) {
+func session(msgs []llm.Message) fakeSource {
+	return fakeSource{id: token.New(), messages: msgs}
+}
+
+func runExport(t *testing.T, src Source) *fakeContext {
 	t.Helper()
 
 	ctx := &fakeContext{}
@@ -95,15 +105,22 @@ func runExport(t *testing.T, src Source) (*fakeContext, string) {
 
 	require.Len(t, ctx.lines, 1)
 
-	tok := strings.TrimSuffix(strings.TrimPrefix(ctx.lines[0].text, "Session "), " exported")
-
-	return ctx, tok
+	return ctx
 }
 
-func readSession(t *testing.T, dir, tok string) (file, string) {
+func fileNames(t *testing.T, dir string) []string {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(dir, tok+".yaml"))
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+
+	return fn.Map(entries, os.DirEntry.Name)
+}
+
+func readSession(t *testing.T, dir, id string) (file, string) {
+	t.Helper()
+
+	raw, err := os.ReadFile(filepath.Join(dir, id+".yaml"))
 	require.NoError(t, err)
 
 	var result file
@@ -122,35 +139,34 @@ func TestExportCommand(t *testing.T) {
 		assert.Equal(t, []string{"export", "Export session"}, result)
 	})
 
-	t.Run("reports the token of the exported session", func(t *testing.T) {
+	t.Run("reports the session id", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
+		src := session(conversation())
 		// when
-		ctx, tok := runExport(t, fakeSource{messages: conversation()})
+		ctx := runExport(t, src)
 		// then
-		assert.Equal(t, command.Info, ctx.lines[0].kind)
-		assert.True(t, token.Valid(tok))
-		assert.FileExists(t, filepath.Join(dir, tok+".yaml"))
+		expected := []printed{{kind: command.Info, text: "Session " + src.id + " exported"}}
+		assert.Equal(t, expected, ctx.lines)
+		assert.FileExists(t, filepath.Join(dir, src.id+".yaml"))
 	})
 
 	t.Run("writes the header and every message", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
-		src := fakeSource{
-			messages: conversation(),
-			info:     &agent.ModelInfo{Provider: "anthropic", ModelName: "claude-opus-5-5", Effort: "high"},
-		}
+		src := session(conversation())
+		src.info = &agent.ModelInfo{Provider: "anthropic", ModelName: "claude-opus-5-5", Effort: "high"}
 		before := time.Now().UTC().Truncate(time.Second)
-		_, tok := runExport(t, src)
+		runExport(t, src)
 		// when
-		result, _ := readSession(t, dir, tok)
+		result, _ := readSession(t, dir, src.id)
 		// then
 		assert.WithinRange(t, result.Exported, before, time.Now().UTC())
 		assert.Equal(t, time.UTC, result.Exported.Location())
 
 		result.Exported = time.Time{}
 		expected := file{
-			Session:  tok,
+			Session:  src.id,
 			Repo:     "/work/repo",
 			Provider: "anthropic",
 			Model:    "claude-opus-5-5",
@@ -187,9 +203,10 @@ func TestExportCommand(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				// given
 				dir := sessionsDir(t)
-				_, tok := runExport(t, fakeSource{messages: []llm.Message{llm.ToolMessage{Content: content}}})
+				src := session([]llm.Message{llm.ToolMessage{Content: content}})
+				runExport(t, src)
 				// when
-				result, _ := readSession(t, dir, tok)
+				result, _ := readSession(t, dir, src.id)
 				// then
 				require.Len(t, result.Messages, 1)
 				assert.Equal(t, content, result.Messages[0].Content)
@@ -200,9 +217,10 @@ func TestExportCommand(t *testing.T) {
 	t.Run("writes multiline content as a literal block", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
-		_, tok := runExport(t, fakeSource{messages: conversation()})
+		src := session(conversation())
+		runExport(t, src)
 		// when
-		_, result := readSession(t, dir, tok)
+		_, result := readSession(t, dir, src.id)
 		// then
 		assert.Contains(t, result, "content: |\n")
 		assert.Contains(t, result, "\n      <role>\n      You are joe\n      </role>\n")
@@ -211,9 +229,10 @@ func TestExportCommand(t *testing.T) {
 	t.Run("omits the model when it is unknown", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
-		_, tok := runExport(t, fakeSource{messages: conversation()})
+		src := session(conversation())
+		runExport(t, src)
 		// when
-		_, result := readSession(t, dir, tok)
+		_, result := readSession(t, dir, src.id)
 		// then
 		assert.NotContains(t, result, "provider:")
 		assert.NotContains(t, result, "model:")
@@ -223,9 +242,10 @@ func TestExportCommand(t *testing.T) {
 	t.Run("restricts the file and the folder to the owner", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
-		_, tok := runExport(t, fakeSource{messages: conversation()})
+		src := session(conversation())
+		runExport(t, src)
 		// when
-		fileInfo, fileErr := os.Stat(filepath.Join(dir, tok+".yaml"))
+		fileInfo, fileErr := os.Stat(filepath.Join(dir, src.id+".yaml"))
 		dirInfo, dirErr := os.Stat(dir)
 		// then
 		require.NoError(t, fileErr)
@@ -234,16 +254,60 @@ func TestExportCommand(t *testing.T) {
 		assert.Equal(t, os.FileMode(0o700), dirInfo.Mode().Perm())
 	})
 
-	t.Run("writes a new file on every export", func(t *testing.T) {
+	t.Run("overwrites the export of the same session", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
-		_, first := runExport(t, fakeSource{messages: conversation()})
+		src := session(conversation()[:2])
+		runExport(t, src)
+		src.messages = conversation()
 		// when
-		_, second := runExport(t, fakeSource{messages: conversation()})
+		runExport(t, src)
 		// then
-		assert.NotEqual(t, first, second)
-		assert.FileExists(t, filepath.Join(dir, first+".yaml"))
-		assert.FileExists(t, filepath.Join(dir, second+".yaml"))
+		result, _ := readSession(t, dir, src.id)
+		assert.Equal(t, []string{src.id + ".yaml"}, fileNames(t, dir))
+		assert.Len(t, result.Messages, len(conversation()))
+	})
+
+	t.Run("writes a separate file per session", func(t *testing.T) {
+		// given
+		dir := sessionsDir(t)
+		first := session(conversation())
+		second := session(conversation())
+		runExport(t, first)
+		// when
+		runExport(t, second)
+		// then
+		assert.ElementsMatch(t, []string{first.id + ".yaml", second.id + ".yaml"}, fileNames(t, dir))
+	})
+
+	t.Run("leaves no temp file behind", func(t *testing.T) {
+		// given
+		dir := sessionsDir(t)
+		src := session(conversation())
+		// when
+		runExport(t, src)
+		// then
+		assert.Equal(t, []string{src.id + ".yaml"}, fileNames(t, dir))
+	})
+
+	t.Run("keeps the previous export when a re-export fails", func(t *testing.T) {
+		// given
+		dir := sessionsDir(t)
+		src := session(conversation()[:2])
+		runExport(t, src)
+		expected, err := os.ReadFile(filepath.Join(dir, src.id+".yaml"))
+		require.NoError(t, err)
+		require.NoError(t, os.Chmod(dir, 0o500))
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+		src.messages = conversation()
+		// when
+		ctx := runExport(t, src)
+		// then
+		result, err := os.ReadFile(filepath.Join(dir, src.id+".yaml"))
+		require.NoError(t, err)
+		assert.Equal(t, command.Error, ctx.lines[0].kind)
+		assert.True(t, strings.HasPrefix(ctx.lines[0].text, "export: "), ctx.lines[0].text)
+		assert.Equal(t, expected, result)
 	})
 
 	t.Run("reports when there is no session", func(t *testing.T) {
@@ -264,7 +328,7 @@ func TestExportCommand(t *testing.T) {
 		require.NoError(t, os.WriteFile(dir, nil, 0o600))
 		ctx := &fakeContext{}
 		// when
-		ExportCommand(fakeSource{messages: conversation()}, "/work/repo").Run(ctx, "")
+		ExportCommand(session(conversation()), "/work/repo").Run(ctx, "")
 		// then
 		require.Len(t, ctx.lines, 1)
 		assert.Equal(t, command.Error, ctx.lines[0].kind)
