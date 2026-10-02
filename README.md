@@ -243,6 +243,18 @@ installed, joe uses the current directory.
 | `/mcp [on\|off] [name]` | Show the MCP servers, or start and stop one |
 | `/exit` | Quit |
 
+To pick up an exported session later, start joe with `-resume` and the id from the file name.
+The profile, when given, comes first:
+
+```bash
+joe -resume <id>          # same as: joe default -resume <id>
+joe work -resume <id>
+```
+
+The model gets the whole conversation back and `/export` keeps writing to the same file. The
+screen starts empty. joe resumes only from the repository the session was exported in, and
+the profile decides the model and effort, not the file.
+
 ### Your own instructions
 
 joe reads your standing instruction files at startup and quotes each into its prompt
@@ -363,6 +375,7 @@ when that variable is set. `joe` reads `default.json`; `joe <name>` reads `<name
 ```bash
 joe                  # ~/.config/joe/default.json
 joe local            # ~/.config/joe/local.json (an Ollama profile, say)
+joe local -resume <id>   # the same profile, resuming an exported session
 ```
 
 Each profile is complete. joe runs exactly what the file says: a profile with no `mcps`

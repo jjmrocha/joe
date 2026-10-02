@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/jjmrocha/joe/internal/cli"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/engine"
 	"github.com/jjmrocha/joe/internal/setup"
@@ -17,17 +18,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	profile := config.DefaultProfile
-	if len(os.Args) > 1 {
-		profile = os.Args[1]
-	}
+	args := cli.Parse(os.Args[1:])
 
-	cfg, err := config.Load(profile)
+	cfg, err := config.Load(args.Profile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := engine.Run(ctx, cfg); err != nil {
+	if err := engine.Run(ctx, cfg, args.SessionID); err != nil {
 		log.Fatal(err)
 	}
 }

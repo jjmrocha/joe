@@ -19,7 +19,7 @@ import (
 	"github.com/jjmrocha/joe/internal/skills"
 )
 
-func Run(ctx context.Context, cfg *config.Config) error {
+func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	// Initialize models
 	llmClient, err := llm.New(cfg.LLMConfig())
 	if err != nil {
@@ -45,6 +45,16 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	repoPath, err := repo.Path(ctx)
 	if err != nil {
 		return err
+	}
+
+	// Restore session
+	var history []llm.Message
+
+	if sessionID != "" {
+		history, err = session.Load(sessionID, repoPath)
+		if err != nil {
+			return fmt.Errorf("resume: %w", err)
+		}
 	}
 
 	// Load the  harness
@@ -138,9 +148,11 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	// Set session
 	codingAgent.StartSession(agent.SessionConfig{
-		Prompt:  sysPrompt,
-		Skills:  skillCollection,
-		ToolBox: toolBox,
+		Prompt:   sysPrompt,
+		Skills:   skillCollection,
+		ToolBox:  toolBox,
+		Messages: history,
+		ID:       sessionID,
 	})
 
 	return ui.Run(ctx, chatAgent)
