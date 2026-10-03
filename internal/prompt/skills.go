@@ -112,7 +112,7 @@ type route struct {
 }
 
 var routes = []route{
-	{wants: `A skill they named ("use brainstorm", "run analyze-code") — if it is coding-discipline, designing-interfaces or test-driven-development, route with the rows below and load the named skill at its step`, load: "that skill"},
+	{wants: `A skill they named ("use brainstorm", "run analyze-code"), or a message that starts with /<skill-name> ("/research how does Load work") — a request to use that skill on the rest of the message. If it is coding-discipline, designing-interfaces or test-driven-development, route with the rows below and load the named skill at its step`, load: "that skill"},
 	{wants: "The knowledge base written to or audited — ingest, update, lint, write a manual", load: skills.KnowledgeBase, needKB: true},
 	{wants: "Findings already reported worked through one at a time — an analyze-code report, PR review comments, an audit or issue list", load: skills.AddressingFindings},
 	{wants: "A review of existing code — a diff, branch, PR, module; quality, security, tech debt", load: skills.AnalyzeCode},
@@ -139,6 +139,7 @@ var examples = []example{
 	{request: `"How does Load resolve the profile?"`, route: skills.Research},
 	{request: `"Why does Load pick the wrong profile?"`, route: skills.UsingSoftwareSpecialists},
 	{request: `"Is there a plan for PROJ-1234?"`, route: skills.Research},
+	{request: `"/research how does Load resolve the profile?"`, route: skills.Research},
 	{request: `"Why does TestLoad fail on CI?"`, route: skills.UsingSoftwareSpecialists},
 	{request: `"Fix the SQL injection in the search handler"`, route: skills.UsingSoftwareSpecialists},
 	{request: `"Fix the nil panic in Load and add a test for it"`, route: skills.UsingSoftwareSpecialists},

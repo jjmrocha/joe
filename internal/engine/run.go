@@ -127,15 +127,15 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	defer codingAgent.Close()
 
 	// Initialize the chat
-	chatAgent := chat.New("JOE", codingAgent,
-		chat.WithMCP(mcpManager),
-		chat.WithClearCommand(),
-		chat.WithModelCommand(),
-		chat.WithEffortCommand(),
-		chat.WithCompactCommand(),
-		chat.WithSkills(skillCollection),
-		chat.WithCommand(session.ExportCommand(codingAgent, repoPath)),
-	)
+	options := buildCommands(&commandsRequest{
+		kbPath:     cfg.KBPath,
+		repoPath:   repoPath,
+		mcpManager: mcpManager,
+		skills:     skillCollection,
+		agent:      codingAgent,
+	})
+
+	chatAgent := chat.New("JOE", codingAgent, options...)
 
 	// Build prompt
 	sysPrompt := prompt.Build(prompt.Request{
