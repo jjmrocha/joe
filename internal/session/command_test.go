@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/jjmrocha/go-algo/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.yaml.in/yaml/v3"
 )
 
 const (
@@ -83,7 +83,7 @@ func conversation() []llm.Message {
 		llm.UserMessage{Content: "find Run"},
 		llm.AssistantMessage{
 			ToolCalls: []llm.ToolCall{
-				{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"name_path": "Run", "depth": 1}},
+				{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"name_path": "Run", "depth": 1.0}},
 			},
 			Stats:      llm.Stats{PromptTokens: 100, OutputTokens: 20, TotalTokens: 120, CacheWriteTokens: 5, CacheReadTokens: 50},
 			StopReason: "tool_use",
@@ -120,11 +120,11 @@ func fileNames(t *testing.T, dir string) []string {
 func readSession(t *testing.T, dir, id string) (file, string) {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(dir, id+".yaml"))
+	raw, err := os.ReadFile(filepath.Join(dir, id+".json"))
 	require.NoError(t, err)
 
 	var result file
-	require.NoError(t, yaml.Unmarshal(raw, &result))
+	require.NoError(t, json.Unmarshal(raw, &result))
 
 	return result, string(raw)
 }
@@ -148,7 +148,7 @@ func TestExportCommand(t *testing.T) {
 		// then
 		expected := []printed{{kind: command.Info, text: "Session " + src.id + " exported"}}
 		assert.Equal(t, expected, ctx.lines)
-		assert.FileExists(t, filepath.Join(dir, src.id+".yaml"))
+		assert.FileExists(t, filepath.Join(dir, src.id+".json"))
 	})
 
 	t.Run("writes the header and every message", func(t *testing.T) {
@@ -177,7 +177,7 @@ func TestExportCommand(t *testing.T) {
 				{
 					Role: "assistant",
 					ToolCalls: []toolCall{
-						{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"name_path": "Run", "depth": 1}},
+						{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"name_path": "Run", "depth": 1.0}},
 					},
 					Stats:      &stats{PromptTokens: 100, OutputTokens: 20, TotalTokens: 120, CacheWriteTokens: 5, CacheReadTokens: 50},
 					StopReason: "tool_use",
@@ -191,12 +191,15 @@ func TestExportCommand(t *testing.T) {
 
 	t.Run("keeps content byte for byte", func(t *testing.T) {
 		cases := map[string]string{
-			"xml on many lines":   "<role>\nYou are joe\n</role>\n<locations>\n  <repo>/work</repo>\n</locations>",
-			"control characters":  "\x1b[31mFAIL\x1b[0m internal/config\n",
-			"trailing whitespace": "line with space \nnext\t\n",
-			"json":                `{"a":[1,2],"b":"c\"d"}`,
-			"backslashes":         `path C:\tmp\new`,
-			"yaml lookalike":      "key: value\n- item\n---\n",
+			"xml on many lines":      "<role>\nYou are joe\n</role>\n<locations>\n  <repo>/work</repo>\n</locations>",
+			"control characters":     "\x1b[31mFAIL\x1b[0m internal/config\n",
+			"trailing whitespace":    "line with space \nnext\t\n",
+			"json":                   `{"a":[1,2],"b":"c\"d"}`,
+			"backslashes":            `path C:\tmp\new`,
+			"yaml lookalike":         "key: value\n- item\n---\n",
+			"leading tab lines":      "\tfoo\n\tbar\n",
+			"leading tab then plain": "\tfoo\nbar",
+			"lone tab":               "\t",
 		}
 
 		for name, content := range cases {
@@ -214,7 +217,7 @@ func TestExportCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("writes multiline content as a literal block", func(t *testing.T) {
+	t.Run("writes markup without escaping it", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
 		src := session(conversation())
@@ -222,8 +225,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		_, result := readSession(t, dir, src.id)
 		// then
-		assert.Contains(t, result, "content: |\n")
-		assert.Contains(t, result, "\n      <role>\n      You are joe\n      </role>\n")
+		assert.Contains(t, result, `"content": "<role>\nYou are joe\n</role>\n"`)
 	})
 
 	t.Run("omits the model when it is unknown", func(t *testing.T) {
@@ -234,9 +236,9 @@ func TestExportCommand(t *testing.T) {
 		// when
 		_, result := readSession(t, dir, src.id)
 		// then
-		assert.NotContains(t, result, "provider:")
-		assert.NotContains(t, result, "model:")
-		assert.NotContains(t, result, "effort:")
+		assert.NotContains(t, result, `"provider":`)
+		assert.NotContains(t, result, `"model":`)
+		assert.NotContains(t, result, `"effort":`)
 	})
 
 	t.Run("restricts the file and the folder to the owner", func(t *testing.T) {
@@ -245,7 +247,7 @@ func TestExportCommand(t *testing.T) {
 		src := session(conversation())
 		runExport(t, src)
 		// when
-		fileInfo, fileErr := os.Stat(filepath.Join(dir, src.id+".yaml"))
+		fileInfo, fileErr := os.Stat(filepath.Join(dir, src.id+".json"))
 		dirInfo, dirErr := os.Stat(dir)
 		// then
 		require.NoError(t, fileErr)
@@ -264,7 +266,7 @@ func TestExportCommand(t *testing.T) {
 		runExport(t, src)
 		// then
 		result, _ := readSession(t, dir, src.id)
-		assert.Equal(t, []string{src.id + ".yaml"}, fileNames(t, dir))
+		assert.Equal(t, []string{src.id + ".json"}, fileNames(t, dir))
 		assert.Len(t, result.Messages, len(conversation()))
 	})
 
@@ -277,7 +279,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		runExport(t, second)
 		// then
-		assert.ElementsMatch(t, []string{first.id + ".yaml", second.id + ".yaml"}, fileNames(t, dir))
+		assert.ElementsMatch(t, []string{first.id + ".json", second.id + ".json"}, fileNames(t, dir))
 	})
 
 	t.Run("leaves no temp file behind", func(t *testing.T) {
@@ -287,7 +289,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		runExport(t, src)
 		// then
-		assert.Equal(t, []string{src.id + ".yaml"}, fileNames(t, dir))
+		assert.Equal(t, []string{src.id + ".json"}, fileNames(t, dir))
 	})
 
 	t.Run("keeps the previous export when a re-export fails", func(t *testing.T) {
@@ -295,7 +297,7 @@ func TestExportCommand(t *testing.T) {
 		dir := sessionsDir(t)
 		src := session(conversation()[:2])
 		runExport(t, src)
-		expected, err := os.ReadFile(filepath.Join(dir, src.id+".yaml"))
+		expected, err := os.ReadFile(filepath.Join(dir, src.id+".json"))
 		require.NoError(t, err)
 		require.NoError(t, os.Chmod(dir, 0o500))
 		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
@@ -303,7 +305,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		ctx := runExport(t, src)
 		// then
-		result, err := os.ReadFile(filepath.Join(dir, src.id+".yaml"))
+		result, err := os.ReadFile(filepath.Join(dir, src.id+".json"))
 		require.NoError(t, err)
 		assert.Equal(t, command.Error, ctx.lines[0].kind)
 		assert.True(t, strings.HasPrefix(ctx.lines[0].text, "export: "), ctx.lines[0].text)

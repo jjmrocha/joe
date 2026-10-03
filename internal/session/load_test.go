@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,7 +15,7 @@ func writeSession(t *testing.T, dir, id, content string) {
 	t.Helper()
 
 	require.NoError(t, os.MkdirAll(dir, 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, id+".yaml"), []byte(content), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, id+".json"), []byte(content), 0o600))
 }
 
 func TestLoad(t *testing.T) {
@@ -28,6 +29,29 @@ func TestLoad(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, conversation(), result)
+	})
+
+	t.Run("returns content byte for byte", func(t *testing.T) {
+		cases := map[string]string{
+			"leading tab lines":      "\tfoo\n\tbar\n",
+			"leading tab then plain": "\tfoo\nbar",
+			"lone tab":               "\t",
+		}
+
+		for name, content := range cases {
+			t.Run(name, func(t *testing.T) {
+				// given
+				sessionsDir(t)
+				src := session([]llm.Message{llm.ToolMessage{Content: content}})
+				runExport(t, src)
+				expected := []llm.Message{llm.ToolMessage{Content: content}}
+				// when
+				result, err := Load(src.id, "/work/repo")
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, expected, result)
+			})
+		}
 	})
 
 	t.Run("rejects an id that is not a token", func(t *testing.T) {
@@ -75,23 +99,24 @@ func TestLoad(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
 		id := token.New()
-		writeSession(t, dir, id, "session: "+id+"\nrepo: /work/repo\nmessages:\n  - role: robot\n    content: beep\n")
+		writeSession(t, dir, id, `{"session":"`+id+`","repo":"/work/repo","messages":[{"role":"robot","content":"beep"}]}`)
 		// when
 		_, err := Load(id, "/work/repo")
 		// then
 		require.ErrorIs(t, err, ErrUnknownRole)
 	})
 
-	t.Run("reports a file that is not valid yaml", func(t *testing.T) {
+	t.Run("reports a file that is not valid json", func(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
 		id := token.New()
-		writeSession(t, dir, id, "session: [unclosed\n")
+		writeSession(t, dir, id, `{"session": [`)
 		// when
 		_, err := Load(id, "/work/repo")
 		// then
 		require.Error(t, err)
 		assert.NotErrorIs(t, err, ErrSessionNotFound)
 		assert.NotErrorIs(t, err, ErrRepoMismatch)
+		assert.Contains(t, err.Error(), id)
 	})
 }

@@ -239,7 +239,7 @@ installed, joe uses the current directory.
 | `/effort [level]` | Show or change reasoning effort |
 | `/clear` | Reset the conversation |
 | `/compact` | Compact the context now, instead of waiting for joe to do it |
-| `/export` | Save the session to `~/.config/joe/sessions/<id>.yaml`; exporting again updates that file, and `/clear` starts a new session with a new file |
+| `/export` | Save the session to `~/.config/joe/sessions/<id>.json`; exporting again updates that file, and `/clear` starts a new session with a new file |
 | `/mcp [on\|off] [name]` | Show the MCP servers, or start and stop one |
 | `/exit` | Quit |
 

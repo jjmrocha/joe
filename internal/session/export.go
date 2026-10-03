@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/config"
-	"go.yaml.in/yaml/v3"
 )
 
 func export(ctx context.Context, src Source, repoPath string, msgs []llm.Message) (string, error) {
@@ -48,12 +48,13 @@ func write(session *file) error {
 		return err
 	}
 
-	encoder := yaml.NewEncoder(out)
-	encoder.SetIndent(2)
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
 
-	err = errors.Join(encoder.Encode(session), encoder.Close(), out.Close())
+	err = errors.Join(encoder.Encode(session), out.Close())
 	if err == nil {
-		err = os.Rename(out.Name(), filepath.Join(dir, session.Session+".yaml"))
+		err = os.Rename(out.Name(), filepath.Join(dir, session.Session+".json"))
 	}
 
 	if err != nil {
