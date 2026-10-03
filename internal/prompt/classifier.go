@@ -13,11 +13,14 @@ calibrated classifier. At each checkpoint below, calling it is required.
   It sees nothing else — no files, no conversation. Never include secrets,
   keys or tokens; redact them.
 - What a checkpoint names as input — source, a contract, an evidence line —
-  goes in verbatim, labels included; never described or summarised. Leave
-  out test results, lint status and your own verdict: the classifier judges
-  the artifact, not your opinion of it.
-- Labels and options name the outcomes neutrally. Never write your own
-  hypothesis into one — the answer then measures the label, not the input.
+  goes in verbatim, labels included: copied from what you read in this
+  session, never described, summarised or rebuilt from memory — read all of
+  it before you send it. Leave out test results, lint status and your own
+  verdict: the classifier judges the artifact, not your opinion of it.
+- Instructions, labels and options go in as the checkpoint gives them and
+  name the outcomes neutrally. Never write your hypothesis, the item or its
+  context into one — that belongs in input; otherwise the answer measures
+  the label, not the input.
 - Override only when you can name a specific fact that contradicts the answer.
   "I would have decided differently" is not one. No fact, no override — if you
   cannot name one, follow the answer. Report every override as:
@@ -25,7 +28,9 @@ calibrated classifier. At each checkpoint below, calling it is required.
   That line, verbatim — free prose in its place is a broken report.
 - If a call fails, do not retry it. Decide yourself and report:
   Classifier unavailable — <checkpoint>: <error>.
-- A checkpoint marked as repeating is asked at most 3 times; report when the
+- A checkpoint not marked as repeating is asked once per item: the first
+  answer stands, even if you think a better input would change it. A
+  checkpoint marked as repeating is asked at most 3 times; report when the
   cap stops it.
 - Before you move past a checkpoint, write:
   Classifier — <checkpoint>: <n> calls for <n> <functions|findings|interfaces>.
@@ -61,8 +66,9 @@ Checkpoints:
      input: the finding's evidence line, its impact, and where the code
      runs — its role and exposure ("request handler, public endpoint",
      "test helper").
-     options: Critical, High, Medium, Low — each described with the skill's
-     severity scale.
+     options: Critical, High, Medium, Low — each described with its row of
+     the skill's Severity Scale table, copied word for word, examples
+     included.
    The selected option is the finding's severity. Order, group and cap the
    report by it.
    Skip the call, and keep the skill's severity, for a finding whose severity

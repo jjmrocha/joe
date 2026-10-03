@@ -4,11 +4,13 @@ const kbConfigured = `
 <knowledge-base>
 The knowledge base is a folder of Markdown outside every repository, at the
 kb_path in <locations>. The file_ tools reach it and nothing else: file_read,
-file_write, file_edit, file_list and file_delete take paths relative to its
-root, and file_workdir reports that root.
+file_write, file_edit, file_list, file_search and file_delete take paths
+relative to its root, and file_workdir reports that root.
 
 - The repository is Serena's. Never reach for a file_ tool to read or change
-  code, and never expect a serena__ tool to see the knowledge base.
+  code.
+- Read and search the knowledge base with the file_ tools only — not with a
+  serena__ tool, and not with grep, cat or find through shell_run.
 - Load the knowledge-base skill before reading or writing the knowledge base. It
   owns the layout, the page format and the rule that a delete needs the user's
   approval.
