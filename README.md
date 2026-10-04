@@ -54,9 +54,6 @@ $ joe
  13 tool calls · 26s llm · 3s tools · ↑33.08K ↓616 tokens
 ```
 
-No code yet. joe checked what exists, found the pattern to follow, and asked the one
-question that matters.
-
 ---
 
 ## Why joe: the workflow
@@ -66,27 +63,29 @@ says which one it loaded. Skills hand off to each other, so work moves through t
 loop every time:
 
 ```mermaid
-flowchart LR
-    Q([Question]) --> R[Research]
-    I([Idea]) --> D[Design]
-    R --> D
-    D -->|approved plan| B[Build]
-    B --> A[Review]
-    A -->|findings| F[Decide]
-    F -->|approved fix| B
-    A -->|clean| S([Ship])
-    B -.->|on request| T[Test by hand]
-    T -->|bug| B
+flowchart TD
+    Q([A question]) --> RS[research]
+    Idea([An idea]) --> BS[brainstorm]
+    PR([PR comments]) --> AF[addressing-findings]
+    RS -->|findings| BS
+    BS -->|approved plan| USS[using-software-specialists]
+    USS -->|implemented| AC[analyze-code]
+    AC -->|findings| AF
+    AF -->|approved fix| USS
+    AC -->|plan changes| BS
+    AC -->|clean| Ship([Ship])
+    USS -.->|on request| GT[guiding-manual-testing]
+    GT -->|bug proven| USS
 ```
 
-| Step | Skill | What joe does |
-|---|---|---|
-| Research | `research` | Answers from your code and notes, citing `file:line`. Never from memory |
-| Design | `brainstorm` | Asks one question at a time, proposes a design, writes no code until you approve. Saves the plan |
-| Build | `using-software-specialists` | Implements the plan test-first, checks each new interface's depth, guards against the usual LLM failure modes |
-| Review | `analyze-code` | Audits the change through five lenses and reports. Fixes nothing |
-| Decide | `addressing-findings` | Walks the findings one at a time. Nothing changes until you decide |
-| Test by hand | `guiding-manual-testing` | Proposes one step at a time on a real environment; you run it, joe reads the output |
+| Skill | What joe does |
+|---|---|
+| `research` | Answers questions about your code by reading it, and cites the lines. Never from memory |
+| `brainstorm` | Asks one question at a time and agrees a design with you before any code. The design becomes a saved plan; large work is split and built one part at a time |
+| `using-software-specialists` | Builds the plan the way a team would: an architect's, security engineer's and tester's view where each applies, tests written first, every new interface checked for depth |
+| `analyze-code` | Reviews the change from five angles, double-checks each finding, and reports. It never fixes |
+| `addressing-findings` | Goes through the findings one at a time and recommends a fix for each. Nothing changes until you decide |
+| `guiding-manual-testing` | Walks you through testing on a real environment, one step at a time: you run it, joe reads the result |
 
 "Too small to need a skill" is never an excuse. A precise request still gets a short
 design conversation: it confirms joe understood and surfaces what you didn't consider.
@@ -97,20 +96,24 @@ design conversation: it confirms joe understood and surfaces what you didn't con
 
 ### A knowledge base of your organisation
 
-One repository rarely tells the whole story. Point joe at a folder and it keeps a wiki of
-your systems: which service owns a piece of data, who consumes an event, which process
-writes a table. Across a dozen microservices, joe knows how the pieces fit before it
-changes one. It also keeps the plans `brainstorm` writes, so work picks up where it left
-off. Code stays the truth: a note that disagrees with the code is reported, not trusted.
+One repository rarely tells the whole story. Point joe at a folder and ask it to ingest
+each repository: it reads the code and writes a wiki of what it found (entities,
+interfaces, events, jobs, dependencies, rules). Once every service is in, joe knows which
+one owns a piece of data and who consumes an event before it changes anything. Plans from
+`brainstorm` are saved there too, so work picks up where it left off. Code stays the
+truth: a page that disagrees with the code is reported, not trusted.
 
-### A second opinion at the critical calls
+### A second opinion from a different kind of model
 
-Some judgements matter more than others. At three of them joe must ask a separate
-classification model (JEV), whose verdict is binding unless a named fact contradicts it:
+The model writing your code doesn't grade its own work. At three critical calls joe asks a
+classification model instead: one that writes no text, but answers a typed question
+(yes/no, pick one, a score) with a calibrated probability. joe uses TypeSafe's
+[Jev](https://openrouter.ai/blog/insights/what-is-jev/), the first model of this kind,
+through OpenRouter. Its verdict is binding unless a named fact contradicts it.
 
-- after a test goes green, whether a function needs more refactoring;
-- how severe each review finding is;
-- how deep a new interface is before it's built.
+- After a test goes green: does this function need more refactoring?
+- In a review: how severe is each finding?
+- Before a new interface is built: how deep is it?
 
 The same model screens tool calls before they run: files change only in your repository and
 knowledge base, nothing remote changes, no secret leaves the machine.
@@ -146,6 +149,7 @@ sessions.
 
 - want an agent that adapts to your way of working;
 - want a general-purpose assistant or a Claude Code replacement;
+- want to vibe code the application;
 - want quick edits without a conversation first.
 
 ---
@@ -156,11 +160,9 @@ You need Go 1.27+, `git`, [uv](https://github.com/astral-sh/uv) (`uvx` on `PATH`
 API key, unless you use a local Ollama.
 
 ```bash
-git clone https://github.com/jjmrocha/joe.git && cd joe
-make build                       # writes ./bin/joe
-export OPEN_ROUTER_KEY=sk-...    # the profile stores the variable's name, never the key
-
-cd ~/your/repo && /path/to/joe/bin/joe
+git clone https://github.com/jjmrocha/joe.git
+cd joe
+make build                              # writes ./bin/joe, that you copy to your PATH
 ```
 
 The first run asks a few questions, writes your profile to `~/.config/joe/`, clones the

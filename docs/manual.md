@@ -29,9 +29,9 @@ For engineers who already use coding agents. For what joe is and why, see the [R
 ### Build
 
 ```bash
-git clone https://github.com/jjmrocha/joe.git && cd joe
+git clone https://github.com/jjmrocha/joe.git
+cd joe
 make build                       # writes ./bin/joe
-export OPEN_ROUTER_KEY=sk-...    # in your shell profile
 ```
 
 Put `./bin/joe` on your `PATH`. The profile stores the variable's *name*; joe reads the key at startup and never stores it.
@@ -59,7 +59,7 @@ Name of the classifier API key variable: OPEN_ROUTER_KEY
 | Provider, Model, API key variable | The model joe talks to. The key question is skipped on Ollama |
 | Harness | Which instruction files joe reads ([Your own instructions](#your-own-instructions)). Pick `claude` if you keep a `~/.claude/CLAUDE.md` |
 | Knowledge base | Whether joe gets the `file_*` tools. The folder must exist; joe asks until it does. `~` is expanded and the full path stored |
-| Classifier model | Whether joe gets the guard and the `classify_*` tools. Runs on OpenRouter, so the key is an OpenRouter one |
+| Classifier model | Whether joe gets the guard and the `classify_*` tools. Runs on OpenRouter, so the key is an OpenRouter one (JEV or equivalent model) |
 
 The folder and classifier follow-ups appear only after `yes`. Setup writes `effort: medium`, registers two MCP servers (both off) and clones the skills:
 
@@ -158,28 +158,7 @@ The routing table and tie-breakers live in [`internal/prompt/skills.go`](../inte
 
 ### The loop
 
-```mermaid
-flowchart TD
-    Q([A question]) --> RS[research]
-    Idea([An idea]) --> BS[brainstorm]
-    PR([PR comments]) --> AF[addressing-findings]
-    RS -->|findings| BS
-    BS -->|approved plan| USS[using-software-specialists]
-    USS -->|implemented| AC[analyze-code]
-    AC -->|findings| AF
-    AF -->|approved fix| USS
-    AC -->|plan changes| BS
-    AC -->|clean| Ship([Ship])
-    USS -.->|on request| GT[guiding-manual-testing]
-    GT -->|bug proven| USS
-```
-
-1. **research** answers from the code and the KB, citing `file:line`. Never from memory.
-2. **brainstorm** asks one question at a time, presents a design, and writes no code until you approve it. The approved spec becomes a plan in the KB's `plans/`; work that splits into parts is built one sub-task at a time.
-3. **using-software-specialists** implements the plan through specialist mindsets (architect, backend, security, tester…). Before code it loads `designing-interfaces`, `coding-discipline` and `test-driven-development`.
-4. **analyze-code** audits through five lenses, verifies each finding, and reports. It never fixes.
-5. **addressing-findings** takes one finding per message: explain, propose, recommend, stop. Nothing changes until you decide; it never posts to a PR.
-6. **guiding-manual-testing** proposes one action at a time; you run it and paste the output. It runs nothing itself.
+How the entry skills hand off to each other is in the README: [Why joe: the workflow](../README.md#why-joe-the-workflow).
 
 ### Supporting skills
 
@@ -212,15 +191,28 @@ A newer joe can need a skill an older clone lacks; pull after upgrading.
 
 ## Knowledge base
 
-The knowledge base is a folder of Markdown that joe reads before it works and updates after. It holds what one repository can't tell an agent: which service owns a piece of data, who consumes an event, what a plan intended.
+The knowledge base is a folder of Markdown outside your repositories. It holds what one repository can't tell an agent: which service owns a piece of data, who consumes an event, what a plan intended.
 
 | Folder | Answers | Holds |
 |---|---|---|
 | `wiki/` | What exists? | Per-repo pages: entities, interfaces, jobs, dependencies, events, rules, helpers, patterns |
 | `plans/` | What's intended? | Plans written by `brainstorm`, often cross-repo |
-| `manuals/` | How do I use this? | Plain-language docs for operators |
+| `manuals/` | How do I use this? | Plain-language docs for operators, written only when you ask |
 
-Every wiki page lists its `sources:`, and joe treats code as truth: a wiki claim is checked against the code it cites, and a disagreement is reported, not silently resolved. Deletes need your approval.
+joe reads the knowledge base before it works. It writes plans on its own; the wiki changes only when you ask. Every wiki page lists its `sources:`, and joe treats code as truth: a wiki claim is checked against the code it cites, and a disagreement is reported, not silently resolved. Deletes need your approval.
+
+### Getting started
+
+1. Create an empty folder and set `kb-path` to it (or answer `yes` at setup).
+2. On first use joe asks before creating the layout (`wiki/`, `plans/`, `manuals/`), and before adding each repository's folder under `wiki/`.
+3. In each repository: `/knowledge-base ingest this repository`. joe reads every file, writes the pages, links them to other services already in the wiki, and reports coverage (`Ingested 42/42 files`).
+
+| To | Ask |
+|---|---|
+| Add documents | `/knowledge-base ingest docs/architecture/` |
+| Record a change you just made | `/knowledge-base update the wiki with what we just changed` |
+| Find stale or orphaned pages | `/knowledge-base audit the KB` |
+| Look something up | `/knowledge-base who consumes order-created?` |
 
 ### Tools
 
@@ -237,7 +229,7 @@ With `kb-path` set, joe gets seven tools confined to that folder: `file_read`, `
 
 ## Second opinion and guard
 
-Both need a `classifier` in the profile: a separate classification model, such as `typesafe/jev-1.13` (JEV) on OpenRouter. Without one, neither exists.
+Both need a `classifier` in the profile: a classification model, different from the model that writes code. It writes no text; it answers a typed question (yes/no, a choice, a score) with a calibrated probability. joe reaches it through OpenRouter's decisions API, so any classification model OpenRouter serves works; today that is TypeSafe's [Jev](https://openrouter.ai/blog/insights/what-is-jev/) (`typesafe/jev-1.13`). Without a classifier, neither feature exists.
 
 ### Second opinion
 
