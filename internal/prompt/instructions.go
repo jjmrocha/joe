@@ -33,6 +33,7 @@ func buildInstructions(r Request) string {
 	}
 
 	builder.WriteString(buildOtherRepositories())
+	builder.WriteString(buildContradictions())
 	builder.WriteString(buildWorkingWithUser())
 
 	builder.WriteString(instructionsEndTag)
