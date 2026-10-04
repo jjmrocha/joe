@@ -2,537 +2,185 @@
 
 <img src="logo.svg" alt="joe" width="360">
 
-**The opinionated coding agent for your terminal.**
+**A coding agent with a workflow of its own.**
 
 [![CI](https://github.com/jjmrocha/joe/actions/workflows/ci.yml/badge.svg)](https://github.com/jjmrocha/joe/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/go-1.27%2B-00ADD8)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[Features](#features) · [Quickstart](#quickstart) · [Everyday use](#everyday-use) · [Safety](#safety-model) · [Configure](#configure) · [Troubleshooting](#troubleshooting)
+[Why joe](#why-joe-the-workflow) · [What makes it practical](#what-makes-it-practical) · [Is joe for you?](#is-joe-for-you) · [Quickstart](#quickstart) · [Manual](docs/manual.md)
 
 </div>
 
-joe works in one repository at a time: it reads the code, changes it, runs the tests and
-tells you what it did. It does not improvise. Every request goes through a written
-procedure.
+joe is one engineer's way of building software, turned into an agent. It doesn't adapt to
+your workflow; it brings its own and follows it on every request. If that workflow fits
+you, joe enforces it so you don't have to.
 
 ```
-$ cd ~/sources/go/joe
 $ joe
 
-❯ what are the skills used on this project?
+❯ add a /version command that prints joe's version
 
-  Loading research
+  Route: a new capability (a new /version command) → Loading brainstorm
 
-● skill_load(skill_name="research")
-  ⎿ <3.0 KB> · 485ms
+● skill_load(skill_name="brainstorm")
+  ⎿ <6.5 KB> · 379ms
 
-● serena__read_file(relative_path="internal/skills/skills.go")
-  ⎿ <1.3 KB> · 377ms
+  Loading knowledge-base (kb_path configured)
 
-  joe ships twelve skills, defined in  internal/skills/skills.go:14-27 :
+● file_read(path="wiki/joe/index.md")
+  ⎿ <10.5 KB> · 240ms
 
-  1. addressing-findings
-  2. analyze-code
-  3. brainstorm
-  4. coding-discipline
-  5. designing-interfaces
-  6. guiding-manual-testing
-  7. knowledge-base
-  8. research
-  9. style-checker
-  10. test-driven-development
-  11. using-software-specialists
-  12. writing-unit-tests
+● serena__find_symbol(include_body=true, name_path_pattern="buildCommands", relative_path="internal/engine/commands.go")
+  ⎿ <755 B> · 303ms
 
-  They're loaded from the coding-skills dir via  skills.Load()  ( internal/skills/skills.go:44 ). 
-  The profile can add extra skills through  cfg.Skills  (loaded from  skills/  in the config folder), 
-  but any name colliding with the twelve above is rejected with 
-   ErrReservedSkill  ( internal/skills/skills.go:37-40 ) — these twelve are the prompt's routing table
-  and are reserved.
+  ⋮ 10 more tool calls
 
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
- 2 tool calls · 4s llm · 863ms tools · ↑19.02K ↓232 tokens
+  Findings from the repo and KB:
 
-───── JOE ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+  • No version string exists anywhere in joe's code — no const, no ldflags, no debug.ReadBuildInfo use.
+  • Slash commands are registered in internal/engine/commands.go (buildCommands, line 37) — the
+    pattern in wiki/ai-chat/patterns/add-slash-command.
 
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-z-ai/glm-5.3-flash (openrouter) · max · ctx: 1% · tokens: 19.26K
+  The one real design decision is where the version value comes from:
+
+  1. Hardcoded const — bumped by hand. Simple, drifts if forgotten. (my default)
+  2. ldflags -X — set at build time. Accurate, but go run / go install print empty.
+  3. runtime/debug.ReadBuildInfo — reports (devel) for local make build.
+
+  Where should the version number come from?
+
+──────────────────────────────────────────────────────────────────────────
+ 13 tool calls · 26s llm · 3s tools · ↑33.08K ↓616 tokens
 ```
 
-Named after [Joe Armstrong](https://en.wikipedia.org/wiki/Joe_Armstrong_(programmer)),
-creator of Erlang.
+No code yet. joe checked what exists, found the pattern to follow, and asked the one
+question that matters.
 
 ---
 
-## Features
+## Why joe: the workflow
 
-### Every request follows a skill
-
-Before joe touches anything, it routes the request to a skill: a written procedure for that
-kind of work. A bug gets the debugging procedure, a new feature starts by pinning down
-requirements and agreeing a design, a review follows the review checklist. joe says which
-skill it loaded, and each skill loads the next at the step that needs it: test-driven
-development while implementing, interface design before a new API is built. The skills live
-in [coding-skills](https://github.com/jjmrocha/coding-skills), cloned into your config folder
-on first run; add your own through the profile's `skills`.
+Every request is routed to a skill, a written procedure for that kind of work, and joe
+says which one it loaded. Skills hand off to each other, so work moves through the same
+loop every time:
 
 ```mermaid
 flowchart LR
-    R[Your request] --> S[Route to a skill]
-    S --> P[Follow the skill]
-    P -->|tool call| G{Guard}
-    G -->|allowed| T[Serena · shell · knowledge base · MCP servers]
-    G -->|refused| P
-    T --> P
-    P --> A[Answer: what changed, where, and the test results]
+    Q([Question]) --> R[Research]
+    I([Idea]) --> D[Design]
+    R --> D
+    D -->|approved plan| B[Build]
+    B --> A[Review]
+    A -->|findings| F[Decide]
+    F -->|approved fix| B
+    A -->|clean| S([Ship])
+    B -.->|on request| T[Test by hand]
+    T -->|bug| B
 ```
 
-### Skills as commands
+| Step | Skill | What joe does |
+|---|---|---|
+| Research | `research` | Answers from your code and notes, citing `file:line`. Never from memory |
+| Design | `brainstorm` | Asks one question at a time, proposes a design, writes no code until you approve. Saves the plan |
+| Build | `using-software-specialists` | Implements the plan test-first, checks each new interface's depth, guards against the usual LLM failure modes |
+| Review | `analyze-code` | Audits the change through five lenses and reports. Fixes nothing |
+| Decide | `addressing-findings` | Walks the findings one at a time. Nothing changes until you decide |
+| Test by hand | `guiding-manual-testing` | Proposes one step at a time on a real environment; you run it, joe reads the output |
 
-When you already know the procedure, name it: `/brainstorm add a --verbose flag`,
-`/research how does Load resolve the profile?`, `/analyze-code`. Eight skills have a
-command, listed by `/help` and completed with Tab; see [Everyday use](#everyday-use).
+"Too small to need a skill" is never an excuse. A precise request still gets a short
+design conversation: it confirms joe understood and surfaces what you didn't consider.
 
-### Guarded tool calls
+---
 
-With a classifier in the profile, a second model checks every tool call against the
-session's rules before it runs: files change only in the repository and the knowledge base,
-nothing remote changes, no secret leaves the machine. A refused call stops joe, and it tells
-you what was refused instead of trying another route. See [Safety model](#safety-model).
+## What makes it practical
 
-### A calibrated second opinion
+### A knowledge base of your organisation
 
-The same classifier is offered to joe as tools, and its instructions require them at three
-judgement calls: whether a function needs more refactoring after a test goes green, how
-severe each finding in a review is, and how deep a new interface is before it is built.
+One repository rarely tells the whole story. Point joe at a folder and it keeps a wiki of
+your systems: which service owns a piece of data, who consumes an event, which process
+writes a table. Across a dozen microservices, joe knows how the pieces fit before it
+changes one. It also keeps the plans `brainstorm` writes, so work picks up where it left
+off. Code stays the truth: a note that disagrees with the code is reported, not trusted.
 
-### A knowledge base that outlives the session
+### A second opinion at the critical calls
 
-Give joe a folder and it keeps notes, plans and manuals there: it reads them before it
-starts and updates them when it finishes. Its file tools cannot leave that folder, and each
-profile can name its own, so `joe work` and `joe personal` remember separately. See
-[Knowledge base](#knowledge-base).
+Some judgements matter more than others. At three of them joe must ask a separate
+classification model (JEV), whose verdict is binding unless a named fact contradicts it:
 
-### Your instructions, joe's rules
+- after a test goes green, whether a function needs more refactoring;
+- how severe each review finding is;
+- how deep a new interface is before it's built.
 
-joe reads the instruction files you already keep, `CLAUDE.md` or `AGENTS.md`, global and
-per repository, and quotes them into its prompt. They can add to joe's rules or narrow them,
-never override them. See [Your own instructions](#your-own-instructions).
+The same model screens tool calls before they run: files change only in your repository and
+knowledge base, nothing remote changes, no secret leaves the machine.
 
-### Code by symbol, other repositories read-only
+### Code by symbol, not by file
 
-joe reads and edits code through [Serena](https://github.com/oraios/serena): it looks up a
-function, its body and its references instead of grepping and guessing. It changes only the
-repository it was started in; others it reads, never edits. See
-[Reading other repositories](#reading-other-repositories).
+joe works through [Serena](https://github.com/oraios/serena), which uses language servers
+to look up a function, its body or its references instead of reading whole files. Less
+context spent, more precise edits, 40+ languages. Other repositories are read-only.
 
-### Profiles and sessions
+### Profiles for every situation
 
-A profile is one JSON file that says everything (model, instruction files, knowledge base,
-MCP servers, classifier), and joe checks all of it before the session opens, listing every
-fault at once. API keys are named by variable, never stored. Bring the model: OpenRouter,
-Anthropic or a local Ollama, and switch mid-session with `/model`. `/export` saves a session
-and `joe -resume <id>` picks it up again. See [Configure](#configure).
+A profile is one JSON file holding the model, knowledge base, MCP servers and classifier.
+Keep one per situation: `joe work` with the company knowledge base and a frontier model,
+`joe local` on Ollama, with no cloud model. Bring OpenRouter, Anthropic or
+Ollama, and switch models mid-session.
 
-### Built on
+joe also reads the `CLAUDE.md` or `AGENTS.md` files you already keep, and saves and resumes
+sessions.
 
-joe itself is small: the prompt, the configuration and the wiring.
+---
 
-| Built on | What it provides |
-|---|---|
-| [ai-toolkit](https://github.com/jjmrocha/ai-toolkit) | The agent loop, the LLM clients, the tool packs and the skill loader |
-| [ai-chat](https://github.com/jjmrocha/ai-chat) | The chat core, the terminal UI and the slash commands |
-| [coding-skills](https://github.com/jjmrocha/coding-skills) | The skills joe loads by name |
+## Is joe for you?
+
+**Yes, if you:**
+
+- want the design agreed before code is written;
+- want to approve every change, one decision at a time;
+- work across several services and want the agent to remember how they connect;
+- prefer a fixed, predictable process to an endlessly configurable one.
+
+**No, if you:**
+
+- want an agent that adapts to your way of working;
+- want a general-purpose assistant or a Claude Code replacement;
+- want quick edits without a conversation first.
 
 ---
 
 ## Quickstart
 
-Three steps, about five minutes.
-
-### 1. Prerequisites
-
-| What | Why | How |
-|---|---|---|
-| Go 1.27+ | Building joe | [go.dev/dl](https://go.dev/dl/) |
-| `git` | Finding the repository root, and cloning the skills on first run | Your package manager |
-| `uvx` on `PATH` | Starts Serena, which serves joe's coding tools. **joe will not start without it** | [uv](https://github.com/astral-sh/uv) |
-| An API key | Unless you run Ollama locally | [OpenRouter](https://openrouter.ai) or [Anthropic](https://console.anthropic.com) |
-
-### 2. Build and export your key
+You need Go 1.27+, `git`, [uv](https://github.com/astral-sh/uv) (`uvx` on `PATH`) and an
+API key, unless you use a local Ollama.
 
 ```bash
 git clone https://github.com/jjmrocha/joe.git && cd joe
 make build                       # writes ./bin/joe
+export OPEN_ROUTER_KEY=sk-...    # the profile stores the variable's name, never the key
 
-export OPEN_ROUTER_KEY=sk-...    # put this in your shell profile
+cd ~/your/repo && /path/to/joe/bin/joe
 ```
 
-Copy `./bin/joe` onto your `PATH` to run it as `joe` from anywhere. joe never stores the key:
-the profile holds the *name* of the variable, and joe reads it at startup.
-
-### 3. Run it
-
-```bash
-./bin/joe
-```
-
-The first run finds no profile, says where it will write one, and asks a few questions:
-
-```
-Provider [anthropic, ollama, openrouter]: openrouter
-Model: z-ai/glm-5.3-flash
-Name of the API key variable: OPEN_ROUTER_KEY
-Harness [agents, claude]: claude
-
-Knowledge base [yes, no]: yes
-Knowledge base folder: /Users/you/Documents/LLM_WIKI
-
-Classifier model [yes, no]: yes
-Classifier model name: typesafe/jev-1.13
-Name of the classifier API key variable: OPEN_ROUTER_KEY
-```
-
-Then it writes the profile, clones the skills, and opens the chat.
-
-```
-~/.config/joe/
-├── default.json    your profile
-├── AGENTS.md       empty, for harness: agents
-├── coding-skills/  a git clone of coding-skills: joe's skills
-└── skills/         empty, for extra skills of your own
-```
-
-<details>
-<summary>What each setup question decides</summary>
-
-- `Provider`, `Model`, API key variable: the model joe talks to. The key question is
-  skipped on Ollama.
-- `Harness`: which instruction files joe reads; see
-  [Your own instructions](#your-own-instructions). Pick `claude` if you already keep a
-  `~/.claude/CLAUDE.md`.
-- `Knowledge base`: whether joe gets the `file_*` tools; see
-  [Knowledge base](#knowledge-base). joe does not create the folder: it must already
-  exist, and joe asks again until it does. A leading `~` is expanded, and the profile stores
-  the full path.
-- `Classifier model`: whether joe screens tool calls and gets the `classify_*` tools;
-  see [Safety model](#safety-model). It runs on OpenRouter, so the key is an OpenRouter one.
-
-The folder and classifier questions only follow a `yes`. If the skills clone fails (no
-network, say), joe stops with `clone skills: …` and keeps your answers: the next run clones
-again without asking.
-
-</details>
-
-<details>
-<summary>The twelve skills</summary>
-
-`addressing-findings`, `analyze-code`, `brainstorm`, `coding-discipline`,
-`designing-interfaces`, `guiding-manual-testing`, `knowledge-base`, `research`,
-`style-checker`, `test-driven-development`, `using-software-specialists`,
-`writing-unit-tests`.
-
-Each loads from `~/.config/joe/coding-skills/<name>/SKILL.md`. joe never updates the clone
-itself. To pick up upstream changes:
-
-```bash
-git -C ~/.config/joe/coding-skills pull
-```
-
-</details>
-
-<details>
-<summary>Optional: web search and library documentation</summary>
-
-The default profile registers two MCP servers and starts neither: a server runs only when
-it is listed in `mcps-on` or you start it with `/mcp on <name>`, so a missing one costs
-nothing until you turn it on. `/mcp` lists them and their state.
-
-- [DonSeTch](https://github.com/dondai44423/donsetch) does web search, page fetching and
-  crawling. Without it joe works fine offline; a request that needs the web fails when the
-  tool is called.
-  ```bash
-  npm install -g donsetch
-  # or: brew tap dondai44423/donsetch && brew install donsetch
-  ```
-- [context7](https://github.com/upstash/context7) serves up-to-date documentation for
-  libraries and frameworks. It runs through `npx`, so [Node.js](https://nodejs.org) is all it
-  needs.
-
-</details>
+The first run asks a few questions, writes your profile to `~/.config/joe/`, clones the
+skills and opens the chat. Details in the [manual](docs/manual.md#install-and-first-run).
 
 ---
 
-## Everyday use
+## Learn more
 
-Run joe from the repository you want it to work on. joe finds the git root and works there;
-Serena starts with that project already active. Outside a repository, or with no `git`
-installed, joe uses the current directory.
+The [manual](docs/manual.md) covers everyday use, the workflow in depth, the knowledge
+base, the guard, configuration and troubleshooting.
 
-| Command | What it does |
-|---|---|
-| `/help` | List the commands |
-| `/model [name]` | Show the current model, or switch to another from `llm.models` |
-| `/effort [level]` | Show or change reasoning effort |
-| `/clear` | Reset the conversation |
-| `/compact` | Compact the context now, instead of waiting for joe to do it |
-| `/export` | Save the session to `~/.config/joe/sessions/<id>.json`; exporting again updates that file, and `/clear` starts a new session with a new file |
-| `/mcp [on\|off] [name]` | Show the MCP servers, or start and stop one |
-| `/skills` | List the loaded skills |
-| `/<skill> [request]` | Run the request through that skill: `/addressing-findings`, `/analyze-code`, `/brainstorm`, `/guiding-manual-testing`, `/research`, `/using-software-specialists`, `/writing-unit-tests`, and `/knowledge-base` when the profile sets `kb-path`. Your own skills have no command |
-| `/exit` | Quit |
-
-To pick up an exported session later, start joe with `-resume` and the id from the file name.
-The profile, when given, comes first:
-
-```bash
-joe -resume <id>          # same as: joe default -resume <id>
-joe work -resume <id>
-```
-
-The model gets the whole conversation back and `/export` keeps writing to the same file. The
-screen starts empty. joe resumes only from the repository the session was exported in, and
-the profile decides the model and effort, not the file.
-
-### Your own instructions
-
-joe reads your standing instruction files at startup and quotes each into its prompt
-verbatim, least specific first, skipping any that are absent. Which three depends on
-`harness`:
-
-| `harness` | Files, least specific first |
-|---|---|
-| `claude` | `~/.claude/CLAUDE.md`, `<repo>/CLAUDE.md`, `<repo>/CLAUDE.local.md` |
-| `agents` | `~/.config/joe/AGENTS.md`, `<repo>/AGENTS.md`, `<repo>/AGENTS.local.md` |
-
-A later file wins where two disagree. joe's own instructions win over all of them, on every
-subject: your files can add to them or narrow them, not override or relax them.
-
-Imports are not followed: a line like `@RTK.md` is passed through as text, and joe never
-opens the file it names.
-
-### Knowledge base
-
-When the profile sets `kb-path`, joe gets seven more tools, confined to that folder and
-unable to leave it: `file_read`, `file_write`, `file_edit`, `file_list`, `file_search`,
-`file_delete`, `file_workdir`. The repository stays Serena's; the knowledge base is where
-joe keeps notes, plans and manuals across sessions.
-
-```json
-{ "kb-path": "/Users/you/Documents/LLM_WIKI" }
-```
-
-Different profiles can name different folders, so `joe work` and `joe personal` keep
-separate knowledge bases.
-
-<details>
-<summary>Rules for <code>kb-path</code></summary>
-
-- The path must be absolute, and the folder must already exist: joe never creates it. A
-  relative path stops joe at startup, with every other fault in the profile; a missing or
-  unreadable folder stops it when the tools are registered.
-- Omit the key and joe starts normally, without the `file_*` tools.
-- The profile is the only place joe reads it from. A `kb_path` line in a `CLAUDE.md` or
-  `AGENTS.md` is quoted into the prompt like any other line, and otherwise ignored: joe will
-  not take a knowledge-base root from a file a repository can ship. The prompt's
-  `<locations>` block names the path joe actually uses and tells the model to ignore any
-  other, so a stale line cannot mislead it. If you used to keep the line in
-  `~/.claude/CLAUDE.md`, move the value into your profile; leaving the line does no harm.
-
-</details>
-
-### Reading other repositories
-
-A feature that spans repositories is still written in the one joe was started in. joe reads
-the others through Serena's `query_project`, which refuses every editing tool.
-
-<details>
-<summary>Setting another repository up for reading</summary>
-
-`query_project` only reaches repositories Serena has registered. Register each one once:
-
-```bash
-uvx --from git+https://github.com/oraios/serena serena project create /path/to/repo
-```
-
-Reading and searching files needs nothing more. Symbol lookups in another repository go
-through Serena's project server, which joe does not start. Run it alongside joe if you want
-them:
-
-```bash
-uvx --from git+https://github.com/oraios/serena serena start-project-server
-```
-
-Without it, joe falls back to searching the other repository as text.
-
-</details>
+joe itself is small: the prompt, the configuration and the wiring. It's built on
+[ai-toolkit](https://github.com/jjmrocha/ai-toolkit) (agent loop, LLM clients, tools),
+[ai-chat](https://github.com/jjmrocha/ai-chat) (terminal UI, commands) and
+[coding-skills](https://github.com/jjmrocha/coding-skills) (the skills).
 
 ---
 
-## Safety model
-
-joe's prompt states the session's rules. With a `classifier` in the profile, a separate
-model also enforces them on every tool call:
-
-- files are created, changed or deleted only inside the repository and the knowledge base;
-- nothing remote or shared changes: no push, deploy, publish, merge or message;
-- no secret or credential leaves the machine.
-
-Before a tool call runs, joe sends the classification model the tool, its arguments and
-those rules. A call judged to break them is refused, and the agent is told `rejected by joe`.
-It stops and tells you what was refused rather than trying another route.
-
-The guard fails open: if the classification model errors or takes longer than five
-seconds, the call runs. It is a second line of defence, not a sandbox.
-
-Some tools earn trust. The first call to each tool also asks whether *any* call to that
-tool could break the rules. A tool judged unable to (`current_date`, say) is not checked
-again until joe exits; `/clear` does not reset it. That verdict is read from the tool's own description, so
-an MCP server can talk the model into trusting a tool it should not: **only add MCP servers
-you trust.**
-
-Without a classifier every call runs unchecked, and the `classify_*` tools are absent.
-
-<details>
-<summary>The classifier as a tool</summary>
-
-The same model is offered to joe as `classify_yes_no`, `classify_choice` and
-`classify_score`, so it can hand a judgement call to a calibrated model instead of guessing.
-joe's instructions make three of those calls required, and each is billed: whether a
-function needs more refactoring after a test goes green, the severity of each finding in a
-code review, and how deep a new interface is before it is built.
-
-</details>
-
----
-
-## Configure
-
-joe starts from a profile: a JSON file in `~/.config/joe/`, or in `$XDG_CONFIG_HOME/joe/`
-when that variable is set. `joe` reads `default.json`; `joe <name>` reads `<name>.json`:
-
-```bash
-joe                  # ~/.config/joe/default.json
-joe local            # ~/.config/joe/local.json (an Ollama profile, say)
-joe local -resume <id>   # the same profile, resuming an exported session
-```
-
-Each profile is complete. joe runs exactly what the file says: a profile with no `mcps`
-section gets no MCP servers. There is no merging between profiles and no hidden default.
-Only `default.json` is written for you; create the others by hand or copy it. Keep
-`default.json`. joe decides whether to run setup by looking for it, so deleting it makes
-the next run ask the setup questions again.
-
-```json
-{
-  "harness": "claude",
-  "kb-path": "/Users/you/Documents/JOE_KB",
-  "llm": {
-    "provider": "openrouter",
-    "api-key-env": "OPEN_ROUTER_KEY",
-    "model": "z-ai/glm-5.3-flash",
-    "models": [
-      "z-ai/glm-5.3-flash",
-      "z-ai/glm-5.3"
-    ],
-    "effort": "max"
-  },
-  "skills": [],
-  "mcps": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "timeout": 60
-    },
-    "donsetch": {
-      "command": "donsetch",
-      "args": ["mcp", "--supervised"],
-      "timeout": 900
-    }
-  },
-  "mcps-on": [],
-  "classifier": {
-    "provider": "openrouter",
-    "api-key-env": "OPEN_ROUTER_KEY",
-    "model": "typesafe/jev-1.13"
-  }
-}
-```
-
-| Key | What it does |
-|---|---|
-| `harness` | `claude` or `agents`: which instruction files joe reads |
-| `kb-path` | Absolute path to your knowledge base. Omit it for no knowledge base and no `file_*` tools |
-| `llm.provider` | `openrouter`, `ollama` or `anthropic` |
-| `llm.base-url` | Overrides the provider's endpoint; omit it for the standard one |
-| `llm.api-key-env` | The **name** of the variable holding the key, never the key itself. Required except on Ollama |
-| `llm.model` | The model joe starts with |
-| `llm.models` | The models `/model` switches between |
-| `llm.effort` | `off`, `low`, `medium` or `max`: how much the model reasons before answering |
-| `skills` | Extra skills by name, loaded from `~/.config/joe/skills`. Cannot name one of joe's own |
-| `mcps` | MCP servers joe registers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds (`0` or absent means 60) |
-| `mcps-on` | The servers started at launch; start the rest with `/mcp on <name>` |
-| `classifier` | The classification model behind the guard and the `classify_*` tools. Omit it for neither |
-| `classifier.provider` | `openrouter` |
-| `classifier.base-url` | Overrides the provider's endpoint; omit it for the standard one |
-| `classifier.api-key-env` | The name of the variable holding the key. Required |
-| `classifier.model` | The classification model, e.g. `typesafe/jev-1.13` |
-
-joe validates the whole profile before the session opens and lists every fault at once:
-an unknown provider, effort, harness or `mcps-on` server; a skill that is not a bare name or
-is one of joe's own; a `kb-path` that is not absolute; an empty model; an API-key
-variable that is not set.
-
-Serena is not configurable: it always starts with joe.
-
----
-
-## Troubleshooting
-
-| Message | Cause | Fix |
-|---|---|---|
-| `skill folder not found: …` | One of joe's skills is missing from `~/.config/joe/coding-skills`, or an extra from `~/.config/joe/skills` | After upgrading joe, run `git -C ~/.config/joe/coding-skills pull`: a newer joe can need a skill your clone predates. Otherwise restore it, or delete `coding-skills/` and joe clones it again. Every missing one is listed at once |
-| `clone skills: …` | The first-run clone of coding-skills failed; git's own message is printed above it | Check the network and `git`, then run joe again. Only the clone is retried |
-| `skill is one of joe's own` | The profile's `skills` names one of joe's own | Remove it from `skills` |
-| `api key variable is not set` | `api-key-env` names a variable with no value | `export` it, or point `api-key-env` at the one you use |
-| `classifier provider is not openrouter` | `classifier.provider` is anything else | Use `openrouter` |
-| `profile not found` | `joe <name>` with no `<name>.json` | Create the file; only `default.json` is written for you |
-| `no answer to read` | Setup ran with nothing on stdin: a pipe, a redirect, or Ctrl-D at a question | Run joe from a terminal; nothing is left broken, the next run asks again |
-| `kb-path is not absolute` | `kb-path` is relative or starts with `~` | Spell the path out in full |
-| `opening root: …` | `kb-path` names a folder that is missing or unreadable | Create it, or drop the key |
-| `harness is not claude or agents` | Unknown `harness` value | Use `claude` or `agents` |
-| `git rev-parse: …` | `git` is present but refusing (dubious ownership, unreadable `.git`) | Fix the repository, or run joe somewhere else |
-| `coding tools: …` | Serena failed to start, usually because `uvx` is not on `PATH` | Install [uv](https://github.com/astral-sh/uv) and check `uvx` runs |
-
-- An `mcps-on` server that fails to start does not stop joe. The failure prints before
-  the chat opens, `/mcp` shows the server as `off`, and `/mcp on <name>` retries it.
-- To start over, delete `~/.config/joe` (or just its `default.json`) and run joe
-  again. An interrupted setup is finished by the next run, and nothing already in the folder
-  is ever overwritten: an existing `default.json` means setup does not run, and an
-  `AGENTS.md` you have edited is left as it is.
-
----
-
-## Development
-
-`make` on its own lists every target:
-
-| Target | Effect |
-|---|---|
-| `build` | Build joe into `./bin` |
-| `clean` | Remove `./bin` |
-| `test` | Run all tests with the race detector |
-| `bench` | Run benchmarks |
-| `lint` | Run golangci-lint |
-| `deps` | Update dependencies |
-| `tidy` | Tidy `go.mod` |
-
-CI runs `go test -race ./...`, `golangci-lint`, `govulncheck` and a gitleaks secret scan on
-every push and pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
-golangci-lint must be v2.13.2 or newer; earlier releases are built with an older Go and
-refuse this module.
-
-## License
+Named after [Joe Armstrong](https://en.wikipedia.org/wiki/Joe_Armstrong_(programmer)),
+creator of Erlang.
 
 [MIT](LICENSE) © 2026 Joaquim Rocha
