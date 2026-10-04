@@ -26,22 +26,29 @@ calibrated classifier. At each checkpoint below, calling it is required.
   cannot name one, follow the answer. Report every override as:
   Classifier override — <checkpoint>: answered <answer>; I did <action> because <fact>.
   That line, verbatim — free prose in its place is a broken report.
-- If a call fails, do not retry it. Decide yourself and report:
+- If a call fails, read the error. An error about the call's arguments
+  (a missing or invalid field) is your mistake: fix the call and send it
+  again — that retry does not count as an ask. Any other failure: do not
+  retry. Decide yourself and report:
   Classifier unavailable — <checkpoint>: <error>.
 - A checkpoint not marked as repeating is asked once per item: the first
   answer stands, even if you think a better input would change it. A
-  checkpoint marked as repeating is asked at most 3 times; report when the
-  cap stops it.
-- Before you move past a checkpoint, write:
-  Classifier — <checkpoint>: <n> calls for <n> <functions|findings|interfaces>.
-  The two numbers must match; if they do not, make the missing calls first.
+  checkpoint marked as repeating is asked again only after the item changed
+  since its last ask, at most 3 times per item; report when the cap stops it.
+- Before you move past a checkpoint, write one line naming every item and
+  each answer it got, in order:
+  Classifier — <checkpoint>: <item> <answer>[ → <answer>…]; <item> <answer>; …
+  An item that should have been asked and is not on the line is a missing
+  call: make it first.
 
 Checkpoints:
 
 1. test-driven-development, "REFACTOR — Clean up without adding behavior"
    — repeating.
-   After you have walked the six REFACTOR items, for each production function
-   changed in GREEN:
+   First write the skill's six REFACTOR lines, one per item — Duplication,
+   Naming, Cognitive complexity, Single responsibility, No side effects,
+   Dead code — each saying what you changed or "already clean". Then, for
+   each production function changed in GREEN:
    classify_yes_no
      instructions: "Would a senior software engineer refactor this function
      further? Judge it against these principles:
@@ -54,9 +61,16 @@ Checkpoints:
        - No side effects: no mutation of arguments, globals or receiver
          state that the name doesn't advertise.
        - Dead code and speculative generality: none is left."
-     input: the function's source and the source of the tests that drive it,
-     both verbatim. One call per production function — a single call naming
-     several functions does not satisfy this.
+     input: exactly two labelled blocks:
+       FUNCTION:
+       <the function's source, verbatim>
+
+       TESTS:
+       <the source of every test that calls it, verbatim>
+     When no test calls the function directly, TESTS holds the tests that
+     reach it through its callers; when none do, TESTS is: none.
+     One call per production function — a single call naming several
+     functions does not satisfy this.
    Yes → refactor, run the suite, ask again. No → move on.
 
 2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.
