@@ -21,20 +21,16 @@ For engineers who already use coding agents. For what joe is and why, see the [R
 
 | What | Why |
 |---|---|
-| Go 1.27+ | Building joe |
 | `git` | Finding the repository root; cloning the skills on first run |
 | `uvx` on `PATH` ([uv](https://github.com/astral-sh/uv)) | Starts Serena, which serves the coding tools. **joe will not start without it** |
 | An API key | [OpenRouter](https://openrouter.ai) or [Anthropic](https://console.anthropic.com); none for a local Ollama |
 
-### Build
+### Install
 
-```bash
-git clone https://github.com/jjmrocha/joe.git
-cd joe
-make build                       # writes ./bin/joe
-```
+Download the archive for your system from [Releases](https://github.com/jjmrocha/joe/releases)
+and put `joe` on your `PATH`.
 
-Put `./bin/joe` on your `PATH`. The profile stores the variable's *name*; joe reads the key at startup and never stores it.
+To build from source instead (Go 1.27+), run `make build` in a clone of the repository; it writes `./bin/joe`.
 
 ### Setup questions
 

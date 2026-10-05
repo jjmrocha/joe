@@ -156,14 +156,11 @@ sessions.
 
 ## Quickstart
 
-You need Go 1.27+, `git`, [uv](https://github.com/astral-sh/uv) (`uvx` on `PATH`) and an
-API key, unless you use a local Ollama.
+You need `git`, [uv](https://github.com/astral-sh/uv) (`uvx` on `PATH`) and an API key,
+unless you use a local Ollama.
 
-```bash
-git clone https://github.com/jjmrocha/joe.git
-cd joe
-make build                              # writes ./bin/joe, that you copy to your PATH
-```
+Download the archive for your system from [Releases](https://github.com/jjmrocha/joe/releases)
+and put `joe` on your `PATH`.
 
 The first run asks a few questions, writes your profile to `~/.config/joe/`, clones the
 skills and opens the chat. Details in the [manual](docs/manual.md#install-and-first-run).
