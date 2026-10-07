@@ -1,7 +1,6 @@
 package config
 
 import (
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -52,7 +51,18 @@ func TestProviders(t *testing.T) {
 		// given
 		expected := []llm.Provider{llm.ProviderAnthropic, llm.ProviderOllama, llm.ProviderOpenRouter}
 		// when
-		result := slices.Sorted(Providers.Values())
+		result := Providers()
+		// then
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("hands out a copy the caller may change", func(t *testing.T) {
+		// given
+		providers := Providers()
+		providers[0] = "bogus"
+		expected := []llm.Provider{llm.ProviderAnthropic, llm.ProviderOllama, llm.ProviderOpenRouter}
+		// when
+		result := Providers()
 		// then
 		assert.Equal(t, expected, result)
 	})

@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jjmrocha/ai-chat/command"
 	"github.com/jjmrocha/ai-toolkit/agent"
@@ -18,10 +19,11 @@ type Source interface {
 type exportCmd struct {
 	src      Source
 	repoPath string
+	now      func() time.Time
 }
 
 func ExportCommand(src Source, repoPath string) command.Command {
-	return exportCmd{src: src, repoPath: repoPath}
+	return exportCmd{src: src, repoPath: repoPath, now: time.Now}
 }
 
 func (exportCmd) Name() string {
@@ -35,15 +37,15 @@ func (exportCmd) Help() string {
 func (c exportCmd) Run(ctx command.Context, _ string) {
 	msgs := c.src.Messages()
 	if len(msgs) == 0 {
-		ctx.Print(command.Info, "No session to export.")
+		ctx.Info("No session to export.")
 		return
 	}
 
-	tok, err := export(ctx.Context(), c.src, c.repoPath, msgs)
+	tok, err := export(ctx.Context(), c.src, c.repoPath, msgs, c.now())
 	if err != nil {
-		ctx.Print(command.Error, fmt.Sprintf("export: %v", err))
+		ctx.Error(fmt.Sprintf("export: %v", err))
 		return
 	}
 
-	ctx.Print(command.Info, fmt.Sprintf("Session %s exported", tok))
+	ctx.Info(fmt.Sprintf("Session %s exported", tok))
 }

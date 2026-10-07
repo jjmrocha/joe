@@ -10,8 +10,8 @@ import (
 
 var closingTagPattern = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
 
-func Load(kind Kind, paths Paths) (*Set, error) {
-	var set Set
+func Load(kind Kind, paths Paths) ([]Block, error) {
+	var blocks []Block
 
 	for _, path := range kind.files(paths) {
 		content, err := os.ReadFile(path) //nolint:gosec // kind.files builds every path from fixed names and caller roots
@@ -23,13 +23,13 @@ func Load(kind Kind, paths Paths) (*Set, error) {
 			return nil, err
 		}
 
-		set.Blocks = append(set.Blocks, Block{
+		blocks = append(blocks, Block{
 			Path:    path,
 			Content: sanitize(content),
 		})
 	}
 
-	return &set, nil
+	return blocks, nil
 }
 
 func sanitize(content []byte) string {

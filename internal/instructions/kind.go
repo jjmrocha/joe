@@ -3,6 +3,7 @@ package instructions
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/jjmrocha/go-algo/sets"
 )
@@ -14,12 +15,16 @@ const (
 	KindAgents Kind = "agents"
 )
 
-const AgentsFile = "AGENTS.md"
+const agentsFile = "AGENTS.md"
 
-var Kinds = sets.New(KindClaude, KindAgents)
+var kinds = sets.New(KindClaude, KindAgents)
+
+func Kinds() []Kind {
+	return slices.Sorted(kinds.Values())
+}
 
 func (k Kind) Validate() error {
-	if !Kinds.Contains(k) {
+	if !kinds.Contains(k) {
 		return fmt.Errorf("%w: %s", ErrInvalidKind, k)
 	}
 
@@ -29,8 +34,8 @@ func (k Kind) Validate() error {
 func (k Kind) files(paths Paths) []string {
 	if k == KindAgents {
 		return []string{
-			filepath.Join(paths.ConfigDir, AgentsFile),
-			filepath.Join(paths.Repo, AgentsFile),
+			userAgentsFile(paths.ConfigDir),
+			filepath.Join(paths.Repo, agentsFile),
 			filepath.Join(paths.Repo, "AGENTS.local.md"),
 		}
 	}

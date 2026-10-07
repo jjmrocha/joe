@@ -10,7 +10,3 @@ type Block struct {
 	Path    string
 	Content string
 }
-
-type Set struct {
-	Blocks []Block
-}

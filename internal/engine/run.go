@@ -58,7 +58,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	}
 
 	// Load the user instructions
-	instructionFiles, err := loadUserInstructions(cfg, repoPath)
+	instructionFiles, err := loadUserInstructions(cfg.Instructions, repoPath)
 	if err != nil {
 		return fmt.Errorf("user instructions: %w", err)
 	}
@@ -83,11 +83,11 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	}
 
 	// Initialize the  MCP manager
-	mcpManager := newMCPManager(toolBox, cfg)
+	mcpManager := newMCPManager(toolBox, cfg.MCPClients())
 	defer mcpManager.Close()
 
 	// Start the MCP servers the profile boots
-	startMCPs(ctx, mcpManager, cfg)
+	startMCPs(ctx, mcpManager, cfg.MCPsOn)
 
 	// Register tools
 	var toolPacks packSet

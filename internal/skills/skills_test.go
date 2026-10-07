@@ -10,44 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testKeyEnv = "JOE_TEST_KEY"
-
-func testProfile(skills string) string {
-	return `{
-  "instructions": "claude",
-  "llm": {
-    "provider": "openrouter",
-    "api-key-env": "` + testKeyEnv + `",
-    "model": "z-ai/glm-5.3-flash",
-    "effort": "medium"
-  },
-  "skills": ` + skills + `,
-  "mcps": {},
-  "mcps-on": []
-}`
-}
-
-func testConfig(t *testing.T, profile string) *config.Config {
+func configHome(t *testing.T) {
 	t.Helper()
-	t.Setenv(testKeyEnv, "sk-test")
 
-	base := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", base)
-
-	dir := filepath.Join(base, "joe")
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		t.Fatalf("MkdirAll(%s): %v", dir, err)
-	}
-
-	path := filepath.Join(dir, "local.json")
-	if err := os.WriteFile(path, []byte(profile), 0o600); err != nil {
-		t.Fatalf("WriteFile(%s): %v", path, err)
-	}
-
-	cfg, err := config.Load("local")
-	require.NoError(t, err)
-
-	return cfg
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 }
 
 func writeSkill(t *testing.T, dir, name string) {
@@ -67,9 +33,9 @@ func writeSkill(t *testing.T, dir, name string) {
 func TestLoad(t *testing.T) {
 	t.Run("reports every missing skill in one pass", func(t *testing.T) {
 		// given
-		cfg := testConfig(t, testProfile(`[]`))
+		configHome(t)
 		// when
-		_, err := Load(cfg.Skills)
+		_, err := Load(nil)
 		// then
 		require.Error(t, err)
 
@@ -80,9 +46,9 @@ func TestLoad(t *testing.T) {
 
 	t.Run("names a missing extra skill beside the missing built-ins", func(t *testing.T) {
 		// given
-		cfg := testConfig(t, testProfile(`["removing-ai-tells"]`))
+		configHome(t)
 		// when
-		_, err := Load(cfg.Skills)
+		_, err := Load([]string{"removing-ai-tells"})
 		// then
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "removing-ai-tells")
@@ -90,7 +56,7 @@ func TestLoad(t *testing.T) {
 
 	t.Run("loads every skill the profile names", func(t *testing.T) {
 		// given
-		cfg := testConfig(t, testProfile(`["removing-ai-tells"]`))
+		configHome(t)
 
 		codingSkillsDir, err := config.CodingSkillsDir()
 		require.NoError(t, err)
@@ -104,7 +70,7 @@ func TestLoad(t *testing.T) {
 
 		writeSkill(t, skillsDir, "removing-ai-tells")
 		// when
-		result, err := Load(cfg.Skills)
+		result, err := Load([]string{"removing-ai-tells"})
 		// then
 		require.NoError(t, err)
 
@@ -113,9 +79,10 @@ func TestLoad(t *testing.T) {
 			assert.Contains(t, catalog, "<name>"+name+"</name>")
 		}
 	})
+
 	t.Run("rejects an extra skill that is one of joe's own", func(t *testing.T) {
 		// given
-		cfg := testConfig(t, testProfile(`["brainstorm"]`))
+		configHome(t)
 
 		codingSkillsDir, err := config.CodingSkillsDir()
 		require.NoError(t, err)
@@ -129,7 +96,7 @@ func TestLoad(t *testing.T) {
 
 		writeSkill(t, skillsDir, "brainstorm")
 		// when
-		_, err = Load(cfg.Skills)
+		_, err = Load([]string{"brainstorm"})
 		// then
 		require.ErrorIs(t, err, ErrReservedSkill)
 		assert.Contains(t, err.Error(), "brainstorm")

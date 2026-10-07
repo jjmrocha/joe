@@ -87,7 +87,7 @@ func TestAskProfile(t *testing.T) {
 		dir := t.TempDir()
 		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\nyes\n" + testClassifierModel + "\nOPEN_ROUTER_KEY\n"))
 		// when
-		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
+		result, err := askProfile(in, &strings.Builder{})
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
@@ -105,7 +105,7 @@ func TestAskProfile(t *testing.T) {
 		// given
 		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\nno\nno\n"))
 		// when
-		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
+		result, err := askProfile(in, &strings.Builder{})
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{instructions: testKind, provider: testProvider, model: testOllamaModel}, result)
@@ -115,16 +115,16 @@ func TestAskProfile(t *testing.T) {
 		// given
 		var out strings.Builder
 
-		dir := t.TempDir()
+		dir := configDir(t)
 		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n"))
 		// when
-		_, err := askProfile(in, &out, dir)
+		_, err := askProfile(in, &out)
 		// then
 		require.NoError(t, err)
 
 		result := out.String()
 		assert.Contains(t, result, "First run: a few questions to set up your profile")
-		assert.Contains(t, result, filepath.Join(dir, defaultProfile))
+		assert.Contains(t, result, filepath.Join(dir, "default.json"))
 		assert.Contains(t, result, filepath.Join(dir, "coding-skills"))
 		assert.Less(t, strings.Index(result, "First run"), strings.Index(result, "Provider"))
 	})
@@ -135,7 +135,7 @@ func TestAskProfile(t *testing.T) {
 
 		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n"))
 		// when
-		_, err := askProfile(in, &out, t.TempDir())
+		_, err := askProfile(in, &out)
 		// then
 		require.NoError(t, err)
 		assert.Contains(t, out.String(), "anthropic, ollama, openrouter")
@@ -150,7 +150,7 @@ func TestAskProfile(t *testing.T) {
 
 		in := bufio.NewReader(strings.NewReader("openai\nanthropic\nbad name\nclaude-opus-5\n\nANTHROPIC_KEY\ncodex\nagents\nno\nno\n"))
 		// when
-		result, err := askProfile(in, &out, t.TempDir())
+		result, err := askProfile(in, &out)
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
@@ -170,7 +170,7 @@ func TestAskProfile(t *testing.T) {
 
 		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n"))
 		// when
-		_, err := askProfile(in, &out, t.TempDir())
+		_, err := askProfile(in, &out)
 		// then
 		require.NoError(t, err)
 
@@ -185,7 +185,7 @@ func TestAskProfile(t *testing.T) {
 		// given
 		in := bufio.NewReader(strings.NewReader("openrouter\n"))
 		// when
-		_, err := askProfile(in, &strings.Builder{}, t.TempDir())
+		_, err := askProfile(in, &strings.Builder{})
 		// then
 		assert.ErrorIs(t, err, ErrNoAnswer)
 	})
@@ -271,7 +271,7 @@ func TestWriteProfile(t *testing.T) {
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\n"+testClassifierModel+"\nOPEN_ROUTER_KEY\n")
 		// when
-		err := writeProfile(dir)
+		err := writeProfile()
 		// then
 		require.NoError(t, err)
 
@@ -291,7 +291,7 @@ func TestWriteProfile(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
 		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := writeProfile(dir)
+		err := writeProfile()
 		// then
 		assert.Error(t, err)
 	})

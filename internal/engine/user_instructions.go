@@ -7,7 +7,7 @@ import (
 	"github.com/jjmrocha/joe/internal/instructions"
 )
 
-func loadUserInstructions(cfg *config.Config, repoPath string) (*instructions.Set, error) {
+func loadUserInstructions(kind instructions.Kind, repoPath string) ([]instructions.Block, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func loadUserInstructions(cfg *config.Config, repoPath string) (*instructions.Se
 		return nil, err
 	}
 
-	return instructions.Load(cfg.Instructions, instructions.Paths{
+	return instructions.Load(kind, instructions.Paths{
 		ConfigDir: dir,
 		Home:      home,
 		Repo:      repoPath,

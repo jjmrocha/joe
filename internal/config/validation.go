@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 
 	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
@@ -14,12 +15,15 @@ import (
 
 var bareNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
-var Providers = sets.New(llm.ProviderOpenRouter, llm.ProviderOllama, llm.ProviderAnthropic)
-
 var (
+	providers           = sets.New(llm.ProviderOpenRouter, llm.ProviderOllama, llm.ProviderAnthropic)
 	efforts             = sets.New(llm.EffortOff, llm.EffortLow, llm.EffortMedium, llm.EffortMax)
 	classifierProviders = sets.New(classify.ProviderOpenRouter)
 )
+
+func Providers() []llm.Provider {
+	return slices.Sorted(providers.Values())
+}
 
 func isBareName(name string) bool {
 	return bareNamePattern.MatchString(name)
@@ -60,7 +64,7 @@ func validate(cfg *Config) error {
 func validateLLM(cfg LLM) []error {
 	var problems []error
 
-	if !Providers.Contains(cfg.Provider) {
+	if !providers.Contains(cfg.Provider) {
 		problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidProvider, cfg.Provider))
 	}
 

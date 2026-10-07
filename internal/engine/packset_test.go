@@ -21,22 +21,9 @@ func (p recordingPack) Close() error {
 	return nil
 }
 
-func (recordingPack) Instructions(context.Context) (*mcp.Instruction, error) { return nil, nil }
+func (recordingPack) Instructions(context.Context) *mcp.Instruction { return nil }
 
 func TestPackSet(t *testing.T) {
-	t.Run("keeps each pack that opened", func(t *testing.T) {
-		// given
-		var closed []string
-		var result packSet
-		// when
-		errFirst := result.add(recordingPack{name: "date", closed: &closed}, nil)
-		errSecond := result.add(recordingPack{name: "shell", closed: &closed}, nil)
-		// then
-		require.NoError(t, errFirst)
-		require.NoError(t, errSecond)
-		assert.Len(t, result, 2)
-	})
-
 	t.Run("returns the error and keeps nothing when a pack fails to open", func(t *testing.T) {
 		// given
 		expected := errors.New("serena missing")

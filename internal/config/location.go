@@ -7,13 +7,18 @@ import (
 
 const (
 	DefaultProfile     = "default"
-	SkillsFolder       = "skills"
-	CodingSkillsFolder = "coding-skills"
-	SessionsFolder     = "sessions"
+	skillsFolder       = "skills"
+	codingSkillsFolder = "coding-skills"
+	sessionsFolder     = "sessions"
 )
 
-func ProfileFile(name string) string {
-	return name + ".json"
+func ProfilePath(name string) (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, name+".json"), nil
 }
 
 func Dir() (string, error) {
@@ -35,7 +40,7 @@ func SkillsDir() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, SkillsFolder), nil
+	return filepath.Join(dir, skillsFolder), nil
 }
 
 func CodingSkillsDir() (string, error) {
@@ -44,7 +49,7 @@ func CodingSkillsDir() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, CodingSkillsFolder), nil
+	return filepath.Join(dir, codingSkillsFolder), nil
 }
 
 func SessionsDir() (string, error) {
@@ -53,5 +58,5 @@ func SessionsDir() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, SessionsFolder), nil
+	return filepath.Join(dir, sessionsFolder), nil
 }

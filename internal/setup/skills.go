@@ -13,14 +13,24 @@ import (
 
 var skillsRepo = "https://github.com/jjmrocha/coding-skills.git"
 
-func createSkillsDir(dir string) error {
-	return os.MkdirAll(filepath.Join(dir, config.SkillsFolder), 0o750)
+func createSkillsDir() error {
+	dir, err := config.SkillsDir()
+	if err != nil {
+		return err
+	}
+
+	return os.MkdirAll(dir, 0o750)
 }
 
-func cloneSkills(ctx context.Context, dir string, out io.Writer) error {
+func cloneSkills(ctx context.Context, out io.Writer) error {
+	target, err := config.CodingSkillsDir()
+	if err != nil {
+		return fmt.Errorf("clone skills: %w", err)
+	}
+
 	_, _ = fmt.Fprintf(out, "Cloning skills from %s …\n", skillsRepo)
 
-	tmp, err := os.MkdirTemp(dir, "coding-skills.tmp-")
+	tmp, err := os.MkdirTemp(filepath.Dir(target), "coding-skills.tmp-")
 	if err != nil {
 		return fmt.Errorf("clone skills: %w", err)
 	}
@@ -35,7 +45,7 @@ func cloneSkills(ctx context.Context, dir string, out io.Writer) error {
 		return fmt.Errorf("clone skills: %w", err)
 	}
 
-	if err := os.Rename(tmp, filepath.Join(dir, config.CodingSkillsFolder)); err != nil {
+	if err := os.Rename(tmp, target); err != nil {
 		_ = os.RemoveAll(tmp)
 
 		return fmt.Errorf("clone skills: %w", err)

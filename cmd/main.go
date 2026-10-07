@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 
@@ -18,7 +19,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	args := cli.Parse(os.Args[1:])
+	args, err := cli.Parse(os.Args[1:])
+	if err != nil {
+		cli.Usage(os.Stdout)
+
+		if errors.Is(err, cli.ErrHelp) {
+			os.Exit(0)
+		}
+
+		os.Exit(1)
+	}
 
 	cfg, err := config.Load(args.Profile)
 	if err != nil {

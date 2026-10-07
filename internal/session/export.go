@@ -12,10 +12,10 @@ import (
 	"github.com/jjmrocha/joe/internal/config"
 )
 
-func export(ctx context.Context, src Source, repoPath string, msgs []llm.Message) (string, error) {
+func export(ctx context.Context, src Source, repoPath string, msgs []llm.Message, exported time.Time) (string, error) {
 	session := file{
 		Session:  src.SessionID(),
-		Exported: time.Now().UTC().Truncate(time.Second),
+		Exported: exported.UTC().Truncate(time.Second),
 		Repo:     repoPath,
 		Messages: toMessages(msgs),
 	}

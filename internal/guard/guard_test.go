@@ -2,12 +2,8 @@ package guard
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
+	"errors"
 	"maps"
-	"net/http"
-	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
@@ -25,104 +21,69 @@ const (
 	testKBPath   = "/srv/wiki"
 )
 
-type sentRequest struct {
-	State     string `json:"state"`
-	Questions map[string]struct {
-		Type         string `json:"type"`
-		Instructions string `json:"instructions"`
-	} `json:"questions"`
+var errUnavailable = errors.New("classifier unavailable")
+
+type answerFunc func(ctx context.Context, req classify.Request) (*classify.Response, error)
+
+type fakeClassifier struct {
+	answer   answerFunc
+	requests []classify.Request
 }
 
-func fakeJev(t *testing.T, handler http.HandlerFunc) *classify.Classifier {
-	t.Helper()
+func (f *fakeClassifier) Classify(ctx context.Context, req classify.Request) (*classify.Response, error) {
+	f.requests = append(f.requests, req)
 
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-
-	d, err := classify.New(classify.Config{
-		Provider: classify.ProviderOpenRouter,
-		BaseURL:  server.URL,
-		APIKey:   "sk-test",
-		Model:    "typesafe/jev-1.13",
-	})
-	require.NoError(t, err)
-
-	return d
+	return f.answer(ctx, req)
 }
 
-func reply(w http.ResponseWriter, r *http.Request, sent *sentRequest, answer map[string]any) {
-	_ = json.NewDecoder(r.Body).Decode(sent)
+func answeringWith(answer classify.Answer) *fakeClassifier {
+	return &fakeClassifier{answer: func(_ context.Context, req classify.Request) (*classify.Response, error) {
+		answers := map[string]classify.Answer{}
+		for id := range req.Questions {
+			answers[id] = answer
+		}
 
-	answers := map[string]any{}
-	for id := range sent.Questions {
-		answers[id] = answer
-	}
-
-	respond(w, answers)
+		return &classify.Response{Answers: answers}, nil
+	}}
 }
 
-func respond(w http.ResponseWriter, answers map[string]any) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"model":   "typesafe/jev-1.13-20260917",
-		"answers": answers,
-		"usage":   map[string]any{"input_tokens": 10},
-	})
+func answering(value float64) *fakeClassifier {
+	return answeringWith(classify.YesNoAnswer{Value: value})
 }
 
-func noul(value float64) map[string]any {
-	return map[string]any{"type": "noul", "noul": value}
-}
+func scripted(values map[string]float64) *fakeClassifier {
+	return &fakeClassifier{answer: func(_ context.Context, req classify.Request) (*classify.Response, error) {
+		answers := map[string]classify.Answer{}
 
-func answering(value float64) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		reply(w, r, &sentRequest{}, noul(value))
-	}
-}
-
-func recording(sent *sentRequest) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		reply(w, r, sent, noul(0.1))
-	}
-}
-
-func scripted(values map[string]float64, requests *[]sentRequest) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var sent sentRequest
-
-		_ = json.NewDecoder(r.Body).Decode(&sent)
-		*requests = append(*requests, sent)
-
-		answers := map[string]any{}
-
-		for id := range sent.Questions {
+		for id := range req.Questions {
 			if value, ok := values[id]; ok {
-				answers[id] = noul(value)
+				answers[id] = classify.YesNoAnswer{Value: value}
 			}
 		}
 
-		respond(w, answers)
-	}
+		return &classify.Response{Answers: answers}, nil
+	}}
 }
 
-func failingFirst(handler http.HandlerFunc) http.HandlerFunc {
+func failingFirst(fake *fakeClassifier) *fakeClassifier {
+	answer := fake.answer
 	failed := false
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	fake.answer = func(ctx context.Context, req classify.Request) (*classify.Response, error) {
 		if !failed {
 			failed = true
 
-			http.Error(w, `{"error":{"message":"bad request"}}`, http.StatusBadRequest)
-
-			return
+			return nil, errUnavailable
 		}
 
-		handler(w, r)
+		return answer(ctx, req)
 	}
+
+	return fake
 }
 
-func questionIDs(sent sentRequest) []string {
-	return slices.Sorted(maps.Keys(sent.Questions))
+func questionIDs(req classify.Request) []string {
+	return slices.Sorted(maps.Keys(req.Questions))
 }
 
 func newInterceptor(t *testing.T, cfg Config) tools.Interceptor {
@@ -167,7 +128,7 @@ func shellCallOfInputSize(t *testing.T, size int) llm.ToolCall {
 func TestNewInterceptor(t *testing.T) {
 	t.Run("blocks a call judged to violate the constraints", func(t *testing.T) {
 		// given
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, answering(0.93)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		interceptor := newInterceptor(t, Config{Classifier: answering(0.93), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		// when
 		result := interceptor(t.Context(), shellCall("git push --force origin main"))
 		// then
@@ -177,7 +138,7 @@ func TestNewInterceptor(t *testing.T) {
 
 	t.Run("blocks a call judged exactly at the threshold", func(t *testing.T) {
 		// given
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, answering(0.8)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		interceptor := newInterceptor(t, Config{Classifier: answering(0.8), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		// when
 		result := interceptor(t.Context(), shellCall("rm -rf ~/Documents"))
 		// then
@@ -186,7 +147,7 @@ func TestNewInterceptor(t *testing.T) {
 
 	t.Run("allows a call judged below the threshold", func(t *testing.T) {
 		// given
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, answering(0.79)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		interceptor := newInterceptor(t, Config{Classifier: answering(0.79), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		// when
 		result := interceptor(t.Context(), shellCall("go test ./..."))
 		// then
@@ -195,34 +156,27 @@ func TestNewInterceptor(t *testing.T) {
 
 	t.Run("allows the call when the classifier cannot answer", func(t *testing.T) {
 		testCases := []struct {
-			name    string
-			handler http.HandlerFunc
+			name       string
+			classifier *fakeClassifier
 		}{
 			{
-				name: "error status",
-				handler: func(w http.ResponseWriter, _ *http.Request) {
-					http.Error(w, `{"error":{"message":"bad request"}}`, http.StatusBadRequest)
-				},
+				name:       "classifier error",
+				classifier: failingFirst(answering(0.93)),
 			},
 			{
-				name: "missing answer",
-				handler: func(w http.ResponseWriter, _ *http.Request) {
-					w.Header().Set("Content-Type", "application/json")
-					_, _ = fmt.Fprint(w, `{"model":"m","answers":{},"usage":{}}`)
-				},
+				name:       "missing answer",
+				classifier: scripted(map[string]float64{}),
 			},
 			{
-				name: "answer of another type",
-				handler: func(w http.ResponseWriter, r *http.Request) {
-					reply(w, r, &sentRequest{}, map[string]any{"type": "choice", "choice": "yes", "probabilities": map[string]float64{"yes": 1}})
-				},
+				name:       "answer of another type",
+				classifier: answeringWith(classify.ChoiceAnswer{Selected: "yes", Probabilities: map[string]float64{"yes": 1}}),
 			},
 		}
 
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				// given
-				interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, testCase.handler), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+				interceptor := newInterceptor(t, Config{Classifier: testCase.classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 				// when
 				result := interceptor(t.Context(), shellCall("git push --force origin main"))
 				// then
@@ -233,11 +187,12 @@ func TestNewInterceptor(t *testing.T) {
 
 	t.Run("allows the call when the caller gives up before the classifier answers", func(t *testing.T) {
 		// given
-		hanging := func(_ http.ResponseWriter, r *http.Request) {
-			_, _ = io.Copy(io.Discard, r.Body)
-			<-r.Context().Done()
-		}
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, hanging), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		hanging := &fakeClassifier{answer: func(ctx context.Context, _ classify.Request) (*classify.Response, error) {
+			<-ctx.Done()
+
+			return nil, ctx.Err()
+		}}
+		interceptor := newInterceptor(t, Config{Classifier: hanging, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 
 		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 		defer cancel()
@@ -249,50 +204,42 @@ func TestNewInterceptor(t *testing.T) {
 
 	t.Run("allows a call to a tool the box does not hold without asking", func(t *testing.T) {
 		// given
-		var sent sentRequest
-
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		classifier := answering(0.1)
+		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		call := llm.ToolCall{ID: "call-1", Name: "file_delete", Arguments: map[string]any{"path": "/etc/hosts"}}
 		// when
 		result := interceptor(t.Context(), call)
 		// then
 		require.NoError(t, result)
-		assert.Empty(t, sent.State)
+		assert.Empty(t, classifier.requests)
 	})
 
 	t.Run("asks whether the call and the tool violate the constraints on the tool's first call", func(t *testing.T) {
 		// given
-		var sent sentRequest
-
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
-		expected := map[string]string{
-			callQuestionID: "Does this tool call violate any of the constraints?",
-			toolQuestionID: "Could any call to this tool, with any arguments, violate any of the constraints?",
+		classifier := answering(0.1)
+		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		expected := map[string]classify.Question{
+			callQuestionID: classify.YesNo{Instructions: "Does this tool call violate any of the constraints?"},
+			toolQuestionID: classify.YesNo{Instructions: "Could any call to this tool, with any arguments, violate any of the constraints?"},
 		}
 		// when
 		err := interceptor(t.Context(), shellCall("go test ./..."))
 		// then
 		require.NoError(t, err)
-		require.Len(t, sent.Questions, len(expected))
-
-		for id, instructions := range expected {
-			assert.Equal(t, "noul", sent.Questions[id].Type)
-			assert.Equal(t, instructions, sent.Questions[id].Instructions)
-		}
+		require.Len(t, classifier.requests, 1)
+		assert.Equal(t, expected, classifier.requests[0].Questions)
 	})
 
 	t.Run("skips the classifier for a tool judged safe", func(t *testing.T) {
 		// given
-		var requests []sentRequest
-
-		classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.19}, &requests))
+		classifier := scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.19})
 		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		require.NoError(t, interceptor(t.Context(), shellCall("date")))
 		// when
 		result := interceptor(t.Context(), shellCall("rm -rf ~/Documents"))
 		// then
 		require.NoError(t, result)
-		assert.Len(t, requests, 1)
+		assert.Len(t, classifier.requests, 1)
 	})
 
 	t.Run("asks only about the call once the tool is judged unsafe", func(t *testing.T) {
@@ -307,9 +254,7 @@ func TestNewInterceptor(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				// given
-				var requests []sentRequest
-
-				classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: testCase.toolSafe}, &requests))
+				classifier := scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: testCase.toolSafe})
 				interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 				require.NoError(t, interceptor(t.Context(), shellCall("go build ./...")))
 
@@ -318,17 +263,15 @@ func TestNewInterceptor(t *testing.T) {
 				err := interceptor(t.Context(), shellCall("go test ./..."))
 				// then
 				require.NoError(t, err)
-				require.Len(t, requests, 2)
-				assert.Equal(t, expected, questionIDs(requests[1]))
+				require.Len(t, classifier.requests, 2)
+				assert.Equal(t, expected, questionIDs(classifier.requests[1]))
 			})
 		}
 	})
 
 	t.Run("asks only about the call once a call to a tool judged safe was blocked", func(t *testing.T) {
 		// given
-		var requests []sentRequest
-
-		classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.93, toolQuestionID: 0.05}, &requests))
+		classifier := scripted(map[string]float64{callQuestionID: 0.93, toolQuestionID: 0.05})
 		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		require.ErrorIs(t, interceptor(t.Context(), shellCall("git push --force origin main")), ErrToolCallRejected)
 
@@ -337,35 +280,29 @@ func TestNewInterceptor(t *testing.T) {
 		err := interceptor(t.Context(), shellCall("git push --force origin main"))
 		// then
 		require.ErrorIs(t, err, ErrToolCallRejected)
-		require.Len(t, requests, 2)
-		assert.Equal(t, expected, questionIDs(requests[1]))
+		require.Len(t, classifier.requests, 2)
+		assert.Equal(t, expected, questionIDs(classifier.requests[1]))
 	})
 
 	t.Run("asks about the tool again when it could not be classified", func(t *testing.T) {
 		testCases := []struct {
-			name    string
-			handler func(requests *[]sentRequest) http.HandlerFunc
+			name       string
+			classifier *fakeClassifier
 		}{
 			{
-				name: "error status",
-				handler: func(requests *[]sentRequest) http.HandlerFunc {
-					return failingFirst(scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.05}, requests))
-				},
+				name:       "classifier error",
+				classifier: failingFirst(scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.05})),
 			},
 			{
-				name: "missing tool answer",
-				handler: func(requests *[]sentRequest) http.HandlerFunc {
-					return scripted(map[string]float64{callQuestionID: 0.1}, requests)
-				},
+				name:       "missing tool answer",
+				classifier: scripted(map[string]float64{callQuestionID: 0.1}),
 			},
 		}
 
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				// given
-				var requests []sentRequest
-
-				classifier := fakeJev(t, testCase.handler(&requests))
+				classifier := testCase.classifier
 				interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 				require.NoError(t, interceptor(t.Context(), shellCall("go build ./...")))
 
@@ -374,8 +311,8 @@ func TestNewInterceptor(t *testing.T) {
 				err := interceptor(t.Context(), shellCall("go test ./..."))
 				// then
 				require.NoError(t, err)
-				require.NotEmpty(t, requests)
-				assert.Equal(t, expected, questionIDs(requests[len(requests)-1]))
+				require.NotEmpty(t, classifier.requests)
+				assert.Equal(t, expected, questionIDs(classifier.requests[len(classifier.requests)-1]))
 			})
 		}
 	})
@@ -424,53 +361,63 @@ Constraints:
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				// given
-				var sent sentRequest
-
-				interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testCase.kbPath})
+				classifier := answering(0.1)
+				interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testCase.kbPath})
 				// when
 				err := interceptor(t.Context(), testCase.call)
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, testCase.expected, sent.State)
+				require.Len(t, classifier.requests, 1)
+				assert.Equal(t, testCase.expected, classifier.requests[0].Input)
 			})
 		}
 	})
 
+	t.Run("allows a call whose arguments cannot be described without asking", func(t *testing.T) {
+		// given
+		classifier := answering(0.93)
+		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		call := shellCall("")
+		call.Arguments["command"] = make(chan int)
+		// when
+		result := interceptor(t.Context(), call)
+		// then
+		require.NoError(t, result)
+		assert.Empty(t, classifier.requests)
+	})
+
 	t.Run("rejects a call too big to classify without asking", func(t *testing.T) {
 		// given
-		var sent sentRequest
-
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		classifier := answering(0.1)
+		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		// when
 		result := interceptor(t.Context(), shellCallOfInputSize(t, maxInputBytes+1))
 		// then
 		require.ErrorIs(t, result, ErrToolCallTooLarge)
-		assert.Empty(t, sent.State)
+		assert.Empty(t, classifier.requests)
 	})
 
 	t.Run("classifies a call exactly at the size limit", func(t *testing.T) {
 		// given
-		var sent sentRequest
-
-		interceptor := newInterceptor(t, Config{Classifier: fakeJev(t, recording(&sent)), ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
+		classifier := answering(0.1)
+		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		// when
 		result := interceptor(t.Context(), shellCallOfInputSize(t, maxInputBytes))
 		// then
 		require.NoError(t, result)
-		assert.Len(t, sent.State, maxInputBytes)
+		require.Len(t, classifier.requests, 1)
+		assert.Len(t, classifier.requests[0].Input, maxInputBytes)
 	})
 
 	t.Run("allows a call too big to classify to a tool judged safe", func(t *testing.T) {
 		// given
-		var requests []sentRequest
-
-		classifier := fakeJev(t, scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.1}, &requests))
+		classifier := scripted(map[string]float64{callQuestionID: 0.1, toolQuestionID: 0.1})
 		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
 		require.NoError(t, interceptor(t.Context(), shellCall("date")))
 		// when
 		result := interceptor(t.Context(), shellCallOfInputSize(t, maxInputBytes+1))
 		// then
 		require.NoError(t, result)
-		assert.Len(t, requests, 1)
+		assert.Len(t, classifier.requests, 1)
 	})
 }

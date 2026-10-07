@@ -14,9 +14,9 @@ import (
 func TestCreateSkillsDir(t *testing.T) {
 	t.Run("creates an empty skills folder", func(t *testing.T) {
 		// given
-		dir := t.TempDir()
+		dir := configDir(t)
 		// when
-		err := createSkillsDir(dir)
+		err := createSkillsDir()
 		// then
 		require.NoError(t, err)
 
@@ -29,8 +29,9 @@ func TestCreateSkillsDir(t *testing.T) {
 		// given
 		blocked := filepath.Join(t.TempDir(), "blocked")
 		require.NoError(t, os.WriteFile(blocked, nil, 0o600))
+		t.Setenv("XDG_CONFIG_HOME", blocked)
 		// when
-		err := createSkillsDir(blocked)
+		err := createSkillsDir()
 		// then
 		assert.Error(t, err)
 	})
@@ -39,12 +40,13 @@ func TestCreateSkillsDir(t *testing.T) {
 func TestCloneSkills(t *testing.T) {
 	t.Run("clones the skills into their folder", func(t *testing.T) {
 		// given
-		dir := t.TempDir()
+		dir := configDir(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
 		skillsFixture(t)
 
 		var out bytes.Buffer
 		// when
-		err := cloneSkills(t.Context(), dir, &out)
+		err := cloneSkills(t.Context(), &out)
 		// then
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join(dir, "coding-skills", "analyze-code", "SKILL.md"))
@@ -54,21 +56,23 @@ func TestCloneSkills(t *testing.T) {
 	t.Run("clones into a folder whose name starts with a dash", func(t *testing.T) {
 		// given
 		t.Chdir(t.TempDir())
-		require.NoError(t, os.Mkdir("-config", 0o750))
+		t.Setenv("XDG_CONFIG_HOME", "-config")
+		require.NoError(t, os.MkdirAll(filepath.Join("-config", "joe"), 0o750))
 		skillsFixture(t)
 		// when
-		err := cloneSkills(t.Context(), "-config", io.Discard)
+		err := cloneSkills(t.Context(), io.Discard)
 		// then
 		require.NoError(t, err)
-		assert.FileExists(t, filepath.Join("-config", "coding-skills", "analyze-code", "SKILL.md"))
+		assert.FileExists(t, filepath.Join("-config", "joe", "coding-skills", "analyze-code", "SKILL.md"))
 	})
 
 	t.Run("leaves nothing behind when the clone fails", func(t *testing.T) {
 		// given
-		dir := t.TempDir()
+		dir := configDir(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
 		unreachableSkills(t)
 		// when
-		err := cloneSkills(t.Context(), dir, io.Discard)
+		err := cloneSkills(t.Context(), io.Discard)
 		// then
 		require.Error(t, err)
 

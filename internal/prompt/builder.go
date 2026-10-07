@@ -8,7 +8,7 @@ import (
 )
 
 type Request struct {
-	UserInstructions *instructions.Set
+	UserInstructions []instructions.Block
 	RepoPath         string
 	KBPath           string
 	WithClassifier   bool
@@ -20,7 +20,7 @@ func Build(r Request) string {
 
 	builder.WriteString(buildRole())
 	builder.WriteString(buildInstructions(r))
-	builder.WriteString(buildUserInstructions(r.UserInstructions.Blocks))
+	builder.WriteString(buildUserInstructions(r.UserInstructions))
 
 	return builder.String()
 }

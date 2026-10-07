@@ -33,10 +33,15 @@ type answers struct {
 	classifierAPIKeyEnv string
 }
 
-func writeProfile(dir string) error {
+func writeProfile() error {
+	path, err := config.ProfilePath(config.DefaultProfile)
+	if err != nil {
+		return err
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
-	given, err := askProfile(reader, os.Stdout, dir)
+	given, err := askProfile(reader, os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -46,18 +51,18 @@ func writeProfile(dir string) error {
 		return err
 	}
 
-	return createFile(filepath.Join(dir, defaultProfile), content)
+	return createFile(path, content)
 }
 
-func askProfile(in *bufio.Reader, out io.Writer, dir string) (answers, error) {
+func askProfile(in *bufio.Reader, out io.Writer) (answers, error) {
 	var given answers
 
-	err := printIntro(out, dir)
+	err := printIntro(out)
 	if err != nil {
 		return given, err
 	}
 
-	given.provider, err = askChoice(in, out, "Provider", slices.Sorted(config.Providers.Values()))
+	given.provider, err = askChoice(in, out, "Provider", config.Providers())
 	if err != nil {
 		return given, err
 	}
@@ -74,7 +79,7 @@ func askProfile(in *bufio.Reader, out io.Writer, dir string) (answers, error) {
 		}
 	}
 
-	given.instructions, err = askChoice(in, out, "Instructions", slices.Sorted(instructions.Kinds.Values()))
+	given.instructions, err = askChoice(in, out, "Instructions", instructions.Kinds())
 	if err != nil {
 		return given, err
 	}
@@ -249,8 +254,18 @@ func readAnswer(in *bufio.Reader, out io.Writer, prompt string) (string, error) 
 	return strings.TrimSpace(line), nil
 }
 
-func printIntro(out io.Writer, dir string) error {
-	_, err := fmt.Fprintf(out, `
+func printIntro(out io.Writer) error {
+	profilePath, err := config.ProfilePath(config.DefaultProfile)
+	if err != nil {
+		return err
+	}
+
+	codingSkillsDir, err := config.CodingSkillsDir()
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(out, `
     ╔═══╗ ╔═══════╗ ╔═══════╗ 
     ╚═╗ ║ ║ ╔═══╗ ║ ║ ╔═════╝ 
       ║ ║ ║ ║   ║ ║ ║ ╚═══╗   
@@ -266,7 +281,7 @@ which you can edit later. Then joe clones its skills into
 
   %s
 
-`, filepath.Join(dir, defaultProfile), filepath.Join(dir, config.CodingSkillsFolder))
+`, profilePath, codingSkillsDir)
 
 	return err
 }

@@ -2,7 +2,6 @@ package engine
 
 import (
 	"github.com/jjmrocha/ai-chat/chat"
-	"github.com/jjmrocha/ai-chat/command"
 	"github.com/jjmrocha/ai-toolkit/agent"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	toolkitskills "github.com/jjmrocha/ai-toolkit/skills"
@@ -40,8 +39,7 @@ func buildCommands(r *commandsRequest) []chat.Option {
 
 	for _, cmd := range skillCommands {
 		if r.kbPath != "" || !cmd.needKB {
-			skillCmd := command.SkillCommand(cmd.name, cmd.help)
-			options = append(options, chat.WithCommand(skillCmd))
+			options = append(options, chat.WithSkillCommand(cmd.name, cmd.help))
 		}
 	}
 

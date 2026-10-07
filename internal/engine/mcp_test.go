@@ -3,16 +3,16 @@ package engine
 import (
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/ai-toolkit/tools"
-	"github.com/jjmrocha/joe/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func statusNames(t *testing.T, cfg *config.Config) []string {
+func statusNames(t *testing.T, clients []mcp.ClientConfig) []string {
 	t.Helper()
 
-	mcpManager := newMCPManager(tools.NewToolBox(), cfg)
+	mcpManager := newMCPManager(tools.NewToolBox(), clients)
 	t.Cleanup(mcpManager.Close)
 
 	names := make([]string, 0)
@@ -25,23 +25,21 @@ func statusNames(t *testing.T, cfg *config.Config) []string {
 }
 
 func TestNewMCPManager(t *testing.T) {
-	t.Run("registers every server the profile names", func(t *testing.T) {
+	t.Run("registers every server it is given", func(t *testing.T) {
 		// given
-		cfg := &config.Config{MCPs: map[string]config.MCP{
-			"context7": {Command: "npx", Args: []string{"-y", "@upstash/context7-mcp"}, Timeout: 60},
-			"donsetch": {Command: "search-server", Args: []string{"mcp"}},
-		}}
+		clients := []mcp.ClientConfig{
+			{Name: "context7", Command: "npx", Args: []string{"-y", "@upstash/context7-mcp"}},
+			{Name: "donsetch", Command: "search-server", Args: []string{"mcp"}},
+		}
 		// when
-		result := statusNames(t, cfg)
+		result := statusNames(t, clients)
 		// then
 		assert.ElementsMatch(t, []string{"context7", "donsetch"}, result)
 	})
 
-	t.Run("registers nothing when the profile has no servers", func(t *testing.T) {
-		// given
-		cfg := &config.Config{}
+	t.Run("registers nothing when given no servers", func(t *testing.T) {
 		// when
-		result := statusNames(t, cfg)
+		result := statusNames(t, nil)
 		// then
 		assert.Empty(t, result)
 	})
@@ -50,15 +48,12 @@ func TestNewMCPManager(t *testing.T) {
 func TestStartMCPs(t *testing.T) {
 	t.Run("carries on when a boot server fails to start", func(t *testing.T) {
 		// given
-		cfg := &config.Config{
-			MCPs:   map[string]config.MCP{"broken": {Command: "definitely-not-a-binary"}},
-			MCPsOn: []string{"broken"},
-		}
+		clients := []mcp.ClientConfig{{Name: "broken", Command: "definitely-not-a-binary"}}
 
-		mcpManager := newMCPManager(tools.NewToolBox(), cfg)
+		mcpManager := newMCPManager(tools.NewToolBox(), clients)
 		t.Cleanup(mcpManager.Close)
 		// when
-		startMCPs(t.Context(), mcpManager, cfg)
+		startMCPs(t.Context(), mcpManager, []string{"broken"})
 		// then
 		result := mcpManager.Status()
 		require.Len(t, result, 1)

@@ -25,6 +25,8 @@ const (
 
 var _ Source = (*agent.Agent)(nil)
 
+var exportedAt = time.Date(2026, time.October, 7, 14, 30, 15, 500_000_000, time.FixedZone("WEST", 3600))
+
 type fakeSource struct {
 	id       string
 	messages []llm.Message
@@ -43,8 +45,15 @@ func (f fakeSource) ModelInfo(context.Context) *agent.ModelInfo {
 	return f.info
 }
 
+type stream int
+
+const (
+	infoStream stream = iota
+	errorStream
+)
+
 type printed struct {
-	kind command.Kind
+	kind stream
 	text string
 }
 
@@ -56,8 +65,12 @@ func (f *fakeContext) Agent() command.AgentController {
 	return nil
 }
 
-func (f *fakeContext) Print(kind command.Kind, text string) {
-	f.lines = append(f.lines, printed{kind: kind, text: text})
+func (f *fakeContext) Info(text string) {
+	f.lines = append(f.lines, printed{kind: infoStream, text: text})
+}
+
+func (f *fakeContext) Error(text string) {
+	f.lines = append(f.lines, printed{kind: errorStream, text: text})
 }
 
 func (f *fakeContext) Clear() error {
@@ -101,7 +114,7 @@ func runExport(t *testing.T, src Source) *fakeContext {
 	t.Helper()
 
 	ctx := &fakeContext{}
-	ExportCommand(src, "/work/repo").Run(ctx, "")
+	exportCmd{src: src, repoPath: "/work/repo", now: func() time.Time { return exportedAt }}.Run(ctx, "")
 
 	require.Len(t, ctx.lines, 1)
 
@@ -146,7 +159,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		ctx := runExport(t, src)
 		// then
-		expected := []printed{{kind: command.Info, text: "Session " + src.id + " exported"}}
+		expected := []printed{{kind: infoStream, text: "Session " + src.id + " exported"}}
 		assert.Equal(t, expected, ctx.lines)
 		assert.FileExists(t, filepath.Join(dir, src.id+".json"))
 	})
@@ -156,17 +169,13 @@ func TestExportCommand(t *testing.T) {
 		dir := sessionsDir(t)
 		src := session(conversation())
 		src.info = &agent.ModelInfo{Provider: "anthropic", ModelName: "claude-opus-5-5", Effort: "high"}
-		before := time.Now().UTC().Truncate(time.Second)
 		runExport(t, src)
 		// when
 		result, _ := readSession(t, dir, src.id)
 		// then
-		assert.WithinRange(t, result.Exported, before, time.Now().UTC())
-		assert.Equal(t, time.UTC, result.Exported.Location())
-
-		result.Exported = time.Time{}
 		expected := file{
 			Session:  src.id,
+			Exported: time.Date(2026, time.October, 7, 13, 30, 15, 0, time.UTC),
 			Repo:     "/work/repo",
 			Provider: "anthropic",
 			Model:    "claude-opus-5-5",
@@ -299,17 +308,18 @@ func TestExportCommand(t *testing.T) {
 		runExport(t, src)
 		expected, err := os.ReadFile(filepath.Join(dir, src.id+".json"))
 		require.NoError(t, err)
-		require.NoError(t, os.Chmod(dir, 0o500))
-		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-		src.messages = conversation()
+		src.messages = append(conversation(), llm.AssistantMessage{
+			ToolCalls: []llm.ToolCall{{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"unencodable": make(chan int)}}},
+		})
 		// when
 		ctx := runExport(t, src)
 		// then
 		result, err := os.ReadFile(filepath.Join(dir, src.id+".json"))
 		require.NoError(t, err)
-		assert.Equal(t, command.Error, ctx.lines[0].kind)
+		assert.Equal(t, errorStream, ctx.lines[0].kind)
 		assert.True(t, strings.HasPrefix(ctx.lines[0].text, "export: "), ctx.lines[0].text)
 		assert.Equal(t, expected, result)
+		assert.Equal(t, []string{src.id + ".json"}, fileNames(t, dir))
 	})
 
 	t.Run("reports when there is no session", func(t *testing.T) {
@@ -319,7 +329,7 @@ func TestExportCommand(t *testing.T) {
 		// when
 		ExportCommand(fakeSource{}, "/work/repo").Run(ctx, "")
 		// then
-		assert.Equal(t, []printed{{kind: command.Info, text: "No session to export."}}, ctx.lines)
+		assert.Equal(t, []printed{{kind: infoStream, text: "No session to export."}}, ctx.lines)
 		assert.NoDirExists(t, dir)
 	})
 
@@ -333,7 +343,7 @@ func TestExportCommand(t *testing.T) {
 		ExportCommand(session(conversation()), "/work/repo").Run(ctx, "")
 		// then
 		require.Len(t, ctx.lines, 1)
-		assert.Equal(t, command.Error, ctx.lines[0].kind)
+		assert.Equal(t, errorStream, ctx.lines[0].kind)
 		assert.True(t, strings.HasPrefix(ctx.lines[0].text, "export: "), ctx.lines[0].text)
 	})
 }

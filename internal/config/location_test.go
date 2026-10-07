@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -22,15 +21,26 @@ func TestDir(t *testing.T) {
 
 	t.Run("falls back to the home config folder", func(t *testing.T) {
 		// given
+		home := t.TempDir()
 		t.Setenv("XDG_CONFIG_HOME", "")
-
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
+		t.Setenv("HOME", home)
 		// when
 		result, err := Dir()
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, filepath.Join(home, ".config", "joe"), result)
+	})
+}
+
+func TestProfilePath(t *testing.T) {
+	t.Run("names the profile's file inside the config folder", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		// when
+		result, err := ProfilePath("work")
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(dir, "work.json"), result)
 	})
 }
 

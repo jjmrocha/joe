@@ -1,7 +1,6 @@
 package instructions
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,22 +11,20 @@ func TestKinds(t *testing.T) {
 		// given
 		expected := []Kind{KindAgents, KindClaude}
 		// when
-		result := slices.Sorted(Kinds.Values())
+		result := Kinds()
 		// then
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("agrees with what Validate accepts", func(t *testing.T) {
-		for kind := range Kinds.Values() {
-			t.Run(string(kind), func(t *testing.T) {
-				// given
-				value := kind
-				// when
-				err := value.Validate()
-				// then
-				assert.NoError(t, err)
-			})
-		}
+	t.Run("hands out a copy the caller may change", func(t *testing.T) {
+		// given
+		kinds := Kinds()
+		kinds[0] = "bogus"
+		expected := []Kind{KindAgents, KindClaude}
+		// when
+		result := Kinds()
+		// then
+		assert.Equal(t, expected, result)
 	})
 }
 

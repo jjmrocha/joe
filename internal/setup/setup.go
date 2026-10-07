@@ -5,12 +5,10 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"path/filepath"
 
 	"github.com/jjmrocha/joe/internal/config"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
-
-var defaultProfile = config.ProfileFile(config.DefaultProfile)
 
 func BuildIfNeeded(ctx context.Context) error {
 	dir, err := config.Dir()
@@ -18,7 +16,12 @@ func BuildIfNeeded(ctx context.Context) error {
 		return err
 	}
 
-	if _, err = os.Stat(filepath.Join(dir, defaultProfile)); err != nil {
+	profilePath, err := config.ProfilePath(config.DefaultProfile)
+	if err != nil {
+		return err
+	}
+
+	if _, err = os.Stat(profilePath); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
@@ -28,12 +31,17 @@ func BuildIfNeeded(ctx context.Context) error {
 		}
 	}
 
-	if _, err = os.Stat(filepath.Join(dir, config.CodingSkillsFolder)); err != nil {
+	codingSkillsDir, err := config.CodingSkillsDir()
+	if err != nil {
+		return err
+	}
+
+	if _, err = os.Stat(codingSkillsDir); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 
-		return cloneSkills(ctx, dir, os.Stdout)
+		return cloneSkills(ctx, os.Stdout)
 	}
 
 	return nil
@@ -44,15 +52,15 @@ func build(dir string) error {
 		return err
 	}
 
-	if err := writeProfile(dir); err != nil {
+	if err := writeProfile(); err != nil {
 		return err
 	}
 
-	if err := createSkillsDir(dir); err != nil {
+	if err := createSkillsDir(); err != nil {
 		return err
 	}
 
-	return createAgentsFile(dir)
+	return instructions.CreateAgentsFile(dir)
 }
 
 func createConfigDir(dir string) error {

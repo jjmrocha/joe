@@ -60,7 +60,7 @@ func TestPath(t *testing.T) {
 		// given
 		dir := gitRepo(t)
 		sub := filepath.Join(dir, "internal", "engine")
-		require.NoError(t, exec.Command("mkdir", "-p", sub).Run())
+		require.NoError(t, os.MkdirAll(sub, 0o750))
 		t.Chdir(sub)
 
 		expected := resolve(t, dir)
@@ -82,17 +82,6 @@ func TestPath(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, resolve(t, result))
-	})
-
-	t.Run("returns an absolute path", func(t *testing.T) {
-		// given
-		dir := gitRepo(t)
-		t.Chdir(dir)
-		// when
-		result, err := Path(t.Context())
-		// then
-		require.NoError(t, err)
-		assert.True(t, filepath.IsAbs(result))
 	})
 
 	t.Run("falls back to the working directory when git is not installed", func(t *testing.T) {

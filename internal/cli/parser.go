@@ -2,54 +2,42 @@ package cli
 
 import (
 	"fmt"
-	"os"
+	"io"
+	"slices"
 	"strings"
 
 	"github.com/jjmrocha/joe/internal/config"
 )
 
-func Parse(args []string) *Args {
+func Parse(args []string) (*Args, error) {
 	result := Args{Profile: config.DefaultProfile}
+
+	if len(args) == 1 && slices.Contains([]string{"-help", "--help", "-h"}, args[0]) {
+		return nil, ErrHelp
+	}
+
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		result.Profile = args[0]
+		args = args[1:]
+	}
 
 	switch len(args) {
 	case 0:
-		return &result
-	case 1:
-		switch args[0] {
-		case "-help", "--help", "-h":
-			help(0)
-		default:
-			if strings.HasPrefix(args[0], "-") {
-				help(1)
-			}
-
-			result.Profile = args[0]
-		}
+		return &result, nil
 	case 2:
 		if args[0] == "-resume" {
 			result.SessionID = args[1]
-		} else {
-			help(1)
+			return &result, nil
 		}
-	case 3:
-		if strings.HasPrefix(args[0], "-") || args[1] != "-resume" {
-			help(1)
-		}
-
-		result.Profile = args[0]
-		result.SessionID = args[2]
-	default:
-		help(1)
 	}
 
-	return &result
+	return nil, ErrUsage
 }
 
-func help(code int) {
-	fmt.Println("Usage: joe [profile] [-resume <id>]")
-	fmt.Println()
-	fmt.Println("       profile   string   name of the profile (defaults to 'default')")
-	fmt.Println("       -resume   string   id of an exported session to resume")
-	fmt.Println("       -help              this message")
-	os.Exit(code)
+func Usage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "Usage: joe [profile] [-resume <id>]")
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "       profile   string   name of the profile (defaults to 'default')")
+	_, _ = fmt.Fprintln(w, "       -resume   string   id of an exported session to resume")
+	_, _ = fmt.Fprintln(w, "       -help              this message")
 }

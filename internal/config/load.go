@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 )
 
 func Load(name string) (*Config, error) {
@@ -14,12 +13,10 @@ func Load(name string) (*Config, error) {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidProfileName, name)
 	}
 
-	dir, err := Dir()
+	cfgPath, err := ProfilePath(name)
 	if err != nil {
 		return nil, err
 	}
-
-	cfgPath := filepath.Join(dir, ProfileFile(name))
 
 	cfgFile, err := os.Open(cfgPath) //nolint:gosec // name passed isBareName, so cfgPath cannot escape Dir()
 	if err != nil {

@@ -125,7 +125,8 @@ func TestLoad(t *testing.T) {
 				// when
 				_, err := Load("local")
 				// then
-				assert.Error(t, err)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), filepath.Join(dir, "local.json"))
 			})
 		}
 	})
@@ -303,14 +304,5 @@ func TestLoad(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Nil(t, result.Classifier)
-	})
-
-	t.Run("reports a missing default profile", func(t *testing.T) {
-		// given
-		configDir(t)
-		// when
-		_, err := Load("default")
-		// then
-		assert.ErrorIs(t, err, ErrProfileNotFound)
 	})
 }

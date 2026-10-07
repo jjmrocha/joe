@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const terse = "be terse"
+
 func writeFile(t testing.TB, dir, name, content string) string {
 	t.Helper()
 
@@ -40,65 +42,86 @@ func TestLoad(t *testing.T) {
 	t.Run("reads the claude files least specific first", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
-		writeFile(t, paths.Home, filepath.Join(".claude", "CLAUDE.md"), "be terse")
-		writeFile(t, paths.Repo, "CLAUDE.md", "use testify")
-		writeFile(t, paths.Repo, "CLAUDE.local.md", "skip the linter")
+		expected := []Block{
+			{Path: writeFile(t, paths.Home, filepath.Join(".claude", "CLAUDE.md"), terse), Content: terse},
+			{Path: writeFile(t, paths.Repo, "CLAUDE.md", "use testify"), Content: "use testify"},
+			{Path: writeFile(t, paths.Repo, "CLAUDE.local.md", "skip the linter"), Content: "skip the linter"},
+		}
 		// when
 		result, err := Load(KindClaude, paths)
 		// then
 		require.NoError(t, err)
-		require.Len(t, result.Blocks, 3)
-		assert.Contains(t, result.Blocks[0].Content, "be terse")
-		assert.Contains(t, result.Blocks[1].Content, "use testify")
-		assert.Contains(t, result.Blocks[2].Content, "skip the linter")
+		assert.Equal(t, expected, result)
 	})
 
 	t.Run("reads the agents files least specific first", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
-		writeFile(t, paths.ConfigDir, "AGENTS.md", "be terse")
-		writeFile(t, paths.Repo, "AGENTS.md", "use testify")
+		expected := []Block{
+			{Path: writeFile(t, paths.ConfigDir, "AGENTS.md", terse), Content: terse},
+			{Path: writeFile(t, paths.Repo, "AGENTS.md", "use testify"), Content: "use testify"},
+			{Path: writeFile(t, paths.Repo, "AGENTS.local.md", "skip the linter"), Content: "skip the linter"},
+		}
 		// when
 		result, err := Load(KindAgents, paths)
 		// then
 		require.NoError(t, err)
-		require.Len(t, result.Blocks, 2)
-		assert.Contains(t, result.Blocks[0].Content, "be terse")
-		assert.Contains(t, result.Blocks[1].Content, "use testify")
+		assert.Equal(t, expected, result)
 	})
 
 	t.Run("ignores the files the other kind reads", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
-		writeFile(t, paths.Repo, "CLAUDE.md", "be terse")
+		writeFile(t, paths.Repo, "CLAUDE.md", terse)
 		// when
 		result, err := Load(KindAgents, paths)
 		// then
 		require.NoError(t, err)
-		assert.Empty(t, result.Blocks)
+		assert.Empty(t, result)
 	})
 
 	t.Run("skips files that are absent", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
-		writeFile(t, paths.Repo, "CLAUDE.md", "be terse")
+		expected := []Block{{Path: writeFile(t, paths.Repo, "CLAUDE.md", terse), Content: terse}}
 		// when
 		result, err := Load(KindClaude, paths)
 		// then
 		require.NoError(t, err)
-		assert.Len(t, result.Blocks, 1)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("drops the trailing newlines of a file", func(t *testing.T) {
+		// given
+		paths := testPaths(t)
+		expected := []Block{{Path: writeFile(t, paths.Repo, "CLAUDE.md", "be terse\n\n"), Content: terse}}
+		// when
+		result, err := Load(KindClaude, paths)
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("reports a file it cannot read", func(t *testing.T) {
+		// given
+		paths := testPaths(t)
+		require.NoError(t, os.MkdirAll(filepath.Join(paths.Repo, "CLAUDE.md"), 0o750))
+		// when
+		result, err := Load(KindClaude, paths)
+		// then
+		assert.Error(t, err)
+		assert.Nil(t, result)
 	})
 
 	t.Run("quotes a kb_path line as plain text", func(t *testing.T) {
 		// given
 		paths := testPaths(t)
-		writeFile(t, paths.Repo, "CLAUDE.md", "kb_path=/srv/wiki")
+		expected := []Block{{Path: writeFile(t, paths.Repo, "CLAUDE.md", "kb_path=/srv/wiki"), Content: "kb_path=/srv/wiki"}}
 		// when
 		result, err := Load(KindClaude, paths)
 		// then
 		require.NoError(t, err)
-		require.Len(t, result.Blocks, 1)
-		assert.Contains(t, result.Blocks[0].Content, "kb_path=/srv/wiki")
+		assert.Equal(t, expected, result)
 	})
 
 	t.Run("returns nothing when no file is present", func(t *testing.T) {
@@ -108,7 +131,7 @@ func TestLoad(t *testing.T) {
 		result, err := Load(KindClaude, paths)
 		// then
 		require.NoError(t, err)
-		assert.Empty(t, result.Blocks)
+		assert.Empty(t, result)
 	})
 }
 

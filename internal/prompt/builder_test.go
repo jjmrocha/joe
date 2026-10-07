@@ -23,7 +23,7 @@ const (
 
 func newRequest(kbPath string, withClassifier bool, blocks ...instructions.Block) Request {
 	return Request{
-		UserInstructions: &instructions.Set{Blocks: blocks},
+		UserInstructions: blocks,
 		RepoPath:         testRepoPath,
 		KBPath:           kbPath,
 		WithClassifier:   withClassifier,
@@ -187,7 +187,7 @@ func TestBuild(t *testing.T) {
 
 	t.Run("adds no user instructions when there are no files", func(t *testing.T) {
 		// given
-		request := newRequest("", false)
+		request := Request{RepoPath: testRepoPath}
 		// when
 		result := Build(request)
 		// then
@@ -222,7 +222,7 @@ func TestBuild(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(repoPath, "CLAUDE.md"), []byte(content), 0o600))
 		loaded, err := instructions.Load(instructions.KindClaude, instructions.Paths{Home: t.TempDir(), Repo: repoPath})
 		require.NoError(t, err)
-		request := newRequest("", false, loaded.Blocks...)
+		request := newRequest("", false, loaded...)
 		// when
 		result := Build(request)
 		// then
