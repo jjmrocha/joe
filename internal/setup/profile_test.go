@@ -12,7 +12,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/classify"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/config"
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,7 +91,7 @@ func TestAskProfile(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
-			harness:             "claude",
+			instructions:        "claude",
 			provider:            "openrouter",
 			model:               testModel,
 			apiKeyEnv:           testKeyEnv,
@@ -108,7 +108,7 @@ func TestAskProfile(t *testing.T) {
 		result, err := askProfile(in, &strings.Builder{}, t.TempDir())
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, answers{harness: testKind, provider: testProvider, model: testOllamaModel}, result)
+		assert.Equal(t, answers{instructions: testKind, provider: testProvider, model: testOllamaModel}, result)
 	})
 
 	t.Run("opens with the intro and the folder it writes to", func(t *testing.T) {
@@ -154,10 +154,10 @@ func TestAskProfile(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, answers{
-			harness:   testKind,
-			provider:  "anthropic",
-			model:     "claude-opus-5",
-			apiKeyEnv: "ANTHROPIC_KEY",
+			instructions: testKind,
+			provider:     "anthropic",
+			model:        "claude-opus-5",
+			apiKeyEnv:    "ANTHROPIC_KEY",
 		}, result)
 		assert.Contains(t, out.String(), `"openai" is not one of`)
 		assert.Contains(t, out.String(), `"bad name" is not a valid answer`)
@@ -175,9 +175,9 @@ func TestAskProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		result := out.String()
-		assert.Contains(t, result, "Model: Harness")
-		assert.NotContains(t, result, "Model: \n\nHarness")
-		assert.Contains(t, result, "Harness [agents, claude]: \nKnowledge base")
+		assert.Contains(t, result, "Model: Instructions")
+		assert.NotContains(t, result, "Model: \n\nInstructions")
+		assert.Contains(t, result, "Instructions [agents, claude]: \nKnowledge base")
 		assert.Contains(t, result, "Knowledge base [yes, no]: \nClassifier model")
 	})
 
@@ -195,10 +195,10 @@ func TestRenderProfile(t *testing.T) {
 	t.Run("writes the profile the answers describe", func(t *testing.T) {
 		// given
 		given := answers{
-			harness:   "claude",
-			provider:  "openrouter",
-			model:     testModel,
-			apiKeyEnv: testKeyEnv,
+			instructions: "claude",
+			provider:     "openrouter",
+			model:        testModel,
+			apiKeyEnv:    testKeyEnv,
 		}
 		// when
 		content, err := renderProfile(given)
@@ -208,7 +208,7 @@ func TestRenderProfile(t *testing.T) {
 		var result config.Config
 
 		require.NoError(t, json.Unmarshal(content, &result))
-		assert.Equal(t, harness.KindClaude, result.Harness)
+		assert.Equal(t, instructions.KindClaude, result.Instructions)
 		assert.Equal(t, llm.ProviderOpenRouter, result.LLM.Provider)
 		assert.Equal(t, testKeyEnv, result.LLM.APIKeyEnv)
 		assert.Equal(t, testModel, result.LLM.Model)
@@ -221,7 +221,7 @@ func TestRenderProfile(t *testing.T) {
 
 	t.Run("leaves out what the answers do not set", func(t *testing.T) {
 		// given
-		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel}
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel}
 		// when
 		content, err := renderProfile(given)
 		// then
@@ -234,7 +234,7 @@ func TestRenderProfile(t *testing.T) {
 
 	t.Run("writes the classifier block the answers set", func(t *testing.T) {
 		// given
-		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
 		expected := &config.Classifier{Provider: classify.ProviderOpenRouter, APIKeyEnv: testKeyEnv, Model: testClassifierModel}
 		// when
 		content, err := renderProfile(given)
@@ -249,7 +249,7 @@ func TestRenderProfile(t *testing.T) {
 
 	t.Run("writes the kb path the answers set", func(t *testing.T) {
 		// given
-		given := answers{harness: testKind, provider: testProvider, model: testOllamaModel, kbPath: "/srv/wiki"}
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, kbPath: "/srv/wiki"}
 		// when
 		content, err := renderProfile(given)
 		// then
@@ -279,7 +279,7 @@ func TestWriteProfile(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, llm.ProviderOpenRouter, result.LLMConfig().Provider)
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
-		assert.Equal(t, harness.KindClaude, result.Harness)
+		assert.Equal(t, instructions.KindClaude, result.Instructions)
 		assert.Equal(t, 60*time.Second, result.MCPClients()[0].ToolCallTimeout)
 		assert.Equal(t, testClassifierModel, result.ClassifierConfig().Model)
 	})

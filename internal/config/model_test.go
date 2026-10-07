@@ -14,11 +14,11 @@ import (
 
 func profileWith(overrides ...string) string {
 	fields := map[string]string{
-		"harness": `"claude"`,
-		"llm":     `{"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testModel + `", "effort": "medium"}`,
-		"skills":  `[]`,
-		"mcps":    `{}`,
-		"mcps-on": `[]`,
+		"instructions": `"claude"`,
+		"llm":          `{"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testModel + `", "effort": "medium"}`,
+		"skills":       `[]`,
+		"mcps":         `{}`,
+		"mcps-on":      `[]`,
 	}
 
 	for _, override := range overrides {

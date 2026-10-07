@@ -1,4 +1,4 @@
-package harness
+package instructions
 
 import (
 	"os"

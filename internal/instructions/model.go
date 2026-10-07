@@ -1,4 +1,4 @@
-package harness
+package instructions
 
 type Paths struct {
 	ConfigDir string
@@ -11,6 +11,6 @@ type Block struct {
 	Content string
 }
 
-type Harness struct {
+type Set struct {
 	Blocks []Block
 }

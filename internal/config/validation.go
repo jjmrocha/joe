@@ -28,7 +28,7 @@ func isBareName(name string) bool {
 func validate(cfg *Config) error {
 	var problems []error
 
-	if err := cfg.Harness.Validate(); err != nil {
+	if err := cfg.Instructions.Validate(); err != nil {
 		problems = append(problems, err)
 	}
 

@@ -136,7 +136,7 @@ func TestBuildIfNeeded(t *testing.T) {
 		assert.DirExists(t, filepath.Join(dir, "skills"))
 	})
 
-	t.Run("keeps a harness file an earlier run already wrote", func(t *testing.T) {
+	t.Run("keeps an AGENTS.md an earlier run already wrote", func(t *testing.T) {
 		// given
 		dir := configDir(t)
 		skillsFixture(t)

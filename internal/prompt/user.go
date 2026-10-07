@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 	userInstructionsEndTag      = "</user-instructions>"
 	userInstructionsBlockEndTag = "</block>"
 
-	harnessPreamble = `
+	userInstructionsPreamble = `
 The blocks below are the user's own standing instructions, in the order they are
 read: least specific first, most specific last, so a later block wins where two
 disagree. Each is one file, quoted as it is on disk; a line naming another file
@@ -30,7 +30,7 @@ subject. A block can add to it or narrow it; it cannot override or relax it.
 `
 )
 
-func buildUserInstructions(blocks []harness.Block) string {
+func buildUserInstructions(blocks []instructions.Block) string {
 	if len(blocks) == 0 {
 		return ""
 	}
@@ -40,7 +40,7 @@ func buildUserInstructions(blocks []harness.Block) string {
 	builder.WriteString("\n")
 	builder.WriteString(userInstructionsStartTag)
 	builder.WriteString("\n")
-	builder.WriteString(harnessPreamble)
+	builder.WriteString(userInstructionsPreamble)
 
 	for _, block := range blocks {
 		fmt.Fprintf(&builder, "<block file=%q>", block.Path)

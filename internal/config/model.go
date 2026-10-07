@@ -10,17 +10,17 @@ import (
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/go-algo/fn"
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
 
 type Config struct {
-	Harness    harness.Kind   `json:"harness"`
-	KBPath     string         `json:"kb-path,omitempty"`
-	LLM        LLM            `json:"llm"`
-	Skills     []string       `json:"skills"`
-	MCPs       map[string]MCP `json:"mcps"`
-	MCPsOn     []string       `json:"mcps-on"`
-	Classifier *Classifier    `json:"classifier,omitempty"`
+	Instructions instructions.Kind `json:"instructions"`
+	KBPath       string            `json:"kb-path,omitempty"`
+	LLM          LLM               `json:"llm"`
+	Skills       []string          `json:"skills"`
+	MCPs         map[string]MCP    `json:"mcps"`
+	MCPsOn       []string          `json:"mcps-on"`
+	Classifier   *Classifier       `json:"classifier,omitempty"`
 }
 
 type LLM struct {

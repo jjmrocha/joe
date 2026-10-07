@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/jjmrocha/ai-toolkit/mcp"
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
 
 type Request struct {
-	Harness          *harness.Harness
+	UserInstructions *instructions.Set
 	RepoPath         string
 	KBPath           string
 	WithClassifier   bool
@@ -20,7 +20,7 @@ func Build(r Request) string {
 
 	builder.WriteString(buildRole())
 	builder.WriteString(buildInstructions(r))
-	builder.WriteString(buildUserInstructions(r.Harness.Blocks))
+	builder.WriteString(buildUserInstructions(r.UserInstructions.Blocks))
 
 	return builder.String()
 }

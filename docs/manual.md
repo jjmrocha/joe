@@ -40,7 +40,7 @@ With no `default.json`, the first run asks:
 Provider [anthropic, ollama, openrouter]: openrouter
 Model: z-ai/glm-5.3-flash
 Name of the API key variable: OPEN_ROUTER_KEY
-Harness [agents, claude]: claude
+Instructions [agents, claude]: claude
 
 Knowledge base [yes, no]: yes
 Knowledge base folder: /Users/you/Documents/LLM_WIKI
@@ -53,7 +53,7 @@ Name of the classifier API key variable: OPEN_ROUTER_KEY
 | Question | Decides |
 |---|---|
 | Provider, Model, API key variable | The model joe talks to. The key question is skipped on Ollama |
-| Harness | Which instruction files joe reads ([Your own instructions](#your-own-instructions)). Pick `claude` if you keep a `~/.claude/CLAUDE.md` |
+| Instructions | Which instruction files joe reads ([Your own instructions](#your-own-instructions)). Pick `claude` if you keep a `~/.claude/CLAUDE.md` |
 | Knowledge base | Whether joe gets the `file_*` tools. The folder must exist; joe asks until it does. `~` is expanded and the full path stored |
 | Classifier model | Whether joe gets the guard and the `classify_*` tools. Runs on OpenRouter, so the key is an OpenRouter one (JEV or equivalent model) |
 
@@ -62,7 +62,7 @@ The folder and classifier follow-ups appear only after `yes`. Setup writes `effo
 ```
 ~/.config/joe/
 ├── default.json    your profile
-├── AGENTS.md       empty, for harness: agents
+├── AGENTS.md       empty, for instructions: agents
 ├── coding-skills/  git clone of coding-skills: joe's skills
 └── skills/         empty, for your own skills
 ```
@@ -281,7 +281,7 @@ Without it, joe searches the other repository as text.
 
 joe quotes your instruction files into its prompt verbatim, least specific first, skipping missing ones:
 
-| `harness` | Files |
+| `instructions` | Files |
 |---|---|
 | `claude` | `~/.claude/CLAUDE.md`, `<repo>/CLAUDE.md`, `<repo>/CLAUDE.local.md` |
 | `agents` | `~/.config/joe/AGENTS.md`, `<repo>/AGENTS.md`, `<repo>/AGENTS.local.md` |
@@ -307,7 +307,7 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 
 ```json
 {
-  "harness": "claude",
+  "instructions": "claude",
   "kb-path": "/Users/you/Documents/LLM_WIKI",
   "llm": {
     "provider": "openrouter",
@@ -332,7 +332,7 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 
 | Key | Meaning |
 |---|---|
-| `harness` | `claude` or `agents`: which instruction files joe reads |
+| `instructions` | `claude` or `agents`: which instruction files joe reads |
 | `kb-path` | Absolute path to the knowledge base. Omit for none |
 | `llm.provider` | `openrouter`, `ollama` or `anthropic` |
 | `llm.base-url` | Overrides the provider's endpoint |
@@ -349,7 +349,7 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 | `classifier.api-key-env` | Name of the variable holding the key. Required |
 | `classifier.model` | Classification model, e.g. `typesafe/jev-1.13` |
 
-joe validates the whole profile before the session opens and lists every fault at once: unknown provider, effort, harness or `mcps-on` server; a skill that isn't a bare name; a relative `kb-path`; an empty model; an unset API-key variable. Unknown keys are rejected.
+joe validates the whole profile before the session opens and lists every fault at once: unknown provider, effort, instructions or `mcps-on` server; a skill that isn't a bare name; a relative `kb-path`; an empty model; an unset API-key variable. Unknown keys are rejected.
 
 ---
 
@@ -368,7 +368,8 @@ joe validates the whole profile before the session opens and lists every fault a
 | `effort is not off, low, medium or max` | Unknown `llm.effort` | Use one of the four |
 | `model is not set` | Empty `llm.model` or `classifier.model` | Set it |
 | `mcps-on names a server that is not registered` | `mcps-on` lists a name missing from `mcps` | Add the server to `mcps` or remove the name |
-| `harness is not claude or agents` | Unknown `harness` | Use `claude` or `agents` |
+| `instructions is not claude or agents` | Unknown `instructions` | Use `claude` or `agents` |
+| `unknown field "harness"` | Profile written before `harness` was renamed | Rename the key to `instructions` |
 | `kb-path is not absolute` | Relative or `~`-prefixed path | Spell it out in full |
 | `opening root: …` | `kb-path` folder missing or unreadable | Create it, or drop the key |
 | `no answer to read` | Setup ran with no terminal on stdin (pipe, redirect, Ctrl-D) | Run joe from a terminal; the next run asks again |

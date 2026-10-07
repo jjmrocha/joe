@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +19,7 @@ const (
 
 func validProfile() string {
 	return `{
-  "harness": "claude",
+  "instructions": "claude",
   "llm": {
     "provider": "openrouter",
     "api-key-env": "` + testKeyEnv + `",
@@ -72,7 +72,7 @@ func TestLoad(t *testing.T) {
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
 		assert.Equal(t, []string{"removing-ai-tells"}, result.Skills)
 		assert.Equal(t, []string{"context7"}, result.MCPsOn)
-		assert.Equal(t, harness.KindClaude, result.Harness)
+		assert.Equal(t, instructions.KindClaude, result.Instructions)
 	})
 
 	t.Run("reports a missing named profile", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestLoad(t *testing.T) {
 			content string
 		}{
 			{name: "malformed json", content: "{"},
-			{name: "unknown key", content: `{"harness": "claude", "mcp": {}}`},
+			{name: "unknown key", content: `{"instructions": "claude", "mcp": {}}`},
 		}
 
 		for _, testCase := range testCases {
@@ -137,9 +137,9 @@ func TestLoad(t *testing.T) {
 			expected error
 		}{
 			{
-				name:     "harness",
-				content:  profileWith(`"harness": "codex"`),
-				expected: harness.ErrInvalidKind,
+				name:     "instructions",
+				content:  profileWith(`"instructions": "codex"`),
+				expected: instructions.ErrInvalidKind,
 			},
 			{
 				name:     "provider",
@@ -226,12 +226,12 @@ func TestLoad(t *testing.T) {
 	t.Run("reports every fault in one pass", func(t *testing.T) {
 		// given
 		dir := configDir(t)
-		content := profileWith(`"harness": "codex"`, `"llm": {"provider": "openai", "model": "", "effort": "extreme"}`)
+		content := profileWith(`"instructions": "codex"`, `"llm": {"provider": "openai", "model": "", "effort": "extreme"}`)
 		writeProfile(t, dir, "local", content)
 		// when
 		_, err := Load("local")
 		// then
-		assert.ErrorIs(t, err, harness.ErrInvalidKind)
+		assert.ErrorIs(t, err, instructions.ErrInvalidKind)
 		assert.ErrorIs(t, err, ErrInvalidProvider)
 		assert.ErrorIs(t, err, ErrInvalidEffort)
 		assert.ErrorIs(t, err, ErrMissingModel)

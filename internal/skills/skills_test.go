@@ -14,7 +14,7 @@ const testKeyEnv = "JOE_TEST_KEY"
 
 func testProfile(skills string) string {
 	return `{
-  "harness": "claude",
+  "instructions": "claude",
   "llm": {
     "provider": "openrouter",
     "api-key-env": "` + testKeyEnv + `",

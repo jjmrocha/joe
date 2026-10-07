@@ -57,10 +57,10 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 		}
 	}
 
-	// Load the  harness
-	instructionFiles, err := loadHarness(cfg, repoPath)
+	// Load the user instructions
+	instructionFiles, err := loadUserInstructions(cfg, repoPath)
 	if err != nil {
-		return fmt.Errorf("harness: %w", err)
+		return fmt.Errorf("user instructions: %w", err)
 	}
 
 	// Initialize the  toolbox
@@ -140,7 +140,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	// Build prompt
 	sysPrompt := prompt.Build(prompt.Request{
 		RepoPath:         repoPath,
-		Harness:          instructionFiles,
+		UserInstructions: instructionFiles,
 		KBPath:           cfg.KBPath,
 		WithClassifier:   classifier != nil,
 		ToolInstructions: toolInstructions(ctx, toolPacks, mcpManager),

@@ -1,4 +1,4 @@
-package harness
+package instructions
 
 import (
 	"errors"
@@ -10,8 +10,8 @@ import (
 
 var closingTagPattern = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
 
-func Load(kind Kind, paths Paths) (*Harness, error) {
-	var h Harness
+func Load(kind Kind, paths Paths) (*Set, error) {
+	var set Set
 
 	for _, path := range kind.files(paths) {
 		content, err := os.ReadFile(path) //nolint:gosec // kind.files builds every path from fixed names and caller roots
@@ -23,13 +23,13 @@ func Load(kind Kind, paths Paths) (*Harness, error) {
 			return nil, err
 		}
 
-		h.Blocks = append(h.Blocks, Block{
+		set.Blocks = append(set.Blocks, Block{
 			Path:    path,
 			Content: sanitize(content),
 		})
 	}
 
-	return &h, nil
+	return &set, nil
 }
 
 func sanitize(content []byte) string {

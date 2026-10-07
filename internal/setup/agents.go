@@ -5,11 +5,11 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
 
 func createAgentsFile(dir string) error {
-	err := createFile(filepath.Join(dir, harness.AgentsFile), nil)
+	err := createFile(filepath.Join(dir, instructions.AgentsFile), nil)
 	if errors.Is(err, fs.ErrExist) {
 		return nil
 	}

@@ -15,7 +15,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
-	"github.com/jjmrocha/joe/internal/harness"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 )
 
 type answers struct {
-	harness             harness.Kind
+	instructions        instructions.Kind
 	provider            llm.Provider
 	model               string
 	apiKeyEnv           string
@@ -74,7 +74,7 @@ func askProfile(in *bufio.Reader, out io.Writer, dir string) (answers, error) {
 		}
 	}
 
-	given.harness, err = askChoice(in, out, "Harness", slices.Sorted(harness.Kinds.Values()))
+	given.instructions, err = askChoice(in, out, "Instructions", slices.Sorted(instructions.Kinds.Values()))
 	if err != nil {
 		return given, err
 	}
@@ -130,8 +130,8 @@ func askClassifier(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, er
 
 func renderProfile(given answers) ([]byte, error) {
 	cfg := config.Config{
-		Harness: given.harness,
-		KBPath:  given.kbPath,
+		Instructions: given.instructions,
+		KBPath:       given.kbPath,
 		LLM: config.LLM{
 			Provider:  given.provider,
 			APIKeyEnv: given.apiKeyEnv,
