@@ -163,7 +163,7 @@ Loaded by the entry skills at the step that needs them, never as entry points.
 | Skill | Loaded |
 |---|---|
 | `coding-discipline` | Before any diff: names six LLM failure modes and their counters |
-| `designing-interfaces` | Before a new or widened interface: a four-line contract; sent back if it hides nothing |
+| `designing-interfaces` | Before a new or widened interface: a contract (what, where, interface, use); sent back if it breaks one of ten interface principles |
 | `test-driven-development` | During implementation: red, green, refactor |
 | `writing-unit-tests` | By TDD, or as an entry for tests only |
 | `style-checker` | As the style lens of `analyze-code` |
@@ -235,7 +235,7 @@ joe gets three tools backed by the classifier: `classify_yes_no`, `classify_choi
 |---|---|---|
 | `test-driven-development` REFACTOR, per function changed in GREEN | `classify_yes_no`, repeated | Would a senior engineer refactor this function further? |
 | `analyze-code`, per surviving finding | `classify_choice` | Severity, from the skill's scale |
-| `designing-interfaces`, after the contract | `classify_score`, repeated | How deep is this interface? |
+| `designing-interfaces`, after the contract | `classify_choice`, repeated | Is this interface design sound? |
 
 joe overrides a verdict only on a named contradicting fact, and reports overrides and failures. Each call is billed.
 

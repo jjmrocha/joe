@@ -8,7 +8,7 @@ calibrated classifier. At each checkpoint below, calling it is required.
 - At a checkpoint the classifier makes that one decision. The block replaces
   the loaded skill's own rule for it; the rest of the skill still applies.
 - Reading the answer: yes_probability of 0.5 or more is yes; selected is the
-  choice; a score is compared with the checkpoint's cutoff.
+  choice, unless the checkpoint says otherwise.
 - Input: the smallest self-contained context that lets the classifier decide.
   It sees nothing else — no files, no conversation. Never include secrets,
   keys or tokens; redact them.
@@ -90,26 +90,42 @@ Checkpoints:
    (step 3), convention drift or duplication (step 4), a hardcoded secret —
    and for step 6's tooling output. Count only the findings you call for.
 
-3. designing-interfaces, when the four-line contract is written and you
-   are about to hand off to test-driven-development — before the first
-   test is written — repeating.
-   classify_score
-     instructions: "How deep is this interface?"
-     input: the module's purpose in one line, the dependencies it touches
-     (I/O, clock, randomness, network, or none), the four-line contract
-     verbatim with its CALLER LEARNS, HIDDEN, SEAM and TEST CALLS labels, and
-     the proposed signatures.
-     levels:
-       0 shallow — HIDDEN is empty or one clause; a conduit
-       1 leaky — CALLER LEARNS is longer than HIDDEN
-       2 adequate — hides more than it exposes, but TEST CALLS reaches past
-         CALLER LEARNS or a needed seam is missing
-       3 deep — small CALLER LEARNS, substantial HIDDEN, the test calls only
-         the interface
-   Below 2.0 → redesign, then ask again. 2.0 or above → implement —
-   hand off to test-driven-development.
-   The score replaces the read-back's verdict; what the read-back found still
-   guides the redesign.
+3. designing-interfaces, when the contract is written and you are about to
+   hand off to test-driven-development — before the first test is written —
+   repeating.
+   classify_choice
+     instructions: "Which interface principle does this design break most
+     seriously? Pick sound only if it breaks none."
+     input: the contract verbatim, with its WHAT, WHERE, INTERFACE and USE
+     labels.
+     options:
+       no real work — WHAT only returns or exposes something the module
+         holds
+       complexity leaks — USE shows the caller filtering, rendering,
+         ordering or interpreting what the module could do itself
+       more than one responsibility — WHAT joins unrelated jobs with "and";
+         a caller could want one part without the other
+       unneeded inputs — an input the module already has or could default,
+         or a whole object passed when one field is used
+       poor names — the function or a parameter is vague, does not say what
+         it is or does, or breaks the language's naming conventions
+       avoidable errors — INTERFACE lists an error the function could
+         handle itself, such as "not found" where an empty result would do
+       easy to misuse — adjacent parameters of the same type that are easy
+         to swap, or a rule the caller must remember that types could enforce
+       exposes internals — INTERFACE or USE shows how the module stores
+         its data
+       wider than needed — it adds functions, methods or types no caller in
+         USE needs
+       creates its dependencies — it builds its own I/O, clock, network
+         client or randomness instead of receiving them
+       sound — breaks none of the above
+   probabilities["sound"] of 0.5 or more → implement — hand off to
+   test-driven-development. Below 0.5 → redesign around the most probable
+   option other than sound, then ask again. When the cap stops it, show the
+   user the contract and every answer it got, and ask before implementing.
+   The answer replaces your own principles check; what that check found
+   still guides the redesign.
 
 Outside these checkpoints you may call the classifier for any other judgement
 a labelled answer settles — a yes/no, a pick from named options, a rating on
