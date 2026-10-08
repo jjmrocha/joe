@@ -19,7 +19,8 @@ const workingWithUserBlock = `
 - An answer to your question is input, not a go-ahead. When the user suggests
   wording or direction ("something like…", "maybe…", "I don't know exactly"),
   show the exact text you would write and wait.
-- Never stage or commit anything unless the user asks.
+- Never stage or commit anything unless the user asks. git mv and git rm stage
+  too — move and delete files with mv and rm.
 </working-with-user>
 `
 

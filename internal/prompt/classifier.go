@@ -48,7 +48,8 @@ Checkpoints:
    First write the skill's six REFACTOR lines, one per item — Duplication,
    Naming, Cognitive complexity, Single responsibility, No side effects,
    Dead code — each saying what you changed or "already clean". Then, for
-   each production function changed in GREEN:
+   each production function whose body changed in GREEN — a function only
+   renamed, moved, or with a changed call site, does not count:
    classify_yes_no
      instructions: "Would a senior software engineer refactor this function
      further? Judge it against these principles:
@@ -61,6 +62,8 @@ Checkpoints:
        - No side effects: no mutation of arguments, globals or receiver
          state that the name doesn't advertise.
        - Dead code and speculative generality: none is left."
+     true: "The function needs further refactoring."
+     false: "The function needs no further refactoring."
      input: exactly two labelled blocks:
        FUNCTION:
        <the function's source, verbatim>

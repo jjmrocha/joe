@@ -26,7 +26,8 @@ not otherwise an exemption.
 
 Announce the route before loading the entry skill:
 "Route: <the row, in a few words> → Loading <skill>". Announce every other skill
-you load: "Loading <skill>".
+you load: "Loading <skill>". The skill_load call goes in the same turn as its
+announcement — an announced skill you never load is a skipped skill.
 
 ## Pick the entry skill
 Route on what the user wants to end up with, not on the words they use. Rows run
@@ -70,6 +71,14 @@ request better than any row above.
 
 	examplesHeading = `
 ## Examples
+A routed request is one turn: the announcement, then the skill_load call — a
+real tool call, never written out as text:
+
+  "Which Go TUI library should we use?"
+  Route: an answer from outside this code base → Loading using-software-specialists
+  → tool call skill_load, skill_name "using-software-specialists"
+
+The list below is shorthand for that turn — request → skill to load:
 `
 
 	followUps = `
@@ -96,10 +105,17 @@ Follow-ups:
 - Apply each fix approved in addressing-findings through
   using-software-specialists' Implementation phase: coding-discipline,
   test-driven-development, and designing-interfaces when an interface changes.
+- Load a skill only when its text is not already in this conversation — a
+  routed request or a /<skill> command for a skill already loaded means
+  following that copy, not loading it again.
 - A follow-up that continues the same work stays in the loaded skill. Route
   again only when the request changes kind — research turning into "now fix it".
 - A skill lists the files it ships. Read the ones it tells you to with
-  skill_load_file — naming a reference file is not reading it.
+  skill_load_file, giving the skill's name and the file's path — naming a
+  reference file is not reading it.
+- When a step needs a tool this session does not have — a web search to answer
+  from outside the code base, say — tell the user which tool is missing and
+  stop there; never answer that step from memory instead.
 `
 )
 
