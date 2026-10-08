@@ -19,7 +19,7 @@ func Build(r Request) string {
 	var builder strings.Builder
 
 	builder.WriteString(buildRole())
-	builder.WriteString(buildInstructions(r))
+	builder.WriteString(buildSystemInstructions(r))
 	builder.WriteString(buildUserInstructions(r.UserInstructions))
 
 	return builder.String()

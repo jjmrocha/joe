@@ -163,7 +163,7 @@ var examples = []example{
 	{request: `"Help me check the new setup flow on my machine"`, route: skills.GuidingManualTesting},
 	{request: `"Update the wiki with what we just changed"`, route: skills.KnowledgeBase, needKB: true},
 	{request: `"Write a manual for running joe"`, route: skills.KnowledgeBase, needKB: true},
-	{request: `"Rename cfg to conf in load.go"`, route: noSkill},
+	{request: `"Rename cfg to conf in config.go"`, route: noSkill},
 }
 
 func buildSkills(r Request) string {

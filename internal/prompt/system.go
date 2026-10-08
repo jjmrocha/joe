@@ -9,7 +9,7 @@ const (
 	instructionsEndTag   = "</instructions>"
 )
 
-func buildInstructions(r Request) string {
+func buildSystemInstructions(r Request) string {
 	var builder strings.Builder
 
 	builder.WriteString("\n")
