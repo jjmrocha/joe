@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/go-algo/cache"
@@ -22,8 +22,8 @@ const (
 )
 
 var (
-	callQuestion = classify.YesNo{Instructions: "Does this tool call violate any of the constraints?"}
-	toolQuestion = classify.YesNo{Instructions: "Could any call to this tool, with any arguments, violate any of the constraints?"}
+	callQuestion = decision.YesNo{Instructions: "Does this tool call violate any of the constraints?"}
+	toolQuestion = decision.YesNo{Instructions: "Could any call to this tool, with any arguments, violate any of the constraints?"}
 )
 
 func NewInterceptor(cfg Config) (tools.Interceptor, error) {
@@ -54,7 +54,7 @@ func NewInterceptor(cfg Config) (tools.Interceptor, error) {
 			return ErrToolCallTooLarge
 		}
 
-		questions := map[string]classify.Question{callQuestionID: callQuestion}
+		questions := map[string]decision.Question{callQuestionID: callQuestion}
 		if !classified {
 			questions[toolQuestionID] = toolQuestion
 		}
@@ -62,18 +62,18 @@ func NewInterceptor(cfg Config) (tools.Interceptor, error) {
 		askCtx, cancel := context.WithTimeout(ctx, classifyTimeout)
 		defer cancel()
 
-		resp, err := cfg.Classifier.Classify(askCtx, classify.Request{
-			Input:     input,
+		resp, err := cfg.Classifier.Ask(askCtx, decision.Request{
+			State:     input,
 			Questions: questions,
 		})
 		if err != nil {
 			return nil
 		}
 
-		answer, ok := resp.Answers[callQuestionID].(classify.YesNoAnswer)
+		answer, ok := resp.Answers[callQuestionID].(decision.YesNoAnswer)
 		blocked := ok && answer.Value >= blockThreshold
 
-		if toolAnswer, ok := resp.Answers[toolQuestionID].(classify.YesNoAnswer); ok {
+		if toolAnswer, ok := resp.Answers[toolQuestionID].(decision.YesNoAnswer); ok {
 			toolVerdicts.Put(call.Name, toolAnswer.Value < toolSafeThreshold && !blocked)
 		}
 

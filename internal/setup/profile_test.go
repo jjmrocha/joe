@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/instructions"
@@ -235,7 +235,7 @@ func TestRenderProfile(t *testing.T) {
 	t.Run("writes the classifier block the answers set", func(t *testing.T) {
 		// given
 		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
-		expected := &config.Classifier{Provider: classify.ProviderOpenRouter, APIKeyEnv: testKeyEnv, Model: testClassifierModel}
+		expected := &config.Classifier{Provider: decision.ProviderOpenRouter, APIKeyEnv: testKeyEnv, Model: testClassifierModel}
 		// when
 		content, err := renderProfile(given)
 		// then

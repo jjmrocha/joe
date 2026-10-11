@@ -107,7 +107,7 @@ truth: a page that disagrees with the code is reported, not trusted.
 
 The model writing your code doesn't grade its own work. At three critical calls joe asks a
 classification model instead: one that writes no text, but answers a typed question
-(yes/no, pick one, a score) with a calibrated probability. joe uses TypeSafe's
+(yes/no, pick one, a score) with a probability. joe uses TypeSafe's
 [Jev](https://openrouter.ai/blog/insights/what-is-jev/), the first model of this kind,
 through OpenRouter. Its verdict is binding unless a named fact contradicts it.
 

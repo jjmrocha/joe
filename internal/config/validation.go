@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"slices"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/sets"
 )
@@ -18,7 +18,7 @@ var bareNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 var (
 	providers           = sets.New(llm.ProviderOpenRouter, llm.ProviderOllama, llm.ProviderAnthropic)
 	efforts             = sets.New(llm.EffortOff, llm.EffortLow, llm.EffortMedium, llm.EffortMax)
-	classifierProviders = sets.New(classify.ProviderOpenRouter)
+	classifierProviders = sets.New(decision.ProviderOpenRouter)
 )
 
 func Providers() []llm.Provider {

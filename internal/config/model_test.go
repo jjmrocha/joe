@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,28 +46,6 @@ func mustLoad(t *testing.T, content string) *Config {
 	return config
 }
 
-func TestProviders(t *testing.T) {
-	t.Run("holds every provider joe accepts", func(t *testing.T) {
-		// given
-		expected := []llm.Provider{llm.ProviderAnthropic, llm.ProviderOllama, llm.ProviderOpenRouter}
-		// when
-		result := Providers()
-		// then
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("hands out a copy the caller may change", func(t *testing.T) {
-		// given
-		providers := Providers()
-		providers[0] = "bogus"
-		expected := []llm.Provider{llm.ProviderAnthropic, llm.ProviderOllama, llm.ProviderOpenRouter}
-		// when
-		result := Providers()
-		// then
-		assert.Equal(t, expected, result)
-	})
-}
-
 func TestLLMConfig(t *testing.T) {
 	t.Run("carries every value the model needs", func(t *testing.T) {
 		// given
@@ -94,8 +72,8 @@ func TestClassifierConfig(t *testing.T) {
 	t.Run("carries every value the classifier needs", func(t *testing.T) {
 		// given
 		config := mustLoad(t, profileWith(`"classifier": {"provider": "openrouter", "base-url": "http://localhost:8080", "api-key-env": "`+testKeyEnv+`", "model": "`+testClassifierModel+`"}`))
-		expected := classify.Config{
-			Provider: classify.ProviderOpenRouter,
+		expected := decision.Config{
+			Provider: decision.ProviderOpenRouter,
 			BaseURL:  "http://localhost:8080",
 			APIKey:   "sk-test",
 			Model:    testClassifierModel,
@@ -112,7 +90,7 @@ func TestClassifierConfig(t *testing.T) {
 		// when
 		result := config.ClassifierConfig()
 		// then
-		assert.Equal(t, classify.Config{}, result)
+		assert.Equal(t, decision.Config{}, result)
 	})
 }
 

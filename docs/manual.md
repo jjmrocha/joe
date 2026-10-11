@@ -55,7 +55,7 @@ Name of the classifier API key variable: OPEN_ROUTER_KEY
 | Provider, Model, API key variable | The model joe talks to. The key question is skipped on Ollama |
 | Instructions | Which instruction files joe reads ([Your own instructions](#your-own-instructions)). Pick `claude` if you keep a `~/.claude/CLAUDE.md` |
 | Knowledge base | Whether joe gets the `file_*` tools. The folder must exist; joe asks until it does. `~` is expanded and the full path stored |
-| Classifier model | Whether joe gets the guard and the `classify_*` tools. Runs on OpenRouter, so the key is an OpenRouter one (JEV or equivalent model) |
+| Classifier model | Whether joe gets the guard and the `decision_*` tools. Runs on OpenRouter, so the key is an OpenRouter one (JEV or equivalent model) |
 
 The folder and classifier follow-ups appear only after `yes`. Setup writes `effort: medium`, registers two MCP servers (both off) and clones the skills:
 
@@ -225,17 +225,17 @@ With `kb-path` set, joe gets seven tools confined to that folder: `file_read`, `
 
 ## Second opinion and guard
 
-Both need a `classifier` in the profile: a classification model, different from the model that writes code. It writes no text; it answers a typed question (yes/no, a choice, a score) with a calibrated probability. joe reaches it through OpenRouter's decisions API, so any classification model OpenRouter serves works; today that is TypeSafe's [Jev](https://openrouter.ai/blog/insights/what-is-jev/) (`typesafe/jev-1.13`). Without a classifier, neither feature exists.
+Both need a `classifier` in the profile: a classification model, different from the model that writes code. It writes no text; it answers a typed question (yes/no, a choice, a score) with a probability. joe reaches it through OpenRouter's decisions API, so any decision model OpenRouter serves works; today that is TypeSafe's [Jev](https://openrouter.ai/blog/insights/what-is-jev/) (`typesafe/jev-1.13`). The default model listing leaves them out; list them with `GET https://openrouter.ai/api/v1/models?output_modalities=decisions`. Without a classifier, neither feature exists.
 
 ### Second opinion
 
-joe gets three tools backed by the classifier: `classify_yes_no`, `classify_choice`, `classify_score`. Its prompt makes three calls required and binding:
+joe gets three tools backed by the classifier: `decision_yes_no`, `decision_choice`, `decision_score`. Its prompt makes three calls required and binding:
 
 | When | Call | Asks |
 |---|---|---|
-| `test-driven-development` REFACTOR, per function changed in GREEN | `classify_yes_no`, repeated | Would a senior engineer refactor this function further? |
-| `analyze-code`, per surviving finding | `classify_choice` | Severity, from the skill's scale |
-| `designing-interfaces`, after the contract | `classify_choice`, repeated | Is this interface design sound? |
+| `test-driven-development` REFACTOR, per function changed in GREEN | `decision_yes_no`, repeated | Would a senior engineer refactor this function further? |
+| `analyze-code`, per surviving finding | `decision_choice` | Severity, from the skill's scale |
+| `designing-interfaces`, after the contract | `decision_choice`, repeated | Is this interface design sound? |
 
 joe overrides a verdict only on a named contradicting fact, and reports overrides and failures. Each call is billed.
 
@@ -343,7 +343,7 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 | `skills` | Your extra skills by name, from `~/.config/joe/skills` |
 | `mcps` | MCP servers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds (`0` or absent: 60) |
 | `mcps-on` | Servers started at launch; start others with `/mcp on <name>` |
-| `classifier` | Model behind the guard and `classify_*`. Omit for neither |
+| `classifier` | Model behind the guard and `decision_*`. Omit for neither |
 | `classifier.provider` | `openrouter` |
 | `classifier.base-url` | Overrides the provider's endpoint |
 | `classifier.api-key-env` | Name of the variable holding the key. Required |

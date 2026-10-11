@@ -2,8 +2,8 @@ package prompt
 
 const classifierBlock = `
 <classifier>
-The classify_yes_no, classify_choice and classify_score tools reach a
-calibrated classifier. At each checkpoint below, calling it is required.
+The decision_yes_no, decision_choice and decision_score tools reach a
+classifier. At each checkpoint below, calling it is required.
 
 - At a checkpoint the classifier makes that one decision. The block replaces
   the loaded skill's own rule for it; the rest of the skill still applies.
@@ -50,7 +50,7 @@ Checkpoints:
    Dead code — each saying what you changed or "already clean". Then, for
    each production function whose body changed in GREEN — a function only
    renamed, moved, or with a changed call site, does not count:
-   classify_yes_no
+   decision_yes_no
      instructions: "Would a senior software engineer refactor this function
      further? Judge it against these principles:
        - Duplication: the same knowledge expressed in two places.
@@ -78,7 +78,7 @@ Checkpoints:
 
 2. analyze-code, step 8 "Synthesize & deliver" — before the report is shown.
    For each finding that survived step 7's verification:
-   classify_choice
+   decision_choice
      instructions: "What is the severity of this finding?"
      input: the finding's evidence line, its impact, and where the code
      runs — its role and exposure ("request handler, public endpoint",
@@ -96,7 +96,7 @@ Checkpoints:
 3. designing-interfaces, when the contract is written and you are about to
    hand off to test-driven-development — before the first test is written —
    repeating.
-   classify_choice
+   decision_choice
      instructions: "Which interface principle does this design break most
      seriously? Pick sound only if it breaks none."
      input: the contract verbatim, with its WHAT, WHERE, INTERFACE and USE

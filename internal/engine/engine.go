@@ -7,7 +7,7 @@ import (
 	"github.com/jjmrocha/ai-chat/chat"
 	"github.com/jjmrocha/ai-chat/ui"
 	"github.com/jjmrocha/ai-toolkit/agent"
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/tools"
@@ -26,10 +26,10 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 		return fmt.Errorf("model: %w", err)
 	}
 
-	var classifier *classify.Classifier
+	var classifier *decision.Decision
 
 	if cfg.Classifier != nil {
-		classifier, err = classify.New(cfg.ClassifierConfig())
+		classifier, err = decision.New(cfg.ClassifierConfig())
 		if err != nil {
 			return fmt.Errorf("classifier: %w", err)
 		}
@@ -113,8 +113,8 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	}
 
 	if classifier != nil {
-		if err = toolPacks.add(packs.ClassifyTools(toolBox, classifier)); err != nil {
-			return fmt.Errorf("classify tools: %w", err)
+		if err = toolPacks.add(packs.DecisionTools(toolBox, classifier)); err != nil {
+			return fmt.Errorf("decision tools: %w", err)
 		}
 	}
 

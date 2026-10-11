@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/stretchr/testify/assert"
@@ -23,45 +23,45 @@ const (
 
 var errUnavailable = errors.New("classifier unavailable")
 
-type answerFunc func(ctx context.Context, req classify.Request) (*classify.Response, error)
+type answerFunc func(ctx context.Context, req decision.Request) (*decision.Response, error)
 
 type fakeClassifier struct {
 	answer   answerFunc
-	requests []classify.Request
+	requests []decision.Request
 }
 
-func (f *fakeClassifier) Classify(ctx context.Context, req classify.Request) (*classify.Response, error) {
+func (f *fakeClassifier) Ask(ctx context.Context, req decision.Request) (*decision.Response, error) {
 	f.requests = append(f.requests, req)
 
 	return f.answer(ctx, req)
 }
 
-func answeringWith(answer classify.Answer) *fakeClassifier {
-	return &fakeClassifier{answer: func(_ context.Context, req classify.Request) (*classify.Response, error) {
-		answers := map[string]classify.Answer{}
+func answeringWith(answer decision.Answer) *fakeClassifier {
+	return &fakeClassifier{answer: func(_ context.Context, req decision.Request) (*decision.Response, error) {
+		answers := map[string]decision.Answer{}
 		for id := range req.Questions {
 			answers[id] = answer
 		}
 
-		return &classify.Response{Answers: answers}, nil
+		return &decision.Response{Answers: answers}, nil
 	}}
 }
 
 func answering(value float64) *fakeClassifier {
-	return answeringWith(classify.YesNoAnswer{Value: value})
+	return answeringWith(decision.YesNoAnswer{Value: value})
 }
 
 func scripted(values map[string]float64) *fakeClassifier {
-	return &fakeClassifier{answer: func(_ context.Context, req classify.Request) (*classify.Response, error) {
-		answers := map[string]classify.Answer{}
+	return &fakeClassifier{answer: func(_ context.Context, req decision.Request) (*decision.Response, error) {
+		answers := map[string]decision.Answer{}
 
 		for id := range req.Questions {
 			if value, ok := values[id]; ok {
-				answers[id] = classify.YesNoAnswer{Value: value}
+				answers[id] = decision.YesNoAnswer{Value: value}
 			}
 		}
 
-		return &classify.Response{Answers: answers}, nil
+		return &decision.Response{Answers: answers}, nil
 	}}
 }
 
@@ -69,7 +69,7 @@ func failingFirst(fake *fakeClassifier) *fakeClassifier {
 	answer := fake.answer
 	failed := false
 
-	fake.answer = func(ctx context.Context, req classify.Request) (*classify.Response, error) {
+	fake.answer = func(ctx context.Context, req decision.Request) (*decision.Response, error) {
 		if !failed {
 			failed = true
 
@@ -82,7 +82,7 @@ func failingFirst(fake *fakeClassifier) *fakeClassifier {
 	return fake
 }
 
-func questionIDs(req classify.Request) []string {
+func questionIDs(req decision.Request) []string {
 	return slices.Sorted(maps.Keys(req.Questions))
 }
 
@@ -169,7 +169,7 @@ func TestNewInterceptor(t *testing.T) {
 			},
 			{
 				name:       "answer of another type",
-				classifier: answeringWith(classify.ChoiceAnswer{Selected: "yes", Probabilities: map[string]float64{"yes": 1}}),
+				classifier: answeringWith(decision.ChoiceAnswer{Selected: "yes", Probabilities: map[string]float64{"yes": 1}}),
 			},
 		}
 
@@ -187,7 +187,7 @@ func TestNewInterceptor(t *testing.T) {
 
 	t.Run("allows the call when the caller gives up before the classifier answers", func(t *testing.T) {
 		// given
-		hanging := &fakeClassifier{answer: func(ctx context.Context, _ classify.Request) (*classify.Response, error) {
+		hanging := &fakeClassifier{answer: func(ctx context.Context, _ decision.Request) (*decision.Response, error) {
 			<-ctx.Done()
 
 			return nil, ctx.Err()
@@ -218,9 +218,9 @@ func TestNewInterceptor(t *testing.T) {
 		// given
 		classifier := answering(0.1)
 		interceptor := newInterceptor(t, Config{Classifier: classifier, ToolBox: shellBox(t), RepoPath: testRepoPath, KBPath: testKBPath})
-		expected := map[string]classify.Question{
-			callQuestionID: classify.YesNo{Instructions: "Does this tool call violate any of the constraints?"},
-			toolQuestionID: classify.YesNo{Instructions: "Could any call to this tool, with any arguments, violate any of the constraints?"},
+		expected := map[string]decision.Question{
+			callQuestionID: decision.YesNo{Instructions: "Does this tool call violate any of the constraints?"},
+			toolQuestionID: decision.YesNo{Instructions: "Could any call to this tool, with any arguments, violate any of the constraints?"},
 		}
 		// when
 		err := interceptor(t.Context(), shellCall("go test ./..."))
@@ -368,7 +368,7 @@ Constraints:
 				// then
 				require.NoError(t, err)
 				require.Len(t, classifier.requests, 1)
-				assert.Equal(t, testCase.expected, classifier.requests[0].Input)
+				assert.Equal(t, testCase.expected, classifier.requests[0].State)
 			})
 		}
 	})
@@ -406,7 +406,7 @@ Constraints:
 		// then
 		require.NoError(t, result)
 		require.Len(t, classifier.requests, 1)
-		assert.Len(t, classifier.requests[0].Input, maxInputBytes)
+		assert.Len(t, classifier.requests[0].State, maxInputBytes)
 	})
 
 	t.Run("allows a call too big to classify to a tool judged safe", func(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
@@ -162,7 +162,7 @@ func renderProfile(given answers) ([]byte, error) {
 
 	if given.classifierModel != "" {
 		cfg.Classifier = &config.Classifier{
-			Provider:  classify.ProviderOpenRouter,
+			Provider:  decision.ProviderOpenRouter,
 			APIKeyEnv: given.classifierAPIKeyEnv,
 			Model:     given.classifierModel,
 		}

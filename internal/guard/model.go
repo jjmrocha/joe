@@ -3,12 +3,12 @@ package guard
 import (
 	"context"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/tools"
 )
 
 type Classifier interface {
-	Classify(ctx context.Context, req classify.Request) (*classify.Response, error)
+	Ask(ctx context.Context, req decision.Request) (*decision.Response, error)
 }
 
 type Config struct {

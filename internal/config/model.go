@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/jjmrocha/ai-toolkit/classify"
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/go-algo/fn"
@@ -33,7 +33,7 @@ type LLM struct {
 }
 
 type Classifier struct {
-	Provider  classify.Provider `json:"provider"`
+	Provider  decision.Provider `json:"provider"`
 	BaseURL   string            `json:"base-url,omitempty"`
 	APIKeyEnv string            `json:"api-key-env"`
 	Model     string            `json:"model"`
@@ -57,12 +57,12 @@ func (c *Config) LLMConfig() llm.Config {
 	}
 }
 
-func (c *Config) ClassifierConfig() classify.Config {
+func (c *Config) ClassifierConfig() decision.Config {
 	if c.Classifier == nil {
-		return classify.Config{}
+		return decision.Config{}
 	}
 
-	return classify.Config{
+	return decision.Config{
 		Provider: c.Classifier.Provider,
 		BaseURL:  c.Classifier.BaseURL,
 		APIKey:   os.Getenv(c.Classifier.APIKeyEnv),
