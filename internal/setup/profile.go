@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -21,6 +22,8 @@ import (
 var (
 	modelPattern  = regexp.MustCompile(`^[a-zA-Z0-9._:/-]+$`)
 	keyEnvPattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+	researchTools = []string{"donsetch", "npx"}
+	lookPath      = exec.LookPath
 )
 
 type answers struct {
@@ -31,6 +34,7 @@ type answers struct {
 	kbPath              string
 	classifierModel     string
 	classifierAPIKeyEnv string
+	researchTools       bool
 }
 
 func writeProfile() error {
@@ -45,6 +49,11 @@ func writeProfile() error {
 	if err != nil {
 		return err
 	}
+
+	given.researchTools = fn.All(researchTools, func(tool string) bool {
+		_, lookErr := lookPath(tool)
+		return lookErr == nil
+	})
 
 	content, err := renderProfile(given)
 	if err != nil {
@@ -145,18 +154,7 @@ func renderProfile(given answers) ([]byte, error) {
 			Effort:    llm.EffortMedium,
 		},
 		Skills: []string{},
-		MCPs: map[string]config.MCP{
-			"context7": {
-				Command: "npx",
-				Args:    []string{"-y", "@upstash/context7-mcp"},
-				Timeout: 60,
-			},
-			"donsetch": {
-				Command: "donsetch",
-				Args:    []string{"mcp", "--supervised"},
-				Timeout: 900,
-			},
-		},
+		MCPs:   map[string]config.MCP{},
 		MCPsOn: []string{},
 		Subagents: config.Subagents{
 			Explorer: config.Subagent{
@@ -168,6 +166,11 @@ func renderProfile(given answers) ([]byte, error) {
 				Model:   given.model,
 				Effort:  llm.EffortMedium,
 				Enabled: true,
+			},
+			Researcher: config.Subagent{
+				Model:   given.model,
+				Effort:  llm.EffortMedium,
+				Enabled: given.researchTools,
 			},
 		},
 	}

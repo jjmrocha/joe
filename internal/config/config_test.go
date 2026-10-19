@@ -18,6 +18,7 @@ const (
 	testClassifierModel = "typesafe/jev-1.13"
 	testExplorerModel   = "deepseek/deepseek-v4-flash"
 	testReviewerModel   = "qwen/qwen3.7-plus"
+	testResearcherModel = "z-ai/glm-5.3"
 )
 
 func validProfile() string {
@@ -37,7 +38,8 @@ func validProfile() string {
   "mcps-on": ["context7"],
   "subagents": {
     "explorer": {"model": "` + testExplorerModel + `", "effort": "low", "enabled": true},
-    "reviewer": {"model": "` + testReviewerModel + `", "effort": "medium", "enabled": true}
+    "reviewer": {"model": "` + testReviewerModel + `", "effort": "medium", "enabled": true},
+    "researcher": {"model": "` + testResearcherModel + `", "effort": "max", "enabled": true}
   }
 }`
 }
@@ -235,6 +237,16 @@ func TestLoad(t *testing.T) {
 				expected: ErrMissingModel,
 			},
 			{
+				name:     "researcher effort",
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"model": "m", "effort": "low"}, "researcher": {"model": "m", "effort": "extreme", "enabled": true}}`),
+				expected: ErrInvalidEffort,
+			},
+			{
+				name:     "researcher model",
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"model": "m", "effort": "low"}, "researcher": {"model": "", "effort": "low", "enabled": true}}`),
+				expected: ErrMissingModel,
+			},
+			{
 				name:     "disabled explorer model",
 				content:  profileWith(`"subagents": {"explorer": {"model": "", "effort": "medium", "enabled": false}}`),
 				expected: ErrMissingModel,
@@ -349,8 +361,9 @@ func TestLoad(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		expected := Subagents{
-			Explorer: Subagent{Model: testExplorerModel, Effort: llm.EffortLow, Enabled: true},
-			Reviewer: Subagent{Model: testReviewerModel, Effort: llm.EffortMedium, Enabled: true},
+			Explorer:   Subagent{Model: testExplorerModel, Effort: llm.EffortLow, Enabled: true},
+			Reviewer:   Subagent{Model: testReviewerModel, Effort: llm.EffortMedium, Enabled: true},
+			Researcher: Subagent{Model: testResearcherModel, Effort: llm.EffortMax, Enabled: true},
 		}
 		assert.Equal(t, expected, result.Subagents)
 	})
@@ -358,7 +371,7 @@ func TestLoad(t *testing.T) {
 	t.Run("leaves the explorer disabled when the profile omits enabled", func(t *testing.T) {
 		// given
 		dir := configDir(t)
-		content := profileWith(`"subagents": {"explorer": {"model": "` + testExplorerModel + `", "effort": "medium"}, "reviewer": {"model": "` + testReviewerModel + `", "effort": "medium"}}`)
+		content := profileWith(`"subagents": {"explorer": {"model": "` + testExplorerModel + `", "effort": "medium"}, "reviewer": {"model": "` + testReviewerModel + `", "effort": "medium"}, "researcher": {"model": "` + testResearcherModel + `", "effort": "medium"}}`)
 		writeProfile(t, dir, "local", content)
 
 		t.Setenv(testKeyEnv, "sk-test")
@@ -395,6 +408,11 @@ func TestLoad(t *testing.T) {
 				name:     "reviewer model",
 				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"effort": "low"}}`),
 				expected: "subagents.reviewer: model is not set",
+			},
+			{
+				name:     "researcher model",
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"model": "m", "effort": "low"}, "researcher": {"effort": "low"}}`),
+				expected: "subagents.researcher: model is not set",
 			},
 		}
 

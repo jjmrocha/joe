@@ -48,6 +48,7 @@ func validate(cfg *Config) error {
 
 	problems = append(problems, validateSubagent("explorer", cfg.Subagents.Explorer)...)
 	problems = append(problems, validateSubagent("reviewer", cfg.Subagents.Reviewer)...)
+	problems = append(problems, validateSubagent("researcher", cfg.Subagents.Researcher)...)
 
 	for _, skillName := range cfg.Skills {
 		if !isBareName(skillName) {

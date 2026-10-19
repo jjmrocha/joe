@@ -26,6 +26,14 @@ lens of a review, one task per lens: name the scope (a diff range or the
 files) and the lens. It returns candidate findings in analyze-code's format.
 `
 
+const researcherParagraph = `
+The researcher answers questions about the world outside this code base:
+library and framework documentation, best practice, "is X true?". It searches
+the web and current library documentation, and you cannot. With the researcher
+on, a step that needs a web search goes to it. Send only what the question
+needs: no secrets, and no private code beyond the lines the question is about.
+`
+
 const subagentsRules = `
 - The task is all it gets. State the goal, the facts and paths that matter,
   and the shape of the answer you want. To check a claim, include the claim
@@ -36,17 +44,21 @@ const subagentsRules = `
 </subagents>
 `
 
-func buildSubagents(withExplorer, withReviewer bool) string {
+func buildSubagents(r Request) string {
 	var builder strings.Builder
 
 	builder.WriteString(subagentsIntro)
 
-	if withExplorer {
+	if r.WithExplorer {
 		builder.WriteString(explorerParagraph)
 	}
 
-	if withReviewer {
+	if r.WithReviewer {
 		builder.WriteString(reviewerParagraph)
+	}
+
+	if r.WithResearcher {
+		builder.WriteString(researcherParagraph)
 	}
 
 	builder.WriteString(subagentsRules)

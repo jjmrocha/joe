@@ -13,12 +13,14 @@ import (
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/subagents/explorer"
+	"github.com/jjmrocha/joe/internal/subagents/researcher"
 	"github.com/jjmrocha/joe/internal/subagents/reviewer"
 )
 
 var (
-	registerExplorer = explorer.Register
-	registerReviewer = reviewer.Register
+	registerExplorer   = explorer.Register
+	registerReviewer   = reviewer.Register
+	registerResearcher = researcher.Register
 )
 
 type Team struct {
@@ -38,7 +40,7 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 	team := &Team{}
 	cfg := r.Config
 
-	if !cfg.Subagents.Explorer.Enabled && !cfg.Subagents.Reviewer.Enabled {
+	if !cfg.Subagents.Explorer.Enabled && !cfg.Subagents.Reviewer.Enabled && !cfg.Subagents.Researcher.Enabled {
 		return team, nil
 	}
 
@@ -70,6 +72,20 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 		}
 
 		team.closers = append(team.closers, closeReviewer)
+	}
+
+	if cfg.Subagents.Researcher.Enabled {
+		closeResearcher, err := registerResearcher(ctx, manager, researcher.Request{
+			LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Researcher),
+			RepoPath:   r.RepoPath,
+			Classifier: r.Classifier,
+		})
+		if err != nil {
+			team.Close()
+			return nil, fmt.Errorf("researcher: %w", err)
+		}
+
+		team.closers = append(team.closers, closeResearcher)
 	}
 
 	subagentTool, err := packs.SubAgentTools(toolBox, manager)

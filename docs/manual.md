@@ -71,16 +71,18 @@ The folder and classifier follow-ups appear only after `yes`. Setup writes `effo
 
 If the clone fails, joe stops with `clone skills: …` and keeps your answers; the next run retries the clone without asking again. Nothing already in the folder is overwritten.
 
-### Optional MCP servers
+### Web research tools
 
-The default profile registers two servers and starts neither. Turn one on with `/mcp on <name>`, or list it in `mcps-on` to start it at launch.
+The researcher subagent starts two servers itself; the main agent gets neither. Setup enables the researcher only when both are installed.
 
 | Server | Provides | Needs |
 |---|---|---|
 | [donsetch](https://github.com/dondai44423/donsetch) | Web search, page fetching, crawling | `npm install -g donsetch` or `brew tap dondai44423/donsetch && brew install donsetch` |
-| [context7](https://github.com/upstash/context7) | Current docs for libraries and frameworks | [Node.js](https://nodejs.org) (runs via `npx`) |
+| [context7](https://github.com/upstash/context7) | Current docs for libraries and frameworks | [Node.js](https://nodejs.org) (runs via `npx`). `CONTEXT7_API_KEY` is optional |
 
-Without them joe works offline; a request needing the web fails when the tool is called.
+With the researcher enabled and either one missing, joe stops at launch with `subagents: researcher: web tools: …` or `library tools: …`. Install it, or set `subagents.researcher.enabled` to `false`; joe then works offline.
+
+Older profiles list both servers under `mcps`. Remove them there, or the main agent keeps its own web tools.
 
 ---
 
@@ -317,10 +319,7 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
     "effort": "max"
   },
   "skills": [],
-  "mcps": {
-    "context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": 60 },
-    "donsetch": { "command": "donsetch", "args": ["mcp", "--supervised"], "timeout": 900 }
-  },
+  "mcps": {},
   "mcps-on": [],
   "classifier": {
     "provider": "openrouter",
@@ -329,7 +328,8 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
   },
   "subagents": {
     "explorer": { "model": "z-ai/glm-5.3-flash", "effort": "medium", "enabled": true },
-    "reviewer": { "model": "z-ai/glm-5.3-flash", "effort": "medium", "enabled": true }
+    "reviewer": { "model": "z-ai/glm-5.3-flash", "effort": "medium", "enabled": true },
+    "researcher": { "model": "z-ai/glm-5.3-flash", "effort": "medium", "enabled": true }
   }
 }
 ```
@@ -352,15 +352,16 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 | `classifier.base-url` | Overrides the provider's endpoint |
 | `classifier.api-key-env` | Name of the variable holding the key. Required |
 | `classifier.model` | Classification model, e.g. `typesafe/jev-1.13` |
-| `subagents` | Required. One entry per subagent: `explorer` and `reviewer` |
+| `subagents` | Required. One entry per subagent: `explorer`, `reviewer` and `researcher` |
 | `subagents.<name>.model` | Model the subagent runs on. Required, even when disabled. It uses the `llm` provider, base URL and key |
 | `subagents.<name>.effort` | `off`, `low`, `medium` or `max`. Setup writes `medium` |
 | `subagents.<name>.enabled` | `true` registers the subagent; `false` or absent leaves it out |
 
-A subagent is a helper agent the main agent hands one task to, through the `subagent` tool; only its final answer comes back. Both are read-only, and each starts its own Serena:
+A subagent is a helper agent the main agent hands one task to, through the `subagent` tool; only its final answer comes back. All three are read-only:
 
-- **explorer** searches the repository and, with `kb-path`, the knowledge base. It answers questions and checks claims.
-- **reviewer** audits a scope through one lens (architecture, quality, performance, security or style) with the matching skill, and returns candidate findings. It does not read the knowledge base.
+- **explorer** searches the repository and, with `kb-path`, the knowledge base. It answers questions and checks claims. It starts its own Serena.
+- **reviewer** audits a scope through one lens (architecture, quality, performance, security or style) with the matching skill, and returns candidate findings. It starts its own Serena and does not read the knowledge base.
+- **researcher** answers questions about the world outside the repository with donsetch and context7, citing URLs. It cannot reach the repository or the knowledge base.
 
 joe validates the whole profile before the session opens and lists every fault at once: unknown provider, effort, instructions or `mcps-on` server; a skill that isn't a bare name; a relative `kb-path`; an empty model; an unset API-key variable. Unknown keys are rejected.
 

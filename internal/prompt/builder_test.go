@@ -216,6 +216,36 @@ func TestBuild(t *testing.T) {
 		assert.Equal(t, 1, strings.Count(result, "<subagents>"))
 	})
 
+	t.Run("describes only the researcher when only the researcher is on", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		request.WithResearcher = true
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "<subagents>")
+		assert.Contains(t, result, "The researcher answers questions about the world outside")
+		assert.NotContains(t, result, "The explorer reads the repository")
+		assert.NotContains(t, result, "The reviewer audits code through one lens")
+	})
+
+	t.Run("describes the explorer, the reviewer and the researcher in that order", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		request.WithExplorer = true
+		request.WithReviewer = true
+		request.WithResearcher = true
+		// when
+		result := Build(request)
+		// then
+		explorer := strings.Index(result, "The explorer reads the repository")
+		reviewer := strings.Index(result, "The reviewer audits code through one lens")
+		researcher := strings.Index(result, "The researcher answers questions about the world outside")
+		assert.Positive(t, explorer)
+		assert.Less(t, explorer, reviewer)
+		assert.Less(t, reviewer, researcher)
+	})
+
 	t.Run("leaves out the subagents block when no subagent is on", func(t *testing.T) {
 		// given
 		request := newRequest(testKBPath, true)

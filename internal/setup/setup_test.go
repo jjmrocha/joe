@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jjmrocha/ai-toolkit/mcp"
-	"github.com/jjmrocha/go-algo/fn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -83,12 +81,6 @@ func unreachableSkills(t *testing.T) {
 	skillsRepo = filepath.Join(t.TempDir(), "missing")
 
 	t.Cleanup(func() { skillsRepo = origin })
-}
-
-func names(configs []mcp.ClientConfig) []string {
-	return fn.Map(configs, func(config mcp.ClientConfig) string {
-		return config.Name
-	})
 }
 
 func TestBuildIfNeeded(t *testing.T) {

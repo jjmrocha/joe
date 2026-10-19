@@ -14,6 +14,7 @@ type Request struct {
 	WithClassifier   bool
 	WithExplorer     bool
 	WithReviewer     bool
+	WithResearcher   bool
 	ToolInstructions []mcp.Instruction
 }
 

@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
@@ -216,7 +217,7 @@ func TestRenderProfile(t *testing.T) {
 		assert.Equal(t, llm.EffortMedium, result.LLM.Effort)
 		assert.Empty(t, result.Skills)
 		assert.Empty(t, result.MCPsOn)
-		assert.ElementsMatch(t, []string{"context7", "donsetch"}, names(result.MCPClients()))
+		assert.Empty(t, result.MCPClients())
 	})
 
 	t.Run("leaves out what the answers do not set", func(t *testing.T) {
@@ -276,6 +277,36 @@ func TestRenderProfile(t *testing.T) {
 		assert.Equal(t, expected, result.Subagents.Explorer)
 	})
 
+	t.Run("enables the researcher on the main model and medium effort when its tools were found", func(t *testing.T) {
+		// given
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, researchTools: true}
+		expected := config.Subagent{Model: testOllamaModel, Effort: llm.EffortMedium, Enabled: true}
+		// when
+		content, err := renderProfile(given)
+		// then
+		require.NoError(t, err)
+
+		var result config.Config
+
+		require.NoError(t, json.Unmarshal(content, &result))
+		assert.Equal(t, expected, result.Subagents.Researcher)
+	})
+
+	t.Run("writes the researcher disabled when its tools were not found", func(t *testing.T) {
+		// given
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel}
+		expected := config.Subagent{Model: testOllamaModel, Effort: llm.EffortMedium, Enabled: false}
+		// when
+		content, err := renderProfile(given)
+		// then
+		require.NoError(t, err)
+
+		var result config.Config
+
+		require.NoError(t, json.Unmarshal(content, &result))
+		assert.Equal(t, expected, result.Subagents.Researcher)
+	})
+
 	t.Run("enables the reviewer on the main model and medium effort", func(t *testing.T) {
 		// given
 		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel}
@@ -290,6 +321,21 @@ func TestRenderProfile(t *testing.T) {
 		require.NoError(t, json.Unmarshal(content, &result))
 		assert.Equal(t, expected, result.Subagents.Reviewer)
 	})
+}
+
+func fakeLookPath(t *testing.T, installed ...string) {
+	t.Helper()
+
+	previous := lookPath
+	t.Cleanup(func() { lookPath = previous })
+
+	lookPath = func(file string) (string, error) {
+		if slices.Contains(installed, file) {
+			return "/usr/local/bin/" + file, nil
+		}
+
+		return "", exec.ErrNotFound
+	}
 }
 
 func TestWriteProfile(t *testing.T) {
@@ -310,8 +356,43 @@ func TestWriteProfile(t *testing.T) {
 		assert.Equal(t, llm.ProviderOpenRouter, result.LLMConfig().Provider)
 		assert.Equal(t, "sk-test", result.LLMConfig().APIKey)
 		assert.Equal(t, instructions.KindClaude, result.Instructions)
-		assert.Equal(t, 60*time.Second, result.MCPClients()[0].ToolCallTimeout)
 		assert.Equal(t, testClassifierModel, result.ClassifierConfig().Model)
+	})
+
+	t.Run("enables the researcher when donsetch and npx are installed", func(t *testing.T) {
+		// given
+		t.Setenv(testKeyEnv, "sk-test")
+		fakeLookPath(t, "donsetch", "npx")
+
+		dir := configDir(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
+		// when
+		err := writeProfile()
+		// then
+		require.NoError(t, err)
+
+		result, err := config.Load("default")
+		require.NoError(t, err)
+		assert.True(t, result.Subagents.Researcher.Enabled)
+	})
+
+	t.Run("disables the researcher when donsetch is missing", func(t *testing.T) {
+		// given
+		t.Setenv(testKeyEnv, "sk-test")
+		fakeLookPath(t, "npx")
+
+		dir := configDir(t)
+		require.NoError(t, os.MkdirAll(dir, 0o750))
+		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
+		// when
+		err := writeProfile()
+		// then
+		require.NoError(t, err)
+
+		result, err := config.Load("default")
+		require.NoError(t, err)
+		assert.False(t, result.Subagents.Researcher.Enabled)
 	})
 
 	t.Run("refuses to overwrite a profile", func(t *testing.T) {
