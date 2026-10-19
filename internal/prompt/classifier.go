@@ -15,8 +15,9 @@ classifier. At each checkpoint below, calling it is required.
 - What a checkpoint names as input — source, a contract, an evidence line —
   goes in verbatim, labels included: copied from what you read in this
   session, never described, summarised or rebuilt from memory — read all of
-  it before you send it. Leave out test results, lint status and your own
-  verdict: the classifier judges the artifact, not your opinion of it.
+  it before you send it. Leave out test results, lint status, verification
+  verdicts and your own verdict: the classifier judges the artifact, not
+  your opinion of it.
 - Instructions, labels and options go in as the checkpoint gives them and
   name the outcomes neutrally. Never write your hypothesis, the item or its
   context into one — that belongs in input; otherwise the answer measures
@@ -80,9 +81,16 @@ Checkpoints:
    For each finding that survived step 7's verification:
    decision_choice
      instructions: "What is the severity of this finding?"
-     input: the finding's evidence line, its impact, and where the code
-     runs — its role and exposure ("request handler, public endpoint",
-     "test helper").
+     input: exactly three labelled blocks:
+       EVIDENCE:
+       <the lines the finding is about, verbatim, each with its path:line>
+
+       IMPACT:
+       <what goes wrong, and when>
+
+       WHERE IT RUNS:
+       <its role and exposure: "request handler, public endpoint",
+       "test helper">
      options: Critical, High, Medium, Low — each described with its row of
      the skill's Severity Scale table, copied word for word, examples
      included.

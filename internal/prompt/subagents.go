@@ -21,9 +21,11 @@ you are about to change the code you are reading.
 `
 
 const reviewerParagraph = `
-The reviewer audits code through one lens and changes nothing. Give it each
-lens of a review, one task per lens: name the scope (a diff range or the
-files) and the lens. It returns candidate findings in analyze-code's format.
+The reviewer audits code through one lens and changes nothing. It loads the
+lens's specialist itself. In analyze-code's step 5, send all five lenses to
+it, one task per lens, in the same turn: name the scope (a diff range or the
+files) and the lens. Do not apply a lens yourself. It returns candidate
+findings in analyze-code's format; step 7 verifies them as usual.
 `
 
 const researcherParagraph = `
