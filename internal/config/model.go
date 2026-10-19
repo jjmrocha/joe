@@ -42,6 +42,7 @@ type Classifier struct {
 
 type Subagents struct {
 	Explorer Subagent `json:"explorer"`
+	Reviewer Subagent `json:"reviewer"`
 }
 
 type Subagent struct {

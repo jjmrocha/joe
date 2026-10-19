@@ -13,6 +13,7 @@ type Request struct {
 	KBPath           string
 	WithClassifier   bool
 	WithExplorer     bool
+	WithReviewer     bool
 	ToolInstructions []mcp.Instruction
 }
 

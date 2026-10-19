@@ -164,6 +164,11 @@ func renderProfile(given answers) ([]byte, error) {
 				Effort:  llm.EffortMedium,
 				Enabled: true,
 			},
+			Reviewer: config.Subagent{
+				Model:   given.model,
+				Effort:  llm.EffortMedium,
+				Enabled: true,
+			},
 		},
 	}
 

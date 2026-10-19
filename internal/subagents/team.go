@@ -13,9 +13,13 @@ import (
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/subagents/explorer"
+	"github.com/jjmrocha/joe/internal/subagents/reviewer"
 )
 
-var registerExplorer = explorer.Register
+var (
+	registerExplorer = explorer.Register
+	registerReviewer = reviewer.Register
+)
 
 type Team struct {
 	manager      *subagent.Manager
@@ -34,23 +38,39 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 	team := &Team{}
 	cfg := r.Config
 
-	if !cfg.Subagents.Explorer.Enabled {
+	if !cfg.Subagents.Explorer.Enabled && !cfg.Subagents.Reviewer.Enabled {
 		return team, nil
 	}
 
 	manager := subagent.NewManager()
 
-	closeExplorer, err := registerExplorer(ctx, manager, explorer.Request{
-		LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Explorer),
-		RepoPath:   r.RepoPath,
-		KBPath:     cfg.KBPath,
-		Classifier: r.Classifier,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("explorer: %w", err)
+	if cfg.Subagents.Explorer.Enabled {
+		closeExplorer, err := registerExplorer(ctx, manager, explorer.Request{
+			LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Explorer),
+			RepoPath:   r.RepoPath,
+			KBPath:     cfg.KBPath,
+			Classifier: r.Classifier,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("explorer: %w", err)
+		}
+
+		team.closers = append(team.closers, closeExplorer)
 	}
 
-	team.closers = append(team.closers, closeExplorer)
+	if cfg.Subagents.Reviewer.Enabled {
+		closeReviewer, err := registerReviewer(ctx, manager, reviewer.Request{
+			LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Reviewer),
+			RepoPath:   r.RepoPath,
+			Classifier: r.Classifier,
+		})
+		if err != nil {
+			team.Close()
+			return nil, fmt.Errorf("reviewer: %w", err)
+		}
+
+		team.closers = append(team.closers, closeReviewer)
+	}
 
 	subagentTool, err := packs.SubAgentTools(toolBox, manager)
 	if err != nil {

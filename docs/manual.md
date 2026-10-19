@@ -326,6 +326,10 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
     "provider": "openrouter",
     "api-key-env": "OPEN_ROUTER_KEY",
     "model": "typesafe/jev-1.13"
+  },
+  "subagents": {
+    "explorer": { "model": "z-ai/glm-5.3-flash", "effort": "medium", "enabled": true },
+    "reviewer": { "model": "z-ai/glm-5.3-flash", "effort": "medium", "enabled": true }
   }
 }
 ```
@@ -348,6 +352,15 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 | `classifier.base-url` | Overrides the provider's endpoint |
 | `classifier.api-key-env` | Name of the variable holding the key. Required |
 | `classifier.model` | Classification model, e.g. `typesafe/jev-1.13` |
+| `subagents` | Required. One entry per subagent: `explorer` and `reviewer` |
+| `subagents.<name>.model` | Model the subagent runs on. Required, even when disabled. It uses the `llm` provider, base URL and key |
+| `subagents.<name>.effort` | `off`, `low`, `medium` or `max`. Setup writes `medium` |
+| `subagents.<name>.enabled` | `true` registers the subagent; `false` or absent leaves it out |
+
+A subagent is a helper agent the main agent hands one task to, through the `subagent` tool; only its final answer comes back. Both are read-only, and each starts its own Serena:
+
+- **explorer** searches the repository and, with `kb-path`, the knowledge base. It answers questions and checks claims.
+- **reviewer** audits a scope through one lens (architecture, quality, performance, security or style) with the matching skill, and returns candidate findings. It does not read the knowledge base.
 
 joe validates the whole profile before the session opens and lists every fault at once: unknown provider, effort, instructions or `mcps-on` server; a skill that isn't a bare name; a relative `kb-path`; an empty model; an unset API-key variable. Unknown keys are rejected.
 

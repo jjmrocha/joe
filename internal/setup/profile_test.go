@@ -275,6 +275,21 @@ func TestRenderProfile(t *testing.T) {
 		require.NoError(t, json.Unmarshal(content, &result))
 		assert.Equal(t, expected, result.Subagents.Explorer)
 	})
+
+	t.Run("enables the reviewer on the main model and medium effort", func(t *testing.T) {
+		// given
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel}
+		expected := config.Subagent{Model: testOllamaModel, Effort: llm.EffortMedium, Enabled: true}
+		// when
+		content, err := renderProfile(given)
+		// then
+		require.NoError(t, err)
+
+		var result config.Config
+
+		require.NoError(t, json.Unmarshal(content, &result))
+		assert.Equal(t, expected, result.Subagents.Reviewer)
+	})
 }
 
 func TestWriteProfile(t *testing.T) {

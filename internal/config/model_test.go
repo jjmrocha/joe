@@ -18,7 +18,7 @@ func profileWith(overrides ...string) string {
 		"skills":       `[]`,
 		"mcps":         `{}`,
 		"mcps-on":      `[]`,
-		"subagents":    `{"explorer": {"model": "` + testExplorerModel + `", "effort": "low", "enabled": true}}`,
+		"subagents":    `{"explorer": {"model": "` + testExplorerModel + `", "effort": "low", "enabled": true}, "reviewer": {"model": "` + testReviewerModel + `", "effort": "medium", "enabled": true}}`,
 	}
 
 	for _, override := range overrides {
