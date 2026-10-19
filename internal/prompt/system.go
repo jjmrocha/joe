@@ -28,6 +28,10 @@ func buildSystemInstructions(r Request) string {
 	builder.WriteString(buildSkills(r))
 	builder.WriteString(buildKnowledgeBase(r.KBPath))
 
+	if r.WithExplorer {
+		builder.WriteString(buildSubagents())
+	}
+
 	if r.WithClassifier {
 		builder.WriteString(buildClassifier())
 	}

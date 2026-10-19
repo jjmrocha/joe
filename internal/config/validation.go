@@ -46,6 +46,8 @@ func validate(cfg *Config) error {
 		problems = append(problems, validateClassifier(cfg.Classifier)...)
 	}
 
+	problems = append(problems, validateSubagent("explorer", cfg.Subagents.Explorer)...)
+
 	for _, skillName := range cfg.Skills {
 		if !isBareName(skillName) {
 			problems = append(problems, fmt.Errorf("%w: %s", ErrInvalidSkillName, skillName))
@@ -82,6 +84,20 @@ func validateLLM(cfg LLM) []error {
 
 	if cfg.APIKeyEnv == "" || os.Getenv(cfg.APIKeyEnv) == "" {
 		problems = append(problems, fmt.Errorf("%w: %s", ErrMissingAPIKey, cfg.APIKeyEnv))
+	}
+
+	return problems
+}
+
+func validateSubagent(name string, cfg Subagent) []error {
+	var problems []error
+
+	if !efforts.Contains(cfg.Effort) {
+		problems = append(problems, fmt.Errorf("subagents.%s: %w: %s", name, ErrInvalidEffort, cfg.Effort))
+	}
+
+	if cfg.Model == "" {
+		problems = append(problems, fmt.Errorf("subagents.%s: %w", name, ErrMissingModel))
 	}
 
 	return problems

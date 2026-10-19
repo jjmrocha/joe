@@ -18,6 +18,7 @@ func profileWith(overrides ...string) string {
 		"skills":       `[]`,
 		"mcps":         `{}`,
 		"mcps-on":      `[]`,
+		"subagents":    `{"explorer": {"model": "` + testExplorerModel + `", "effort": "low", "enabled": true}}`,
 	}
 
 	for _, override := range overrides {
@@ -91,6 +92,24 @@ func TestClassifierConfig(t *testing.T) {
 		result := config.ClassifierConfig()
 		// then
 		assert.Equal(t, decision.Config{}, result)
+	})
+}
+
+func TestSubagentLLMConfig(t *testing.T) {
+	t.Run("takes the main model settings with the subagent's model and effort", func(t *testing.T) {
+		// given
+		config := mustLoad(t, validProfile())
+		expected := llm.Config{
+			Provider: llm.ProviderOpenRouter,
+			APIKey:   "sk-test",
+			Model:    testExplorerModel,
+			Models:   []string{testModel, "deepseek/deepseek-v4-pro"},
+			Effort:   llm.EffortLow,
+		}
+		// when
+		result := config.SubagentLLMConfig(config.Subagents.Explorer)
+		// then
+		assert.Equal(t, expected, result)
 	})
 }
 

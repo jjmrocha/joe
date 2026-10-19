@@ -17,6 +17,8 @@ import (
 	"github.com/jjmrocha/joe/internal/repo"
 	"github.com/jjmrocha/joe/internal/session"
 	"github.com/jjmrocha/joe/internal/skills"
+	"github.com/jjmrocha/joe/internal/subagents"
+	"github.com/jjmrocha/joe/internal/toolpacks"
 )
 
 func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
@@ -90,33 +92,45 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	startMCPs(ctx, mcpManager, cfg.MCPsOn)
 
 	// Register tools
-	var toolPacks packSet
+	var toolPacks toolpacks.Set
 
-	defer toolPacks.close()
+	defer toolPacks.Close()
 
-	if err = toolPacks.add(packs.CodingTools(ctx, toolBox, repoPath)); err != nil {
+	if err = toolPacks.Add(packs.CodingTools(ctx, toolBox, repoPath, false)); err != nil {
 		return fmt.Errorf("coding tools: %w", err)
 	}
 
-	if err = toolPacks.add(packs.DateTools(toolBox)); err != nil {
+	if err = toolPacks.Add(packs.DateTools(toolBox)); err != nil {
 		return fmt.Errorf("date tools: %w", err)
 	}
 
-	if err = toolPacks.add(packs.ShellTools(toolBox)); err != nil {
+	if err = toolPacks.Add(packs.ShellTools(toolBox)); err != nil {
 		return fmt.Errorf("shell tools: %w", err)
 	}
 
 	if cfg.KBPath != "" {
-		if err = toolPacks.add(packs.FileTools(toolBox, cfg.KBPath)); err != nil {
+		if err = toolPacks.Add(packs.FileTools(toolBox, cfg.KBPath, false)); err != nil {
 			return fmt.Errorf("knowledge-base tools: %w", err)
 		}
 	}
 
 	if classifier != nil {
-		if err = toolPacks.add(packs.DecisionTools(toolBox, classifier)); err != nil {
+		if err = toolPacks.Add(packs.DecisionTools(toolBox, classifier)); err != nil {
 			return fmt.Errorf("decision tools: %w", err)
 		}
 	}
+
+	// Start subagents
+	team, err := subagents.Start(ctx, toolBox, subagents.Request{
+		Config:     cfg,
+		RepoPath:   repoPath,
+		Classifier: classifier,
+	})
+	if err != nil {
+		return fmt.Errorf("subagents: %w", err)
+	}
+
+	defer team.Close()
 
 	// Initialize the agent
 	codingAgent, err := agent.New(agent.Config{}, llmClient)
@@ -134,6 +148,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 		skills:     skillCollection,
 		agent:      codingAgent,
 	})
+	options = append(options, team.ChatOption())
 
 	chatAgent := chat.New("JOE", codingAgent, options...)
 
@@ -143,7 +158,8 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 		UserInstructions: instructionFiles,
 		KBPath:           cfg.KBPath,
 		WithClassifier:   classifier != nil,
-		ToolInstructions: toolInstructions(ctx, toolPacks, mcpManager),
+		WithExplorer:     cfg.Subagents.Explorer.Enabled,
+		ToolInstructions: toolInstructions(ctx, &toolPacks, mcpManager),
 	})
 
 	// Set session

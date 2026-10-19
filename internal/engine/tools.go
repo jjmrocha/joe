@@ -4,17 +4,9 @@ import (
 	"context"
 
 	"github.com/jjmrocha/ai-toolkit/mcp"
-	"github.com/jjmrocha/ai-toolkit/packs"
+	"github.com/jjmrocha/joe/internal/toolpacks"
 )
 
-func toolInstructions(ctx context.Context, toolPacks []packs.ToolPack, mcpManager *mcp.Manager) []mcp.Instruction {
-	instructions := mcpManager.Instructions()
-
-	for _, pack := range toolPacks {
-		if instruction := pack.Instructions(ctx); instruction != nil {
-			instructions = append(instructions, *instruction)
-		}
-	}
-
-	return instructions
+func toolInstructions(ctx context.Context, toolPacks *toolpacks.Set, mcpManager *mcp.Manager) []mcp.Instruction {
+	return append(mcpManager.Instructions(), toolPacks.Instructions(ctx)...)
 }

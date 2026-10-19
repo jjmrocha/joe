@@ -102,3 +102,32 @@ func TestLoad(t *testing.T) {
 		assert.Contains(t, err.Error(), "brainstorm")
 	})
 }
+
+func TestLoadBuiltIn(t *testing.T) {
+	t.Run("loads only the named skills", func(t *testing.T) {
+		// given
+		configHome(t)
+
+		codingSkillsDir, err := config.CodingSkillsDir()
+		require.NoError(t, err)
+
+		for _, name := range skillNames {
+			writeSkill(t, codingSkillsDir, name)
+		}
+		// when
+		result, err := LoadBuiltIn(KnowledgeBase)
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, []string{KnowledgeBase}, result.Skills())
+	})
+
+	t.Run("reports a skill that is not installed", func(t *testing.T) {
+		// given
+		configHome(t)
+		// when
+		_, err := LoadBuiltIn(KnowledgeBase)
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), KnowledgeBase)
+	})
+}

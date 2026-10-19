@@ -176,6 +176,37 @@ func TestBuild(t *testing.T) {
 		assert.Contains(t, result, "<tools>\n</tools>\n")
 	})
 
+	t.Run("places the subagents block between the knowledge base and the classifier when the explorer is on", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, true)
+		request.WithExplorer = true
+		// when
+		result := Build(request)
+		// then
+		subagentsStart := strings.Index(result, "<subagents>")
+		assert.Positive(t, subagentsStart)
+		assert.Less(t, strings.Index(result, "</knowledge-base>"), subagentsStart)
+		assert.Less(t, strings.Index(result, "</subagents>"), strings.Index(result, "<classifier>"))
+	})
+
+	t.Run("leaves out the subagents block when the explorer is off", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, true)
+		// when
+		result := Build(request)
+		// then
+		assert.NotContains(t, result, "<subagents>")
+	})
+
+	t.Run("does not send the model to activate a Serena project", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, true)
+		// when
+		result := Build(request)
+		// then
+		assert.NotContains(t, result, "serena__activate_project")
+	})
+
 	t.Run("does not send the model to fetch Serena's manual", func(t *testing.T) {
 		// given
 		request := newRequest(testKBPath, true)

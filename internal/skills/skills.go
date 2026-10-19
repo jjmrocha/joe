@@ -72,3 +72,22 @@ func Load(extra []string) (*toolkitskills.Collection, error) {
 
 	return skillCollection, nil
 }
+
+func LoadBuiltIn(names ...string) (*toolkitskills.Collection, error) {
+	skillCollection := toolkitskills.NewCollection()
+
+	codingSkillsDir, err := config.CodingSkillsDir()
+	if err != nil {
+		return nil, err
+	}
+
+	problems := fn.Map(names, func(skillName string) error {
+		return skillCollection.Add(filepath.Join(codingSkillsDir, skillName))
+	})
+
+	if err := errors.Join(problems...); err != nil {
+		return nil, err
+	}
+
+	return skillCollection, nil
+}

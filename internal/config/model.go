@@ -21,6 +21,7 @@ type Config struct {
 	MCPs         map[string]MCP    `json:"mcps"`
 	MCPsOn       []string          `json:"mcps-on"`
 	Classifier   *Classifier       `json:"classifier,omitempty"`
+	Subagents    Subagents         `json:"subagents"`
 }
 
 type LLM struct {
@@ -39,6 +40,16 @@ type Classifier struct {
 	Model     string            `json:"model"`
 }
 
+type Subagents struct {
+	Explorer Subagent `json:"explorer"`
+}
+
+type Subagent struct {
+	Model   string     `json:"model"`
+	Effort  llm.Effort `json:"effort"`
+	Enabled bool       `json:"enabled"`
+}
+
 type MCP struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
@@ -55,6 +66,14 @@ func (c *Config) LLMConfig() llm.Config {
 		Models:   c.LLM.Models,
 		Effort:   c.LLM.Effort,
 	}
+}
+
+func (c *Config) SubagentLLMConfig(s Subagent) llm.Config {
+	llmConfig := c.LLMConfig()
+	llmConfig.Model = s.Model
+	llmConfig.Effort = s.Effort
+
+	return llmConfig
 }
 
 func (c *Config) ClassifierConfig() decision.Config {

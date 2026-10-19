@@ -12,6 +12,7 @@ type Request struct {
 	RepoPath         string
 	KBPath           string
 	WithClassifier   bool
+	WithExplorer     bool
 	ToolInstructions []mcp.Instruction
 }
 

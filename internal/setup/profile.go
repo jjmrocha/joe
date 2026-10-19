@@ -158,6 +158,13 @@ func renderProfile(given answers) ([]byte, error) {
 			},
 		},
 		MCPsOn: []string{},
+		Subagents: config.Subagents{
+			Explorer: config.Subagent{
+				Model:   given.model,
+				Effort:  llm.EffortMedium,
+				Enabled: true,
+			},
+		},
 	}
 
 	if given.classifierModel != "" {

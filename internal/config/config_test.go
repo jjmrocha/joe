@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,7 @@ const (
 	testModel  = "z-ai/glm-5.3-flash"
 
 	testClassifierModel = "typesafe/jev-1.13"
+	testExplorerModel   = "deepseek/deepseek-v4-flash"
 )
 
 func validProfile() string {
@@ -31,7 +33,10 @@ func validProfile() string {
   "mcps": {
     "context7": {"command": "npx", "args": ["-y", "@upstash/context7-mcp"], "timeout": 60}
   },
-  "mcps-on": ["context7"]
+  "mcps-on": ["context7"],
+  "subagents": {
+    "explorer": {"model": "` + testExplorerModel + `", "effort": "low", "enabled": true}
+  }
 }`
 }
 
@@ -207,6 +212,21 @@ func TestLoad(t *testing.T) {
 				content:  profileWith(`"classifier": {"provider": "openrouter", "model": "` + testClassifierModel + `"}`),
 				expected: ErrMissingAPIKey,
 			},
+			{
+				name:     "explorer effort",
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "extreme", "enabled": true}}`),
+				expected: ErrInvalidEffort,
+			},
+			{
+				name:     "explorer model",
+				content:  profileWith(`"subagents": {"explorer": {"model": "", "effort": "medium", "enabled": true}}`),
+				expected: ErrMissingModel,
+			},
+			{
+				name:     "disabled explorer model",
+				content:  profileWith(`"subagents": {"explorer": {"model": "", "effort": "medium", "enabled": false}}`),
+				expected: ErrMissingModel,
+			},
 		}
 
 		for _, testCase := range testCases {
@@ -304,5 +324,73 @@ func TestLoad(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Nil(t, result.Classifier)
+	})
+
+	t.Run("carries the subagents section", func(t *testing.T) {
+		// given
+		t.Setenv(testKeyEnv, "sk-test")
+
+		dir := configDir(t)
+		writeProfile(t, dir, "local", validProfile())
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		expected := Subagent{Model: testExplorerModel, Effort: llm.EffortLow, Enabled: true}
+		assert.Equal(t, expected, result.Subagents.Explorer)
+	})
+
+	t.Run("leaves the explorer disabled when the profile omits enabled", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		content := profileWith(`"subagents": {"explorer": {"model": "` + testExplorerModel + `", "effort": "medium"}}`)
+		writeProfile(t, dir, "local", content)
+
+		t.Setenv(testKeyEnv, "sk-test")
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		assert.False(t, result.Subagents.Explorer.Enabled)
+	})
+
+	t.Run("names the subagent in its validation errors", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			content  string
+			expected string
+		}{
+			{
+				name: "missing section",
+				content: `{
+  "instructions": "claude",
+  "llm": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testModel + `", "effort": "medium"},
+  "skills": [],
+  "mcps": {},
+  "mcps-on": []
+}`,
+				expected: "subagents.explorer: model is not set",
+			},
+			{
+				name:     "effort",
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "extreme", "enabled": true}}`),
+				expected: "subagents.explorer: effort is not off, low, medium or max: extreme",
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				// given
+				t.Setenv(testKeyEnv, "sk-test")
+
+				dir := configDir(t)
+				writeProfile(t, dir, "local", testCase.content)
+				// when
+				_, err := Load("local")
+				// then
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), testCase.expected)
+			})
+		}
 	})
 }
