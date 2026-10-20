@@ -4,6 +4,8 @@ const findingsBlock = `
 <findings>
 - Report only what you can point to: every finding quotes the line it is about,
   with its path:line, the line taken from a tool result in this task.
+- Your findings are candidates. Do not verify them or say how they were
+  verified: the main agent sends each one to its own independent verifier.
 - Rate severity with analyze-code's Severity Scale table, examples included.
   Do not inflate it.
 - Write each finding as:

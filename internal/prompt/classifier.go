@@ -81,7 +81,7 @@ Checkpoints:
    For each finding that survived step 7's verification:
    decision_choice
      instructions: "What is the severity of this finding?"
-     input: exactly three labelled blocks:
+     input: exactly four labelled blocks:
        EVIDENCE:
        <the lines the finding is about, verbatim, each with its path:line>
 
@@ -91,6 +91,10 @@ Checkpoints:
        WHERE IT RUNS:
        <its role and exposure: "request handler, public endpoint",
        "test helper">
+
+       DOCUMENTED INTENT:
+       <the plan, ADR or nolint line that accepts this behaviour,
+       verbatim with its source, or "none">
      options: Critical, High, Medium, Low — each described with its row of
      the skill's Severity Scale table, copied word for word, examples
      included.
