@@ -24,7 +24,6 @@ func buildSystemInstructions(r Request) string {
 	}
 
 	builder.WriteString(buildTools(r))
-	builder.WriteString(buildSerena())
 	builder.WriteString(buildSkills(r))
 	builder.WriteString(buildKnowledgeBase(r.KBPath))
 

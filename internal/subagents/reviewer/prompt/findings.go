@@ -3,9 +3,7 @@ package prompt
 const findingsBlock = `
 <findings>
 - Report only what you can point to: every finding quotes the line it is about,
-  with its path:line. Serena's tools report 0-based lines: add 1.
-- read_file returns text without line numbers. Never count lines in it. Take
-  every line you cite from a search_for_pattern or find_symbol result.
+  with its path:line, the line taken from a tool result in this task.
 - Rate severity with analyze-code's Severity Scale table, examples included.
   Do not inflate it.
 - Write each finding as:
