@@ -115,8 +115,10 @@ through OpenRouter. Its verdict is binding unless a named fact contradicts it.
 - In a review: how severe is each finding?
 - Before a new interface is built: how deep is it?
 
-The same model screens tool calls before they run: files change only in your repository and
-knowledge base, nothing remote changes, no secret leaves the machine.
+The same model checks each tool call against three rules before it runs: files change only
+in your repository and knowledge base, nothing remote changes, and no secret leaves the
+machine. It is a second line of defence, not a sandbox: if the classifier fails or is slow,
+the call runs.
 
 ### Code by symbol, not by file
 

@@ -236,7 +236,7 @@ joe gets three tools backed by the classifier: `decision_yes_no`, `decision_choi
 | When | Call | Asks |
 |---|---|---|
 | `test-driven-development` REFACTOR, per function changed in GREEN | `decision_yes_no`, repeated | Would a senior engineer refactor this function further? |
-| `analyze-code`, per surviving finding | `decision_choice` | Severity, from the skill's scale |
+| `analyze-code`, per surviving finding | `decision_choice` | Severity, from the skill's scale. The classifier also gets the plan, ADR or `nolint` line that accepts the behaviour, when one exists |
 | `designing-interfaces`, after the contract | `decision_choice`, repeated | Is this interface design sound? |
 
 joe overrides a verdict only on a named contradicting fact, and reports overrides and failures. Each call is billed.
@@ -289,6 +289,8 @@ joe quotes your instruction files into its prompt verbatim, least specific first
 | `agents` | `~/.config/joe/AGENTS.md`, `<repo>/AGENTS.md`, `<repo>/AGENTS.local.md` |
 
 A later file wins where two disagree. joe's own instructions win over all of them: your files can add rules or narrow joe's, never override or relax them.
+
+The reviewer subagent gets the same files and uses their rules as review criteria. Rules about how to talk to you, or about tools it doesn't have, don't apply to it. The explorer and researcher don't get your files.
 
 Imports aren't followed: `@RTK.md` is passed through as text.
 
@@ -360,7 +362,7 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 A subagent is a helper agent the main agent hands one task to, through the `subagent` tool; only its final answer comes back. All three are read-only:
 
 - **explorer** searches the repository and, with `kb-path`, the knowledge base. It answers questions and checks claims. It starts its own Serena.
-- **reviewer** audits a scope through one lens (architecture, quality, performance, security or style) with the matching skill, and returns candidate findings. It starts its own Serena and does not read the knowledge base.
+- **reviewer** audits a scope through one lens (architecture, quality, performance, security or style) with the matching skill, and returns candidate findings. It also judges the code against your instruction files: code that breaks one of their rules is a finding, and code that follows one is not. It starts its own Serena and does not read the knowledge base.
 - **researcher** answers questions about the world outside the repository with donsetch and context7, citing URLs. It cannot reach the repository or the knowledge base.
 
 joe validates the whole profile before the session opens and lists every fault at once: unknown provider, effort, instructions or `mcps-on` server; a skill that isn't a bare name; a relative `kb-path`; an empty model; an unset API-key variable. Unknown keys are rejected.
