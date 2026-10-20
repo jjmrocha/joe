@@ -122,9 +122,10 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 
 	// Start subagents
 	team, err := subagents.Start(ctx, toolBox, subagents.Request{
-		Config:     cfg,
-		RepoPath:   repoPath,
-		Classifier: classifier,
+		Config:           cfg,
+		RepoPath:         repoPath,
+		UserInstructions: instructionFiles,
+		Classifier:       classifier,
 	})
 	if err != nil {
 		return fmt.Errorf("subagents: %w", err)

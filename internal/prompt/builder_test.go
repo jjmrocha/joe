@@ -201,6 +201,60 @@ func TestBuild(t *testing.T) {
 		assert.NotContains(t, result, "The explorer reads the repository")
 	})
 
+	t.Run("tells the main agent how to send analyze-code's verification to the explorer", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		request.WithExplorer = true
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "In analyze-code's step 7, send each candidate to its own explorer task")
+		assert.Contains(t, result, `"Plausible by default"`)
+		assert.Contains(t, result, "Leave out why the\nfinder believed it.")
+	})
+
+	t.Run("leaves out the verification paragraph when the explorer is off", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		request.WithReviewer = true
+		// when
+		result := Build(request)
+		// then
+		assert.NotContains(t, result, "In analyze-code's step 7")
+	})
+
+	t.Run("asks for fewer things said, in complete sentences", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "- Be brief: say fewer things, not the same things in fewer words. Write\n  complete sentences. Lead with the answer or the code.")
+		assert.NotContains(t, result, "Be terse")
+	})
+
+	t.Run("tells the main agent to give the researcher a dependency's version", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		request.WithResearcher = true
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "For a question about a dependency, include its version from the module file.")
+	})
+
+	t.Run("tells the main agent to paste the diff because the reviewer cannot run git", func(t *testing.T) {
+		// given
+		request := newRequest(testKBPath, false)
+		request.WithReviewer = true
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "paste its hunks")
+		assert.Contains(t, result, "the reviewer cannot run git")
+		assert.NotContains(t, result, "a diff range")
+	})
+
 	t.Run("describes the explorer before the reviewer when both are on", func(t *testing.T) {
 		// given
 		request := newRequest(testKBPath, false)

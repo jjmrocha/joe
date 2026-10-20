@@ -18,13 +18,20 @@ Give it the work that reads much more than it keeps:
 - checking one claim from a fresh start, such as a finding to verify.
 Read the code yourself when you already know the file or the symbol, or when
 you are about to change the code you are reading.
+
+In analyze-code's step 7, send each candidate to its own explorer task, all in
+the same turn. A task holds the claim, the reference step 7 names for it, and
+the three verdicts with step 7's definitions and its "Plausible by default"
+and "No reference, no verdict" rules, copied word for word. Leave out why the
+finder believed it.
 `
 
 const reviewerParagraph = `
 The reviewer audits code through one lens and changes nothing. It loads the
 lens's specialist itself. In analyze-code's step 5, send all five lenses to
-it, one task per lens, in the same turn: name the scope (a diff range or the
-files) and the lens. Do not apply a lens yourself. It returns candidate
+it, one task per lens, in the same turn: name the lens and the files in scope,
+and for a diff, paste its hunks — the reviewer cannot run git. Do not apply a
+lens yourself. It returns candidate
 findings in analyze-code's format; step 7 verifies them as usual.
 `
 
@@ -34,6 +41,7 @@ library and framework documentation, best practice, "is X true?". It searches
 the web and current library documentation, and you cannot. With the researcher
 on, a step that needs a web search goes to it. Send only what the question
 needs: no secrets, and no private code beyond the lines the question is about.
+For a question about a dependency, include its version from the module file.
 `
 
 const subagentsRules = `

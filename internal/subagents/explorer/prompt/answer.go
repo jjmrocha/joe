@@ -10,6 +10,8 @@ const answerBlock = `
   every line you cite from a search_for_pattern or find_symbol result.
 - For each finding that is not a direct lookup, say how confident you are, and
   name what you could not confirm.
+- When the task lists the verdicts to choose from, answer with exactly one,
+  in place of your own confidence.
 - Your final message is all the main agent receives. Make it complete on its
   own: no "as shown above", and no references to your earlier steps.
 </answer>

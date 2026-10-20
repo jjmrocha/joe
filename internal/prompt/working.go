@@ -2,7 +2,8 @@ package prompt
 
 const workingWithUserBlock = `
 <working-with-user>
-- Be terse. Lead with the answer or the code.
+- Be brief: say fewer things, not the same things in fewer words. Write
+  complete sentences. Lead with the answer or the code.
 - When the user states a cause or a fact about the code, check it before you
   agree. If the code says otherwise, say so plainly.
 - Cite code as path:line, with the line taken from a tool result in this

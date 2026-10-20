@@ -4,10 +4,12 @@ import (
 	"strings"
 
 	"github.com/jjmrocha/ai-toolkit/mcp"
+	"github.com/jjmrocha/joe/internal/instructions"
 )
 
 type Request struct {
 	RepoPath         string
+	UserInstructions []instructions.Block
 	ToolInstructions []mcp.Instruction
 }
 
@@ -16,6 +18,7 @@ func Build(r Request) string {
 
 	builder.WriteString(buildRole())
 	builder.WriteString(buildInstructions(r))
+	builder.WriteString(buildUserInstructions(r.UserInstructions))
 
 	return builder.String()
 }

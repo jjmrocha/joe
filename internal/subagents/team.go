@@ -12,6 +12,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/subagent"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/jjmrocha/joe/internal/subagents/explorer"
 	"github.com/jjmrocha/joe/internal/subagents/researcher"
 	"github.com/jjmrocha/joe/internal/subagents/reviewer"
@@ -31,9 +32,10 @@ type Team struct {
 }
 
 type Request struct {
-	Config     *config.Config
-	RepoPath   string
-	Classifier *decision.Decision
+	Config           *config.Config
+	RepoPath         string
+	UserInstructions []instructions.Block
+	Classifier       *decision.Decision
 }
 
 func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error) {
@@ -62,9 +64,10 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 
 	if cfg.Subagents.Reviewer.Enabled {
 		closeReviewer, err := registerReviewer(ctx, manager, reviewer.Request{
-			LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Reviewer),
-			RepoPath:   r.RepoPath,
-			Classifier: r.Classifier,
+			LLM:              cfg.SubagentLLMConfig(cfg.Subagents.Reviewer),
+			RepoPath:         r.RepoPath,
+			UserInstructions: r.UserInstructions,
+			Classifier:       r.Classifier,
 		})
 		if err != nil {
 			team.Close()

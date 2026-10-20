@@ -14,6 +14,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/subagent"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/jjmrocha/joe/internal/subagents/explorer"
 	"github.com/jjmrocha/joe/internal/subagents/researcher"
 	"github.com/jjmrocha/joe/internal/subagents/reviewer"
@@ -269,13 +270,18 @@ func TestStart(t *testing.T) {
 		assert.Contains(t, result.Description, "- reviewer: Audits code")
 	})
 
-	t.Run("gives the reviewer its model and the repository", func(t *testing.T) {
+	t.Run("gives the reviewer its model, the repository and the user's instructions", func(t *testing.T) {
 		// given
 		installFakeExplorer(t, nil)
 		fake := installFakeReviewer(t, nil)
 		toolBox := tools.NewToolBox()
+		expected := []instructions.Block{{Path: "/src/joe/CLAUDE.md", Content: "Do not write comments."}}
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, true), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{
+			Config:           newConfig(false, true),
+			RepoPath:         testRepoPath,
+			UserInstructions: expected,
+		})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -285,6 +291,7 @@ func TestStart(t *testing.T) {
 		assert.Equal(t, testReviewerModel, result.LLM.Model)
 		assert.Equal(t, llm.EffortMax, result.LLM.Effort)
 		assert.Equal(t, testRepoPath, result.RepoPath)
+		assert.Equal(t, expected, result.UserInstructions)
 		assert.Nil(t, result.Classifier)
 	})
 

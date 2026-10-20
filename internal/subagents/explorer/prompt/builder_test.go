@@ -41,6 +41,15 @@ func TestBuild(t *testing.T) {
 		assert.Less(t, research, answer)
 	})
 
+	t.Run("answers with one of the task's verdicts when it lists them", func(t *testing.T) {
+		// given
+		request := Request{RepoPath: testRepoPath}
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "When the task lists the verdicts to choose from, answer with exactly one,\n  in place of your own confidence.")
+	})
+
 	t.Run("fills the locations with the repository only when there is no knowledge base", func(t *testing.T) {
 		// given
 		request := Request{RepoPath: testRepoPath}

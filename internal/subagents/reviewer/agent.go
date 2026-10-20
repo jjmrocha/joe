@@ -11,6 +11,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/subagent"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/guard"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/jjmrocha/joe/internal/skills"
 	"github.com/jjmrocha/joe/internal/subagents/reviewer/prompt"
 	"github.com/jjmrocha/joe/internal/toolpacks"
@@ -24,9 +25,10 @@ const (
 var codingTools = packs.CodingTools
 
 type Request struct {
-	LLM        llm.Config
-	RepoPath   string
-	Classifier *decision.Decision
+	LLM              llm.Config
+	RepoPath         string
+	UserInstructions []instructions.Block
+	Classifier       *decision.Decision
 }
 
 func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeFn func(), err error) {
@@ -37,7 +39,7 @@ func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeF
 	}
 
 	// Initialize the skills collection
-	skillCollection, err := skills.LoadBuiltIn(skills.UsingSoftwareSpecialists, skills.StyleChecker, skills.DesigningInterfaces)
+	skillCollection, err := skills.LoadBuiltIn(skills.AnalyzeCode, skills.UsingSoftwareSpecialists, skills.StyleChecker, skills.DesigningInterfaces)
 	if err != nil {
 		return nil, fmt.Errorf("skills: %w", err)
 	}
@@ -85,6 +87,7 @@ func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeF
 		Description: description,
 		Prompt: prompt.Build(prompt.Request{
 			RepoPath:         r.RepoPath,
+			UserInstructions: r.UserInstructions,
 			ToolInstructions: toolPacks.Instructions(ctx),
 		}),
 	}

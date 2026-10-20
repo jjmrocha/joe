@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jjmrocha/ai-toolkit/mcp"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,6 +41,35 @@ func TestBuild(t *testing.T) {
 		assert.Less(t, review, findings)
 	})
 
+	t.Run("renders the user's instruction blocks after the instructions, in order", func(t *testing.T) {
+		// given
+		request := Request{
+			RepoPath: testRepoPath,
+			UserInstructions: []instructions.Block{
+				{Path: "/home/me/.claude/CLAUDE.md", Content: "Be brief."},
+				{Path: "/src/joe/CLAUDE.md", Content: "Do not write comments."},
+			},
+		}
+		expected := "<block file=\"/home/me/.claude/CLAUDE.md\">\nBe brief.\n</block>\n" +
+			"<block file=\"/src/joe/CLAUDE.md\">\nDo not write comments.\n</block>\n" +
+			"</user-instructions>\n"
+		// when
+		result := Build(request)
+		// then
+		assert.Less(t, strings.Index(result, "</instructions>"), strings.Index(result, "<user-instructions>"))
+		assert.Contains(t, result, "code that follows one is not a finding")
+		assert.True(t, strings.HasSuffix(result, expected))
+	})
+
+	t.Run("adds no user-instructions block when there are none", func(t *testing.T) {
+		// given
+		request := Request{RepoPath: testRepoPath}
+		// when
+		result := Build(request)
+		// then
+		assert.NotContains(t, result, "<user-instructions>")
+	})
+
 	t.Run("fills the locations with the repository only", func(t *testing.T) {
 		// given
 		request := Request{RepoPath: testRepoPath}
@@ -57,8 +87,29 @@ func TestBuild(t *testing.T) {
 		result := Build(request)
 		// then
 		assert.Contains(t, result, "| Style | style-checker |")
-		assert.Contains(t, result, "| A change that adds or widens an interface | designing-interfaces |")
+		assert.NotContains(t, result, "| A change that adds or widens an interface |")
 		assert.Contains(t, result, "using-software-specialists, then read only that lens's specialist reference")
+	})
+
+	t.Run("rates severity with analyze-code's table and says where each finding runs", func(t *testing.T) {
+		// given
+		request := Request{RepoPath: testRepoPath}
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "Rate severity with analyze-code's Severity Scale table, examples included.")
+		assert.Contains(t, result, "    - Where it runs: <its role and exposure")
+		assert.NotContains(t, result, "Critical is data loss")
+	})
+
+	t.Run("sends every lens to analyze-code's checks without its workflow", func(t *testing.T) {
+		// given
+		request := Request{RepoPath: testRepoPath}
+		// when
+		result := Build(request)
+		// then
+		assert.Contains(t, result, "| Every lens | analyze-code: read its Five Lenses table and step 5's checks for your lens only. Do not run its workflow. |")
+		assert.Contains(t, result, `section "Security lens — exclusions and precedents"`)
 	})
 
 	t.Run("renders each tool's instructions under its name, in name order", func(t *testing.T) {

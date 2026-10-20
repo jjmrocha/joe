@@ -19,6 +19,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/jjmrocha/joe/internal/skills"
 	"github.com/jjmrocha/joe/internal/subagents/reviewer/prompt"
 	"github.com/stretchr/testify/assert"
@@ -168,7 +169,7 @@ func installReviewerSkills(t *testing.T) {
 	codingSkillsDir, err := config.CodingSkillsDir()
 	require.NoError(t, err)
 
-	for _, name := range []string{skills.UsingSoftwareSpecialists, skills.StyleChecker, skills.DesigningInterfaces} {
+	for _, name := range []string{skills.AnalyzeCode, skills.UsingSoftwareSpecialists, skills.StyleChecker, skills.DesigningInterfaces} {
 		folder := filepath.Join(codingSkillsDir, name)
 		content := "---\nname: " + name + "\ndescription: " + name + " skill\n---\nBody.\n"
 		require.NoError(t, os.MkdirAll(folder, 0o750))
@@ -248,7 +249,7 @@ func TestRegister(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
 
-		reviewerSkills, err := skills.LoadBuiltIn(skills.UsingSoftwareSpecialists, skills.StyleChecker, skills.DesigningInterfaces)
+		reviewerSkills, err := skills.LoadBuiltIn(skills.AnalyzeCode, skills.UsingSoftwareSpecialists, skills.StyleChecker, skills.DesigningInterfaces)
 		require.NoError(t, err)
 
 		expected := prompt.Build(prompt.Request{
@@ -260,6 +261,26 @@ func TestRegister(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, server.firstRequest(t).systemMessage())
+	})
+
+	t.Run("puts the user's instructions into the system prompt", func(t *testing.T) {
+		// given
+		installReviewerSkills(t)
+		server := newModelServer(t)
+		fakeCodingTools(t, nil)
+		manager := subagent.NewManager()
+		request := newRequest(server)
+		request.UserInstructions = []instructions.Block{{Path: "/src/joe/CLAUDE.md", Content: "Do not write comments."}}
+
+		closeFn, err := Register(context.Background(), manager, request)
+		require.NoError(t, err)
+		t.Cleanup(closeFn)
+		expected := "<block file=\"/src/joe/CLAUDE.md\">\nDo not write comments.\n</block>\n"
+		// when
+		_, err = manager.Run(context.Background(), "reviewer", "style lens on config.go")
+		// then
+		require.NoError(t, err)
+		assert.Contains(t, server.firstRequest(t).systemMessage(), expected)
 	})
 
 	t.Run("closes Serena through the function it returns", func(t *testing.T) {
