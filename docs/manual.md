@@ -407,7 +407,7 @@ joe validates the whole profile before the session opens and lists every fault a
 | `clean` | Remove `./bin` |
 | `test` | All tests with the race detector |
 | `bench` | Benchmarks |
-| `lint` | golangci-lint (v2.13.2+; older builds refuse Go 1.27) |
+| `lint` | golangci-lint (v2.14.0+; older builds cannot read Go 1.27.2 export data) |
 | `deps` | Update dependencies |
 | `tidy` | Tidy `go.mod` |
 
