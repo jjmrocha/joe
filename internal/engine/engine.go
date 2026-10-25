@@ -96,6 +96,8 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 
 	defer toolPacks.Close()
 
+	fmt.Println("- Starting the coding tools for the main agent…")
+
 	if err = toolPacks.Add(packs.CodingTools(ctx, toolBox, repoPath, false)); err != nil {
 		return fmt.Errorf("coding tools: %w", err)
 	}

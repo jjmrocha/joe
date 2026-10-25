@@ -58,6 +58,8 @@ github.com/jjmrocha/ai-chat v0.6.3 h1:kkJFj9ljDEVBLT71wS8LjRmzH474Z2bc5O22a4x/gO
 github.com/jjmrocha/ai-chat v0.6.3/go.mod h1:SP4FXBTUgPNlfsx2AmYwXZgRW1SRfJmhOaP65gWegO0=
 github.com/jjmrocha/ai-toolkit v0.5.3 h1:VICDWsi8B3codsi+DjjaOL2s6Bh2b+IUD7j6UkQren0=
 github.com/jjmrocha/ai-toolkit v0.5.3/go.mod h1:hydTAnebHPUa1+uzhYwI7CkhC7zmJEyGo8iSY40BRe4=
+github.com/jjmrocha/ai-toolkit v0.5.4 h1:MVmiCYeFu8Xdi2GKhioOi9XQwyEW3yV2IslRAgCfQgM=
+github.com/jjmrocha/ai-toolkit v0.5.4/go.mod h1:hydTAnebHPUa1+uzhYwI7CkhC7zmJEyGo8iSY40BRe4=
 github.com/jjmrocha/go-algo v0.1.2 h1:ZtxdKumRXsqv0hUcf29NMxcpyKYtfaVAKcB+OE5AlxE=
 github.com/jjmrocha/go-algo v0.1.2/go.mod h1:l6KK2EOYd8czVnXwY3c4q96ZA1bjB24E0hv4bGmWdRk=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=

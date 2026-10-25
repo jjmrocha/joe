@@ -20,6 +20,8 @@ func newMCPManager(tb *tools.ToolBox, clients []mcp.ClientConfig) *mcp.Manager {
 
 func startMCPs(ctx context.Context, mcpManager *mcp.Manager, names []string) {
 	fn.ForEach(names, func(name string) {
+		fmt.Printf("- Starting MCP server %s…\n", name)
+
 		if err := mcpManager.Start(ctx, name); err != nil {
 			fmt.Fprintf(os.Stderr, "starting mcp %s: %v\n", name, err)
 		}

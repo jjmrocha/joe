@@ -49,6 +49,8 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 	manager := subagent.NewManager()
 
 	if cfg.Subagents.Explorer.Enabled {
+		fmt.Println("- Starting subagent explorer…")
+
 		closeExplorer, err := registerExplorer(ctx, manager, explorer.Request{
 			LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Explorer),
 			RepoPath:   r.RepoPath,
@@ -63,6 +65,8 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 	}
 
 	if cfg.Subagents.Reviewer.Enabled {
+		fmt.Println("- Starting subagent reviewer…")
+
 		closeReviewer, err := registerReviewer(ctx, manager, reviewer.Request{
 			LLM:              cfg.SubagentLLMConfig(cfg.Subagents.Reviewer),
 			RepoPath:         r.RepoPath,
@@ -78,6 +82,8 @@ func Start(ctx context.Context, toolBox *tools.ToolBox, r Request) (*Team, error
 	}
 
 	if cfg.Subagents.Researcher.Enabled {
+		fmt.Println("- Starting subagent researcher…")
+
 		closeResearcher, err := registerResearcher(ctx, manager, researcher.Request{
 			LLM:        cfg.SubagentLLMConfig(cfg.Subagents.Researcher),
 			RepoPath:   r.RepoPath,
