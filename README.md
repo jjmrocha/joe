@@ -51,7 +51,7 @@ $ joe
   Where should the version number come from?
 
 ──────────────────────────────────────────────────────────────────────────
- 13 tool calls · 26s llm · 3s tools · ↑33.08K ↓616 tokens
+ 13 tool calls · 26s llm · 3s tools · ↑33.08K (87% cached) ↓616 tokens
 ```
 
 ---
@@ -131,7 +131,8 @@ context spent, more precise edits, 40+ languages. Other repositories are read-on
 A profile is one JSON file holding the model, knowledge base, MCP servers and classifier.
 Keep one per situation: `joe work` with the company knowledge base and a frontier model,
 `joe local` on Ollama, with no cloud model. Bring OpenRouter, Anthropic or
-Ollama, and switch models mid-session.
+Ollama, and switch models mid-session. With Anthropic and OpenRouter, joe caches the prompt
+between calls, and the status line shows how much of it came from the cache.
 
 joe also reads the `CLAUDE.md` or `AGENTS.md` files you already keep, and saves and resumes
 sessions.
