@@ -152,6 +152,12 @@ func installFakeResearcher(t *testing.T, err error) *fakeResearcher {
 	return fake
 }
 
+type fakeProgress struct {
+	texts []string
+}
+
+func (f *fakeProgress) SetText(text string) { f.texts = append(f.texts, text) }
+
 func withResearcher(cfg *config.Config) *config.Config {
 	cfg.Subagents.Researcher.Enabled = true
 	return cfg
@@ -175,7 +181,7 @@ func TestStart(t *testing.T) {
 		researcherFake := installFakeResearcher(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		require.NotNil(t, team)
@@ -191,7 +197,7 @@ func TestStart(t *testing.T) {
 		installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -206,7 +212,7 @@ func TestStart(t *testing.T) {
 		fake := installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -227,7 +233,7 @@ func TestStart(t *testing.T) {
 		installFakeExplorer(t, failure)
 		toolBox := tools.NewToolBox()
 		// when
-		_, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath})
+		_, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "explorer: ")
@@ -241,7 +247,7 @@ func TestStart(t *testing.T) {
 		installFakeReviewer(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, true), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -259,7 +265,7 @@ func TestStart(t *testing.T) {
 		installFakeReviewer(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -281,6 +287,7 @@ func TestStart(t *testing.T) {
 			Config:           newConfig(false, true),
 			RepoPath:         testRepoPath,
 			UserInstructions: expected,
+			Progress:         &fakeProgress{},
 		})
 		// then
 		require.NoError(t, err)
@@ -302,7 +309,7 @@ func TestStart(t *testing.T) {
 		installFakeReviewer(t, failure)
 		toolBox := tools.NewToolBox()
 		// when
-		_, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath})
+		_, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "reviewer: ")
@@ -318,7 +325,7 @@ func TestStart(t *testing.T) {
 		installFakeResearcher(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -337,7 +344,7 @@ func TestStart(t *testing.T) {
 		installFakeResearcher(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -356,7 +363,7 @@ func TestStart(t *testing.T) {
 		fake := installFakeResearcher(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -369,6 +376,46 @@ func TestStart(t *testing.T) {
 		assert.Nil(t, result.Classifier)
 	})
 
+	t.Run("shows each subagent as it starts", func(t *testing.T) {
+		// given
+		installFakeExplorer(t, nil)
+		installFakeReviewer(t, nil)
+		installFakeResearcher(t, nil)
+		line := &fakeProgress{}
+		// when
+		team, err := Start(context.Background(), tools.NewToolBox(), Request{
+			Config:   withResearcher(newConfig(true, true)),
+			RepoPath: testRepoPath,
+			Progress: line,
+		})
+		// then
+		require.NoError(t, err)
+		t.Cleanup(team.Close)
+
+		expected := []string{
+			"Starting subagent explorer…",
+			"Starting subagent reviewer…",
+			"Starting subagent researcher…",
+		}
+		assert.Equal(t, expected, line.texts)
+	})
+
+	t.Run("shows nothing when no subagent is enabled", func(t *testing.T) {
+		// given
+		line := &fakeProgress{}
+		// when
+		team, err := Start(context.Background(), tools.NewToolBox(), Request{
+			Config:   newConfig(false, false),
+			RepoPath: testRepoPath,
+			Progress: line,
+		})
+		// then
+		require.NoError(t, err)
+		t.Cleanup(team.Close)
+
+		assert.Empty(t, line.texts)
+	})
+
 	t.Run("names the researcher and closes the others when the researcher cannot be built", func(t *testing.T) {
 		// given
 		explorerFake := installFakeExplorer(t, nil)
@@ -377,7 +424,7 @@ func TestStart(t *testing.T) {
 		installFakeResearcher(t, failure)
 		toolBox := tools.NewToolBox()
 		// when
-		_, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath})
+		_, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "researcher: ")
@@ -403,7 +450,7 @@ func TestTeamChatOption(t *testing.T) {
 		fake := installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
 
@@ -425,7 +472,7 @@ func TestTeamChatOption(t *testing.T) {
 		// given
 		installFakeExplorer(t, nil)
 
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		// when
 		chatCore := chat.New("JOE", newMainAgent(t), team.ChatOption())
@@ -440,7 +487,7 @@ func TestTeamClose(t *testing.T) {
 		fake := installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		// when
 		team.Close()
@@ -454,7 +501,7 @@ func TestTeamClose(t *testing.T) {
 		// given
 		fake := installFakeExplorer(t, nil)
 
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(true, false), RepoPath: testRepoPath})
+		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 
 		team.Close()

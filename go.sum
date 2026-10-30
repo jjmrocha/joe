@@ -56,6 +56,8 @@ github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUq
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
 github.com/jjmrocha/ai-chat v0.6.4 h1:3QPNJKILIAB2kOEkp5lR2lDDendKgcbko0nGG7BajAY=
 github.com/jjmrocha/ai-chat v0.6.4/go.mod h1:/Hvmmuug5ixUA6wu98og44Js+84hjO0JxrB8zVdzdIA=
+github.com/jjmrocha/ai-chat v0.6.5 h1:BLMknpYzb0y7zA6ieWpLznH38sXZS3/FTtfyc8Xh8NY=
+github.com/jjmrocha/ai-chat v0.6.5/go.mod h1:/Hvmmuug5ixUA6wu98og44Js+84hjO0JxrB8zVdzdIA=
 github.com/jjmrocha/ai-toolkit v0.6.0 h1:fNIp6bnGMUtewIFsMWUxUNlY+3VKtcsbvFTq7n2L+54=
 github.com/jjmrocha/ai-toolkit v0.6.0/go.mod h1:hydTAnebHPUa1+uzhYwI7CkhC7zmJEyGo8iSY40BRe4=
 github.com/jjmrocha/go-algo v0.1.2 h1:ZtxdKumRXsqv0hUcf29NMxcpyKYtfaVAKcB+OE5AlxE=

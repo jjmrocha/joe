@@ -3,7 +3,7 @@ module github.com/jjmrocha/joe
 go 1.27.3
 
 require (
-	github.com/jjmrocha/ai-chat v0.6.4
+	github.com/jjmrocha/ai-chat v0.6.5
 	github.com/jjmrocha/ai-toolkit v0.6.0
 	github.com/jjmrocha/go-algo v0.1.2
 	github.com/stretchr/testify v1.12.1

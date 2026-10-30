@@ -88,15 +88,18 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	mcpManager := newMCPManager(toolBox, cfg.MCPClients())
 	defer mcpManager.Close()
 
+	waiting := ui.StartWaiting(ctx, "Starting joe…")
+	defer waiting.Stop()
+
 	// Start the MCP servers the profile boots
-	startMCPs(ctx, mcpManager, cfg.MCPsOn)
+	startMCPs(ctx, mcpManager, cfg.MCPsOn, waiting)
 
 	// Register tools
 	var toolPacks toolpacks.Set
 
 	defer toolPacks.Close()
 
-	fmt.Println("- Starting the coding tools for the main agent…")
+	waiting.SetText("Starting the coding tools for the main agent…")
 
 	if err = toolPacks.Add(packs.CodingTools(ctx, toolBox, repoPath, false)); err != nil {
 		return fmt.Errorf("coding tools: %w", err)
@@ -128,6 +131,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 		RepoPath:         repoPath,
 		UserInstructions: instructionFiles,
 		Classifier:       classifier,
+		Progress:         waiting,
 	})
 	if err != nil {
 		return fmt.Errorf("subagents: %w", err)
@@ -175,6 +179,8 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 		Messages: history,
 		ID:       sessionID,
 	})
+
+	waiting.Stop()
 
 	return ui.Run(ctx, chatAgent)
 }
