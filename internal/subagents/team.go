@@ -118,6 +118,14 @@ func (t *Team) ChatOption() chat.Option {
 	return chat.WithSubagents(t.manager)
 }
 
+func (t *Team) SetDebugger(d subagent.Debugger) {
+	if t.manager == nil {
+		return
+	}
+
+	t.manager.SetDebugger(d)
+}
+
 func (t *Team) Close() {
 	t.once.Do(func() {
 		if t.subagentTool != nil {

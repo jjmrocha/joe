@@ -39,11 +39,15 @@ func write(session *file) error {
 		return err
 	}
 
-	if err = os.MkdirAll(dir, 0o700); err != nil {
+	return writeJSON(dir, session.Session, session)
+}
+
+func writeJSON(dir, name string, content any) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
 
-	out, err := os.CreateTemp(dir, session.Session+".*.tmp")
+	out, err := os.CreateTemp(dir, name+".*.tmp")
 	if err != nil {
 		return err
 	}
@@ -52,9 +56,9 @@ func write(session *file) error {
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
 
-	err = errors.Join(encoder.Encode(session), out.Close())
+	err = errors.Join(encoder.Encode(content), out.Close())
 	if err == nil {
-		err = os.Rename(out.Name(), filepath.Join(dir, session.Session+".json"))
+		err = os.Rename(out.Name(), filepath.Join(dir, name+".json"))
 	}
 
 	if err != nil {

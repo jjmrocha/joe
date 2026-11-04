@@ -21,7 +21,7 @@ import (
 	"github.com/jjmrocha/joe/internal/toolpacks"
 )
 
-func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
+func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) error {
 	// Initialize models
 	llmClient, err := llm.New(cfg.LLMConfig())
 	if err != nil {
@@ -146,6 +146,15 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string) error {
 	}
 
 	defer codingAgent.Close()
+
+	if debug {
+		debugger, err := session.Debugger(repoPath, codingAgent)
+		if err != nil {
+			return fmt.Errorf("debug: %w", err)
+		}
+
+		team.SetDebugger(debugger)
+	}
 
 	// Initialize the chat
 	options := buildCommands(&commandsRequest{

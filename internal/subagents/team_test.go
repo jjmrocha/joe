@@ -481,6 +481,50 @@ func TestTeamChatOption(t *testing.T) {
 	})
 }
 
+const explorerName = "explorer"
+
+type debuggedRun struct {
+	agentName string
+	messages  int
+	err       error
+}
+
+func TestTeamSetDebugger(t *testing.T) {
+	t.Run("gives the debugger each run of an enabled subagent", func(t *testing.T) {
+		// given
+		installFakeExplorer(t, nil)
+		toolBox := tools.NewToolBox()
+
+		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		require.NoError(t, err)
+		t.Cleanup(team.Close)
+
+		var result []debuggedRun
+
+		team.SetDebugger(func(agentName string, messages []llm.Message, err error) {
+			result = append(result, debuggedRun{agentName: agentName, messages: len(messages), err: err})
+		})
+
+		call := llm.ToolCall{ID: "1", Name: "subagent", Arguments: map[string]any{"agent": explorerName, "prompt": "find Run"}}
+		// when
+		_, err = toolBox.Execute(context.Background(), call)
+		// then
+		require.NoError(t, err)
+		expected := []debuggedRun{{agentName: explorerName, messages: 3}}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("does nothing when no subagent is enabled", func(t *testing.T) {
+		// given
+		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		require.NoError(t, err)
+		// when
+		setDebugger := func() { team.SetDebugger(func(string, []llm.Message, error) {}) }
+		// then
+		assert.NotPanics(t, setDebugger)
+	})
+}
+
 func TestTeamClose(t *testing.T) {
 	t.Run("removes the subagent tool and closes the explorer", func(t *testing.T) {
 		// given

@@ -91,7 +91,7 @@ Older profiles list both servers under `mcps`. Remove them there, or the main ag
 Run joe from the repository you want it to work on. It works at the git root, with Serena's project already active. Outside a repository, or without `git`, it uses the current directory.
 
 ```
-Usage: joe [profile] [-resume <id>]
+Usage: joe [profile] [-resume <id>] [-debug]
 ```
 
 | Command | Does |
@@ -132,6 +132,17 @@ joe work -resume <id>
 ```
 
 The model gets the whole conversation back; the screen starts empty, and `/export` keeps writing to the same file. joe resumes only in the repository the session was exported from. The profile, not the file, decides model and effort.
+
+### Debug subagents
+
+```bash
+joe -debug
+joe work -resume <id> -debug
+```
+
+With `-debug`, joe saves every subagent run, successful or failed, to `~/.config/joe/debug/<session id>-<number>-<agent>.json`, for example `k3x9q2-003-explorer.json`. The session id is the main session's, the same one `/export` uses; `/clear` starts a new id. The number counts the runs of that session in the order they finished, so sorting by name lists them in order, and `-resume` continues the count.
+
+Each file holds `session`, `sequence`, `agent`, `finished` (UTC), `repo`, `error` (only when the run failed) and `messages`: the subagent's whole conversation — system prompt, task, every tool call with its arguments and result, and its answer — in the same shape as an `/export` file. The files are readable only by you, and joe never deletes them.
 
 ---
 
@@ -393,6 +404,7 @@ joe validates the whole profile before the session opens and lists every fault a
 | `coding tools: …` | Serena failed to start, usually no `uvx` on `PATH` | Install [uv](https://github.com/astral-sh/uv); check `uvx` runs |
 | `invalid session id` / `session not found` | `-resume` with a malformed or unknown id | Use the id from a file in `~/.config/joe/sessions/` |
 | `session belongs to another repository` | `-resume` outside the session's repository | Run joe from that repository |
+| `debug: …` | `-debug` could not create `~/.config/joe/debug` | Check the permissions of `~/.config/joe` |
 
 - An `mcps-on` server that fails to start doesn't stop joe: the error prints before the chat opens, `/mcp` shows it `off`, and `/mcp on <name>` retries.
 - To start over, delete `~/.config/joe` (or just `default.json`). An interrupted setup finishes on the next run; an existing `AGENTS.md` is never overwritten.

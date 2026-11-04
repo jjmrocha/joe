@@ -21,23 +21,27 @@ func Parse(args []string) (*Args, error) {
 		args = args[1:]
 	}
 
-	switch len(args) {
-	case 0:
-		return &result, nil
-	case 2:
-		if args[0] == "-resume" {
+	for len(args) > 0 {
+		switch {
+		case args[0] == "-debug" && !result.Debug:
+			result.Debug = true
+			args = args[1:]
+		case args[0] == "-resume" && len(args) > 1 && result.SessionID == "":
 			result.SessionID = args[1]
-			return &result, nil
+			args = args[2:]
+		default:
+			return nil, ErrUsage
 		}
 	}
 
-	return nil, ErrUsage
+	return &result, nil
 }
 
 func Usage(w io.Writer) {
-	_, _ = fmt.Fprintln(w, "Usage: joe [profile] [-resume <id>]")
+	_, _ = fmt.Fprintln(w, "Usage: joe [profile] [-resume <id>] [-debug]")
 	_, _ = fmt.Fprintln(w)
 	_, _ = fmt.Fprintln(w, "       profile   string   name of the profile (defaults to 'default')")
 	_, _ = fmt.Fprintln(w, "       -resume   string   id of an exported session to resume")
+	_, _ = fmt.Fprintln(w, "       -debug             save each subagent run to ~/.config/joe/debug")
 	_, _ = fmt.Fprintln(w, "       -help              this message")
 }

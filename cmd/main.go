@@ -35,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := engine.Run(ctx, cfg, args.SessionID); err != nil {
+	if err := engine.Run(ctx, cfg, args.SessionID, args.Debug); err != nil {
 		log.Fatal(err)
 	}
 }

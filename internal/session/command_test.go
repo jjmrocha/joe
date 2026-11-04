@@ -106,6 +106,23 @@ func conversation() []llm.Message {
 	}
 }
 
+func exportedConversation() []message {
+	return []message{
+		{Role: "system", Content: "<role>\nYou are joe\n</role>\n"},
+		{Role: "user", Content: "find Run"},
+		{
+			Role: "assistant",
+			ToolCalls: []toolCall{
+				{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"name_path": "Run", "depth": 1.0}},
+			},
+			Stats:      &stats{PromptTokens: 100, OutputTokens: 20, TotalTokens: 120, CacheWriteTokens: 5, CacheReadTokens: 50},
+			StopReason: "tool_use",
+		},
+		{Role: "tool", ToolCallID: toolCallID, ToolName: findSymbol, Content: `[{"name_path":"Run"}]`},
+		{Role: "assistant", Content: "Found it.", StopReason: "end_turn"},
+	}
+}
+
 func session(msgs []llm.Message) fakeSource {
 	return fakeSource{id: token.New(), messages: msgs}
 }
@@ -180,20 +197,7 @@ func TestExportCommand(t *testing.T) {
 			Provider: "anthropic",
 			Model:    "claude-opus-5-5",
 			Effort:   "high",
-			Messages: []message{
-				{Role: "system", Content: "<role>\nYou are joe\n</role>\n"},
-				{Role: "user", Content: "find Run"},
-				{
-					Role: "assistant",
-					ToolCalls: []toolCall{
-						{ID: toolCallID, Name: findSymbol, Arguments: map[string]any{"name_path": "Run", "depth": 1.0}},
-					},
-					Stats:      &stats{PromptTokens: 100, OutputTokens: 20, TotalTokens: 120, CacheWriteTokens: 5, CacheReadTokens: 50},
-					StopReason: "tool_use",
-				},
-				{Role: "tool", ToolCallID: toolCallID, ToolName: findSymbol, Content: `[{"name_path":"Run"}]`},
-				{Role: "assistant", Content: "Found it.", StopReason: "end_turn"},
-			},
+			Messages: exportedConversation(),
 		}
 		assert.Equal(t, expected, result)
 	})

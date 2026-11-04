@@ -12,6 +12,16 @@ type file struct {
 	Messages []message `json:"messages"`
 }
 
+type debugRun struct {
+	Session  string    `json:"session"`
+	Sequence int       `json:"sequence"`
+	Agent    string    `json:"agent"`
+	Finished time.Time `json:"finished"`
+	Repo     string    `json:"repo"`
+	Error    string    `json:"error,omitempty"`
+	Messages []message `json:"messages"`
+}
+
 type message struct {
 	Role       string     `json:"role"`
 	Content    string     `json:"content,omitempty"`
