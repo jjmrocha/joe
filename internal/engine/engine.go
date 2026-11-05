@@ -13,6 +13,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/joe/internal/config"
 	"github.com/jjmrocha/joe/internal/guard"
+	"github.com/jjmrocha/joe/internal/instructions"
 	"github.com/jjmrocha/joe/internal/prompt"
 	"github.com/jjmrocha/joe/internal/repo"
 	"github.com/jjmrocha/joe/internal/session"
@@ -63,6 +64,11 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) 
 	instructionFiles, err := loadUserInstructions(cfg.Instructions, repoPath)
 	if err != nil {
 		return fmt.Errorf("user instructions: %w", err)
+	}
+
+	repoInstructions, err := instructions.LoadRepository(cfg.Instructions, repoPath)
+	if err != nil {
+		return fmt.Errorf("repository instructions: %w", err)
 	}
 
 	// Initialize the  toolbox
@@ -129,7 +135,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) 
 	team, err := subagents.Start(ctx, toolBox, subagents.Request{
 		Config:           cfg,
 		RepoPath:         repoPath,
-		UserInstructions: instructionFiles,
+		UserInstructions: repoInstructions,
 		Classifier:       classifier,
 		Progress:         waiting,
 	})

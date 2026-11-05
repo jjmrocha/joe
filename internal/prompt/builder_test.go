@@ -243,7 +243,7 @@ func TestBuild(t *testing.T) {
 		assert.Contains(t, result, "For a question about a dependency, include its version from the module file.")
 	})
 
-	t.Run("tells the main agent to paste the diff because the reviewer cannot run git", func(t *testing.T) {
+	t.Run("tells the main agent to paste the diff because the reviewer cannot run git or read outside the repository", func(t *testing.T) {
 		// given
 		request := newRequest(testKBPath, false)
 		request.WithReviewer = true
@@ -251,7 +251,7 @@ func TestBuild(t *testing.T) {
 		result := Build(request)
 		// then
 		assert.Contains(t, result, "paste its hunks")
-		assert.Contains(t, result, "the reviewer cannot run git")
+		assert.Contains(t, result, "the reviewer cannot run git or read files\noutside the repository")
 		assert.NotContains(t, result, "a diff range")
 	})
 

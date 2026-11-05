@@ -9,7 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const terse = "be terse"
+const (
+	terse      = "be terse"
+	useTestify = "use testify"
+	skipLinter = "skip the linter"
+)
 
 func writeFile(t testing.TB, dir, name, content string) string {
 	t.Helper()
@@ -44,8 +48,8 @@ func TestLoad(t *testing.T) {
 		paths := testPaths(t)
 		expected := []Block{
 			{Path: writeFile(t, paths.Home, filepath.Join(".claude", "CLAUDE.md"), terse), Content: terse},
-			{Path: writeFile(t, paths.Repo, "CLAUDE.md", "use testify"), Content: "use testify"},
-			{Path: writeFile(t, paths.Repo, "CLAUDE.local.md", "skip the linter"), Content: "skip the linter"},
+			{Path: writeFile(t, paths.Repo, "CLAUDE.md", useTestify), Content: useTestify},
+			{Path: writeFile(t, paths.Repo, "CLAUDE.local.md", skipLinter), Content: skipLinter},
 		}
 		// when
 		result, err := Load(KindClaude, paths)
@@ -59,8 +63,8 @@ func TestLoad(t *testing.T) {
 		paths := testPaths(t)
 		expected := []Block{
 			{Path: writeFile(t, paths.ConfigDir, "AGENTS.md", terse), Content: terse},
-			{Path: writeFile(t, paths.Repo, "AGENTS.md", "use testify"), Content: "use testify"},
-			{Path: writeFile(t, paths.Repo, "AGENTS.local.md", "skip the linter"), Content: "skip the linter"},
+			{Path: writeFile(t, paths.Repo, "AGENTS.md", useTestify), Content: useTestify},
+			{Path: writeFile(t, paths.Repo, "AGENTS.local.md", skipLinter), Content: skipLinter},
 		}
 		// when
 		result, err := Load(KindAgents, paths)
@@ -129,6 +133,49 @@ func TestLoad(t *testing.T) {
 		paths := testPaths(t)
 		// when
 		result, err := Load(KindClaude, paths)
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, result)
+	})
+}
+
+func TestLoadRepository(t *testing.T) {
+	t.Run("reads only the repository's claude files", func(t *testing.T) {
+		// given
+		paths := testPaths(t)
+		writeFile(t, paths.Home, filepath.Join(".claude", "CLAUDE.md"), terse)
+		expected := []Block{
+			{Path: writeFile(t, paths.Repo, "CLAUDE.md", useTestify), Content: useTestify},
+			{Path: writeFile(t, paths.Repo, "CLAUDE.local.md", skipLinter), Content: skipLinter},
+		}
+		// when
+		result, err := LoadRepository(KindClaude, paths.Repo)
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("reads only the repository's agents files", func(t *testing.T) {
+		// given
+		paths := testPaths(t)
+		writeFile(t, paths.ConfigDir, "AGENTS.md", terse)
+		expected := []Block{
+			{Path: writeFile(t, paths.Repo, "AGENTS.md", useTestify), Content: useTestify},
+			{Path: writeFile(t, paths.Repo, "AGENTS.local.md", skipLinter), Content: skipLinter},
+		}
+		// when
+		result, err := LoadRepository(KindAgents, paths.Repo)
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("returns nothing when only the user-level file is present", func(t *testing.T) {
+		// given
+		paths := testPaths(t)
+		writeFile(t, paths.Home, filepath.Join(".claude", "CLAUDE.md"), terse)
+		// when
+		result, err := LoadRepository(KindClaude, paths.Repo)
 		// then
 		require.NoError(t, err)
 		assert.Empty(t, result)

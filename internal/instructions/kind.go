@@ -32,17 +32,27 @@ func (k Kind) Validate() error {
 }
 
 func (k Kind) files(paths Paths) []string {
+	return append([]string{k.userFile(paths)}, k.repositoryFiles(paths.Repo)...)
+}
+
+func (k Kind) userFile(paths Paths) string {
+	if k == KindAgents {
+		return userAgentsFile(paths.ConfigDir)
+	}
+
+	return filepath.Join(paths.Home, ".claude", "CLAUDE.md")
+}
+
+func (k Kind) repositoryFiles(repo string) []string {
 	if k == KindAgents {
 		return []string{
-			userAgentsFile(paths.ConfigDir),
-			filepath.Join(paths.Repo, agentsFile),
-			filepath.Join(paths.Repo, "AGENTS.local.md"),
+			filepath.Join(repo, agentsFile),
+			filepath.Join(repo, "AGENTS.local.md"),
 		}
 	}
 
 	return []string{
-		filepath.Join(paths.Home, ".claude", "CLAUDE.md"),
-		filepath.Join(paths.Repo, "CLAUDE.md"),
-		filepath.Join(paths.Repo, "CLAUDE.local.md"),
+		filepath.Join(repo, "CLAUDE.md"),
+		filepath.Join(repo, "CLAUDE.local.md"),
 	}
 }

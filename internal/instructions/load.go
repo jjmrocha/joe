@@ -11,9 +11,17 @@ import (
 var closingTagPattern = regexp.MustCompile(`(?i)</\s*(user-instructions|block)\b(\s*>)?`)
 
 func Load(kind Kind, paths Paths) ([]Block, error) {
+	return read(kind.files(paths))
+}
+
+func LoadRepository(kind Kind, repoPath string) ([]Block, error) {
+	return read(kind.repositoryFiles(repoPath))
+}
+
+func read(files []string) ([]Block, error) {
 	var blocks []Block
 
-	for _, path := range kind.files(paths) {
+	for _, path := range files {
 		content, err := os.ReadFile(path) //nolint:gosec // kind.files builds every path from fixed names and caller roots
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {

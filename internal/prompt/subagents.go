@@ -30,8 +30,8 @@ const reviewerParagraph = `
 The reviewer audits code through one lens and changes nothing. It loads the
 lens's specialist itself. In analyze-code's step 5, send all five lenses to
 it, one task per lens, in the same turn: name the lens and the files in scope,
-and for a diff, paste its hunks — the reviewer cannot run git. Do not apply a
-lens yourself. It returns candidate
+and for a diff, paste its hunks — the reviewer cannot run git or read files
+outside the repository. Do not apply a lens yourself. It returns candidate
 findings in analyze-code's format; step 7 verifies them as usual.
 `
 
