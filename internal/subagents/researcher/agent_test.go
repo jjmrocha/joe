@@ -125,10 +125,10 @@ func (p *fakePack) Instructions(_ context.Context) *mcp.Instruction {
 	return p.instruction
 }
 
-func fakeTools(toolName string, instruction *mcp.Instruction, err error) (*fakePack, func(context.Context, *tools.ToolBox) (packs.ToolPack, error)) {
+func fakeTools(toolName string, instruction *mcp.Instruction, err error) (*fakePack, func(context.Context, *tools.ToolBox, bool) (packs.ToolPack, error)) {
 	pack := &fakePack{instruction: instruction}
 
-	return pack, func(_ context.Context, m *tools.ToolBox) (packs.ToolPack, error) {
+	return pack, func(_ context.Context, m *tools.ToolBox, _ bool) (packs.ToolPack, error) {
 		if err != nil {
 			return nil, err
 		}

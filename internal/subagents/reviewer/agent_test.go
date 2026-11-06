@@ -142,8 +142,8 @@ func fakeCodingTools(t *testing.T, err error) (*fakePack, *[]codingToolsCall) {
 	previous := codingTools
 	t.Cleanup(func() { codingTools = previous })
 
-	codingTools = func(_ context.Context, m *tools.ToolBox, project string, readOnly bool) (packs.ToolPack, error) {
-		call := codingToolsCall{project: project, readOnly: readOnly}
+	codingTools = func(_ context.Context, m *tools.ToolBox, cfg packs.CodingConfig) (packs.ToolPack, error) {
+		call := codingToolsCall{project: cfg.Project, readOnly: cfg.ReadOnly}
 		*calls = append(*calls, call)
 
 		if err != nil {
