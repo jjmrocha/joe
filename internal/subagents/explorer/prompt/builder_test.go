@@ -69,6 +69,7 @@ func TestBuild(t *testing.T) {
 		// then
 		assert.Contains(t, result, "<locations>\nrepository="+testRepoPath+"\nkb_path="+testKBPath+"\n</locations>\n")
 		assert.Contains(t, result, "load the knowledge-base skill and follow\n  its Query workflow only. Do not call skill_execute_file.")
+		assert.Contains(t, result, "Serena's\n  read_file, find_file, list_dir and search_for_pattern are not file_ tools.")
 	})
 
 	t.Run("renders each tool's instructions under its name, in name order", func(t *testing.T) {

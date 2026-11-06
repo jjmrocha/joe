@@ -18,7 +18,8 @@ const researchBlock = `
 
 const knowledgeBaseRule = `- Before you read the knowledge base, load the knowledge-base skill and follow
   its Query workflow only. Do not call skill_execute_file. Read the knowledge
-  base with the file_ tools only, and the code with Serena's tools.
+  base with the file_ tools only, and the code with Serena's tools. Serena's
+  read_file, find_file, list_dir and search_for_pattern are not file_ tools.
 `
 
 func buildResearch(kbPath string) string {

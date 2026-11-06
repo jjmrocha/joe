@@ -3,7 +3,9 @@ package prompt
 const kbConfigured = `
 <knowledge-base>
 The knowledge base is a folder of Markdown outside every repository, at the
-kb_path in <locations>. The file_ tools reach it and nothing else.
+kb_path in <locations>. The tools whose names start with file_ reach it and
+nothing else. Serena's read_file, find_file, list_dir and search_for_pattern
+are not file_ tools: they reach only the repository.
 
 - The repository is Serena's. Never reach for a file_ tool to read or change
   code.

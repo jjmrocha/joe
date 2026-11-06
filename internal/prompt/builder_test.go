@@ -80,6 +80,7 @@ func TestBuild(t *testing.T) {
 		result := Build(request)
 		// then
 		assert.Contains(t, result, kbConfigured)
+		assert.Contains(t, result, "Serena's read_file, find_file, list_dir and search_for_pattern\nare not file_ tools: they reach only the repository.")
 		assert.NotContains(t, result, kbNotConfigured)
 	})
 
