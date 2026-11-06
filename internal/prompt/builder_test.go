@@ -315,7 +315,7 @@ func TestBuild(t *testing.T) {
 		// when
 		result := Build(request)
 		// then
-		assert.NotContains(t, result, "serena__activate_project")
+		assert.NotContains(t, result, "activate_project")
 	})
 
 	t.Run("does not send the model to fetch Serena's manual", func(t *testing.T) {

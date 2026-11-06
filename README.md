@@ -31,7 +31,7 @@ $ joe
 ● file_read(path="wiki/joe/index.md")
   ⎿ <10.5 KB> · 240ms
 
-● serena__find_symbol(include_body=true, name_path_pattern="buildCommands", relative_path="internal/engine/commands.go")
+● find_symbol(include_body=true, name_path_pattern="buildCommands", relative_path="internal/engine/commands.go")
   ⎿ <755 B> · 303ms
 
   ⋮ 10 more tool calls

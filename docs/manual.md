@@ -274,7 +274,7 @@ joe reads and edits the repository through [Serena](https://github.com/oraios/se
 
 ### Other repositories
 
-joe changes only the repository it started in. Others it reads through `serena__query_project`, which refuses every editing tool. Register each repository once:
+joe changes only the repository it started in. Others it reads through `query_project`, which refuses every editing tool. Register each repository once:
 
 ```bash
 uvx --from git+https://github.com/oraios/serena serena project create /path/to/repo

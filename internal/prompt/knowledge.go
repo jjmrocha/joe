@@ -7,8 +7,8 @@ kb_path in <locations>. The file_ tools reach it and nothing else.
 
 - The repository is Serena's. Never reach for a file_ tool to read or change
   code.
-- Read and search the knowledge base with the file_ tools only — not with a
-  serena__ tool, and not with grep, cat or find through shell_run.
+- Read and search the knowledge base with the file_ tools only — not with
+  Serena's tools, and not with grep, cat or find through shell_run.
 - Load the knowledge-base skill before reading or writing the knowledge base. It
   owns the layout, the page format and the rule that a delete needs the user's
   approval.

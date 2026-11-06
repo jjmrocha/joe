@@ -108,7 +108,8 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) 
 	waiting.SetText("Starting the coding tools for the main agent…")
 
 	codeConfig := packs.CodingConfig{
-		Project: repoPath,
+		Project:      repoPath,
+		NoToolPrefix: true,
 	}
 	if err = toolPacks.Add(packs.CodingTools(ctx, toolBox, codeConfig)); err != nil {
 		return fmt.Errorf("coding tools: %w", err)
