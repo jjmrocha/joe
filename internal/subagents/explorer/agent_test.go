@@ -30,7 +30,7 @@ const (
 	answerReply    = `{"message":{"content":"the answer"},"done":true,"prompt_eval_count":20,"eval_count":10}`
 	modelInfo      = `{"model_info":{"general.architecture":"test","test.context_length":8192}}`
 	serenaManual   = "Use the symbolic tools."
-	testSerenaTool = "serena__find_symbol"
+	testSerenaTool = "find_symbol"
 	knowledgeBase  = "---\nname: knowledge-base\ndescription: Reads the knowledge base\n---\nRead the index first.\n"
 )
 
@@ -129,8 +129,9 @@ func (p *fakePack) Instructions(_ context.Context) *mcp.Instruction {
 }
 
 type codingToolsCall struct {
-	project  string
-	readOnly bool
+	project      string
+	readOnly     bool
+	noToolPrefix bool
 }
 
 func fakeCodingTools(t *testing.T, err error) (*fakePack, *[]codingToolsCall) {
@@ -143,7 +144,7 @@ func fakeCodingTools(t *testing.T, err error) (*fakePack, *[]codingToolsCall) {
 	t.Cleanup(func() { codingTools = previous })
 
 	codingTools = func(_ context.Context, m *tools.ToolBox, cfg packs.CodingConfig) (packs.ToolPack, error) {
-		call := codingToolsCall{project: cfg.Project, readOnly: cfg.ReadOnly}
+		call := codingToolsCall{project: cfg.Project, readOnly: cfg.ReadOnly, noToolPrefix: cfg.NoToolPrefix}
 		*calls = append(*calls, call)
 
 		if err != nil {
@@ -202,7 +203,7 @@ func TestRegister(t *testing.T) {
 		server := newModelServer(t)
 		_, calls := fakeCodingTools(t, nil)
 		manager := subagent.NewManager()
-		expected := []codingToolsCall{{project: testRepoPath, readOnly: true}}
+		expected := []codingToolsCall{{project: testRepoPath, readOnly: true, noToolPrefix: true}}
 		// when
 		closeFn, err := Register(context.Background(), manager, newRequest(server, ""))
 		// then

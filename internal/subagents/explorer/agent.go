@@ -77,8 +77,9 @@ func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeF
 	}()
 
 	codeConfig := packs.CodingConfig{
-		Project:  r.RepoPath,
-		ReadOnly: true,
+		Project:      r.RepoPath,
+		ReadOnly:     true,
+		NoToolPrefix: true,
 	}
 	if err = toolPacks.Add(codingTools(ctx, toolBox, codeConfig)); err != nil {
 		return nil, fmt.Errorf("coding tools: %w", err)
