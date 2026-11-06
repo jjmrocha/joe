@@ -65,11 +65,11 @@ func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeF
 		}
 	}()
 
-	if err = toolPacks.Add(webTools(ctx, toolBox, false)); err != nil {
+	if err = toolPacks.Add(webTools(ctx, toolBox, true)); err != nil {
 		return nil, fmt.Errorf("web tools: %w", err)
 	}
 
-	if err = toolPacks.Add(libraryTools(ctx, toolBox, false)); err != nil {
+	if err = toolPacks.Add(libraryTools(ctx, toolBox, true)); err != nil {
 		return nil, fmt.Errorf("library tools: %w", err)
 	}
 

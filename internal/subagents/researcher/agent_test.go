@@ -25,8 +25,8 @@ const (
 	testRepoPath    = "/src/joe"
 	answerReply     = `{"message":{"content":"the answer"},"done":true,"prompt_eval_count":20,"eval_count":10}`
 	modelInfo       = `{"model_info":{"general.architecture":"test","test.context_length":8192}}`
-	testWebTool     = "donsetch__web_search"
-	testLibraryTool = "context7__query-docs"
+	testWebTool     = "web_search"
+	testLibraryTool = "query-docs"
 	libraryManual   = "Resolve the library id first."
 )
 
@@ -112,8 +112,9 @@ func newModelServer(t *testing.T) *modelServer {
 }
 
 type fakePack struct {
-	instruction *mcp.Instruction
-	closed      bool
+	instruction  *mcp.Instruction
+	closed       bool
+	noToolPrefix bool
 }
 
 func (p *fakePack) Close() error {
@@ -128,7 +129,9 @@ func (p *fakePack) Instructions(_ context.Context) *mcp.Instruction {
 func fakeTools(toolName string, instruction *mcp.Instruction, err error) (*fakePack, func(context.Context, *tools.ToolBox, bool) (packs.ToolPack, error)) {
 	pack := &fakePack{instruction: instruction}
 
-	return pack, func(_ context.Context, m *tools.ToolBox, _ bool) (packs.ToolPack, error) {
+	return pack, func(_ context.Context, m *tools.ToolBox, noToolPrefix bool) (packs.ToolPack, error) {
+		pack.noToolPrefix = noToolPrefix
+
 		if err != nil {
 			return nil, err
 		}
@@ -205,6 +208,21 @@ func TestRegister(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "the answer", result)
 		assert.ElementsMatch(t, []string{testWebTool, testLibraryTool}, server.firstRequest(t).toolNames())
+	})
+
+	t.Run("starts the web and library tools without the prefix", func(t *testing.T) {
+		// given
+		server := newModelServer(t)
+		web := fakeWebTools(t, nil)
+		library := fakeLibraryTools(t, nil)
+		manager := subagent.NewManager()
+		// when
+		closeFn, err := Register(context.Background(), manager, newRequest(server))
+		// then
+		require.NoError(t, err)
+		t.Cleanup(closeFn)
+		assert.True(t, web.noToolPrefix)
+		assert.True(t, library.noToolPrefix)
 	})
 
 	t.Run("builds the system prompt from the packs' instructions", func(t *testing.T) {
