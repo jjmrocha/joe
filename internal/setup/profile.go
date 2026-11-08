@@ -32,6 +32,7 @@ type answers struct {
 	model               string
 	apiKeyEnv           string
 	kbPath              string
+	classifierProvider  decision.Provider
 	classifierModel     string
 	classifierAPIKeyEnv string
 	researchTools       bool
@@ -102,7 +103,7 @@ func askProfile(in *bufio.Reader, out io.Writer) (answers, error) {
 
 	_, _ = fmt.Fprintln(out)
 
-	given.classifierModel, given.classifierAPIKeyEnv, err = askClassifier(in, out)
+	given.classifierProvider, given.classifierModel, given.classifierAPIKeyEnv, err = askClassifier(in, out)
 	if err != nil {
 		return given, err
 	}
@@ -123,23 +124,32 @@ func askKBPath(in *bufio.Reader, out io.Writer) (string, error) {
 	return askPath(in, out, "Knowledge base folder")
 }
 
-func askClassifier(in *bufio.Reader, out io.Writer) (model, apiKeyEnv string, err error) {
+func askClassifier(in *bufio.Reader, out io.Writer) (provider decision.Provider, model, apiKeyEnv string, err error) {
 	wanted, err := askChoice(in, out, "Classifier model", []string{"yes", "no"})
 	if err != nil || wanted == "no" {
-		return "", "", err
+		return "", "", "", err
+	}
+
+	provider, err = askChoice(in, out, "Classifier provider", config.ClassifierProviders())
+	if err != nil {
+		return "", "", "", err
 	}
 
 	model, err = askMatching(in, out, "Classifier model name", modelPattern)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
+	}
+
+	if provider == decision.ProviderOllama {
+		return provider, model, "", nil
 	}
 
 	apiKeyEnv, err = askMatching(in, out, "Name of the classifier API key variable", keyEnvPattern)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return model, apiKeyEnv, nil
+	return provider, model, apiKeyEnv, nil
 }
 
 func renderProfile(given answers) ([]byte, error) {
@@ -177,7 +187,7 @@ func renderProfile(given answers) ([]byte, error) {
 
 	if given.classifierModel != "" {
 		cfg.Classifier = &config.Classifier{
-			Provider:  decision.ProviderOpenRouter,
+			Provider:  given.classifierProvider,
 			APIKeyEnv: given.classifierAPIKeyEnv,
 			Model:     given.classifierModel,
 		}

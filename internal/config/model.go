@@ -36,7 +36,7 @@ type LLM struct {
 type Classifier struct {
 	Provider  decision.Provider `json:"provider"`
 	BaseURL   string            `json:"base-url,omitempty"`
-	APIKeyEnv string            `json:"api-key-env"`
+	APIKeyEnv string            `json:"api-key-env,omitempty"`
 	Model     string            `json:"model"`
 }
 

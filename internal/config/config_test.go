@@ -207,6 +207,11 @@ func TestLoad(t *testing.T) {
 				expected: ErrMissingModel,
 			},
 			{
+				name:     "ollama classifier model",
+				content:  profileWith(`"classifier": {"provider": "ollama", "model": ""}`),
+				expected: ErrMissingModel,
+			},
+			{
 				name:     "classifier unset api key variable",
 				content:  profileWith(`"classifier": {"provider": "openrouter", "api-key-env": "JOE_TEST_UNSET", "model": "` + testClassifierModel + `"}`),
 				expected: ErrMissingAPIKey,
@@ -335,6 +340,21 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, result.Classifier)
 		assert.Equal(t, testClassifierModel, result.Classifier.Model)
+	})
+
+	t.Run("accepts an ollama classifier without an api key", func(t *testing.T) {
+		// given
+		dir := configDir(t)
+		content := profileWith(`"classifier": {"provider": "ollama", "model": "qwen3"}`)
+		writeProfile(t, dir, "local", content)
+
+		t.Setenv(testKeyEnv, "sk-test")
+		// when
+		result, err := Load("local")
+		// then
+		require.NoError(t, err)
+		assert.Empty(t, result.ClassifierConfig().APIKey)
+		assert.Equal(t, "qwen3", result.ClassifierConfig().Model)
 	})
 
 	t.Run("leaves the classifier off when the profile omits it", func(t *testing.T) {

@@ -86,7 +86,7 @@ func TestAskProfile(t *testing.T) {
 	t.Run("collects every answer", func(t *testing.T) {
 		// given
 		dir := t.TempDir()
-		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\nyes\n" + testClassifierModel + "\nOPEN_ROUTER_KEY\n"))
+		in := bufio.NewReader(strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nyes\n" + dir + "\nyes\nopenrouter\n" + testClassifierModel + "\nOPEN_ROUTER_KEY\n"))
 		// when
 		result, err := askProfile(in, &strings.Builder{})
 		// then
@@ -97,9 +97,30 @@ func TestAskProfile(t *testing.T) {
 			model:               testModel,
 			apiKeyEnv:           testKeyEnv,
 			kbPath:              dir,
+			classifierProvider:  decision.ProviderOpenRouter,
 			classifierModel:     testClassifierModel,
 			classifierAPIKeyEnv: testKeyEnv,
 		}, result)
+	})
+
+	t.Run("skips the classifier key question for an ollama classifier", func(t *testing.T) {
+		// given
+		var out strings.Builder
+
+		in := bufio.NewReader(strings.NewReader("ollama\nqwen3\nagents\nno\nyes\nollama\nqwen3\n"))
+		// when
+		result, err := askProfile(in, &out)
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, answers{
+			instructions:       testKind,
+			provider:           testProvider,
+			model:              testOllamaModel,
+			classifierProvider: decision.ProviderOllama,
+			classifierModel:    testOllamaModel,
+		}, result)
+		assert.Contains(t, out.String(), "Classifier provider [ollama, openrouter]")
+		assert.NotContains(t, out.String(), "classifier API key")
 	})
 
 	t.Run("skips the folder question when no knowledge base is wanted", func(t *testing.T) {
@@ -235,7 +256,7 @@ func TestRenderProfile(t *testing.T) {
 
 	t.Run("writes the classifier block the answers set", func(t *testing.T) {
 		// given
-		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, classifierProvider: decision.ProviderOpenRouter, classifierModel: testClassifierModel, classifierAPIKeyEnv: testKeyEnv}
 		expected := &config.Classifier{Provider: decision.ProviderOpenRouter, APIKeyEnv: testKeyEnv, Model: testClassifierModel}
 		// when
 		content, err := renderProfile(given)
@@ -246,6 +267,22 @@ func TestRenderProfile(t *testing.T) {
 
 		require.NoError(t, json.Unmarshal(content, &result))
 		assert.Equal(t, expected, result.Classifier)
+	})
+
+	t.Run("writes an ollama classifier block without an api key variable", func(t *testing.T) {
+		// given
+		given := answers{instructions: testKind, provider: testProvider, model: testOllamaModel, classifierProvider: decision.ProviderOllama, classifierModel: testOllamaModel}
+		expected := &config.Classifier{Provider: decision.ProviderOllama, Model: testOllamaModel}
+		// when
+		content, err := renderProfile(given)
+		// then
+		require.NoError(t, err)
+
+		var result config.Config
+
+		require.NoError(t, json.Unmarshal(content, &result))
+		assert.Equal(t, expected, result.Classifier)
+		assert.NotContains(t, string(content), "api-key-env")
 	})
 
 	t.Run("writes the kb path the answers set", func(t *testing.T) {
@@ -345,7 +382,7 @@ func TestWriteProfile(t *testing.T) {
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\n"+testClassifierModel+"\nOPEN_ROUTER_KEY\n")
+		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\nopenrouter\n"+testClassifierModel+"\nOPEN_ROUTER_KEY\n")
 		// when
 		err := writeProfile()
 		// then

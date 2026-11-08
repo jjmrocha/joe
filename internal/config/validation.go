@@ -18,11 +18,15 @@ var bareNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 var (
 	providers           = sets.New(llm.ProviderOpenRouter, llm.ProviderOllama, llm.ProviderAnthropic)
 	efforts             = sets.New(llm.EffortOff, llm.EffortLow, llm.EffortMedium, llm.EffortMax)
-	classifierProviders = sets.New(decision.ProviderOpenRouter)
+	classifierProviders = sets.New(decision.ProviderOpenRouter, decision.ProviderOllama)
 )
 
 func Providers() []llm.Provider {
 	return slices.Sorted(providers.Values())
+}
+
+func ClassifierProviders() []decision.Provider {
+	return slices.Sorted(classifierProviders.Values())
 }
 
 func isBareName(name string) bool {
@@ -114,6 +118,10 @@ func validateClassifier(cfg *Classifier) []error {
 
 	if cfg.Model == "" {
 		problems = append(problems, fmt.Errorf("classifier: %w", ErrMissingModel))
+	}
+
+	if cfg.Provider == decision.ProviderOllama {
+		return problems
 	}
 
 	if cfg.APIKeyEnv == "" || os.Getenv(cfg.APIKeyEnv) == "" {

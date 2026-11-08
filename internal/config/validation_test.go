@@ -3,6 +3,7 @@ package config
 import (
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,6 +25,17 @@ func TestProviders(t *testing.T) {
 		expected := []llm.Provider{llm.ProviderAnthropic, llm.ProviderOllama, llm.ProviderOpenRouter}
 		// when
 		result := Providers()
+		// then
+		assert.Equal(t, expected, result)
+	})
+}
+
+func TestClassifierProviders(t *testing.T) {
+	t.Run("holds every classifier provider joe accepts", func(t *testing.T) {
+		// given
+		expected := []decision.Provider{decision.ProviderOllama, decision.ProviderOpenRouter}
+		// when
+		result := ClassifierProviders()
 		// then
 		assert.Equal(t, expected, result)
 	})

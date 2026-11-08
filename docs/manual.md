@@ -46,6 +46,7 @@ Knowledge base [yes, no]: yes
 Knowledge base folder: /Users/you/Documents/LLM_WIKI
 
 Classifier model [yes, no]: yes
+Classifier provider [ollama, openrouter]: openrouter
 Classifier model name: typesafe/jev-1.13
 Name of the classifier API key variable: OPEN_ROUTER_KEY
 ```
@@ -55,7 +56,7 @@ Name of the classifier API key variable: OPEN_ROUTER_KEY
 | Provider, Model, API key variable | The model joe talks to. The key question is skipped on Ollama |
 | Instructions | Which instruction files joe reads ([Your own instructions](#your-own-instructions)). Pick `claude` if you keep a `~/.claude/CLAUDE.md` |
 | Knowledge base | Whether joe gets the `file_*` tools. The folder must exist; joe asks until it does. `~` is expanded and the full path stored |
-| Classifier model | Whether joe gets the guard and the `decision_*` tools. Runs on OpenRouter, so the key is an OpenRouter one (JEV or equivalent model) |
+| Classifier model | Whether joe gets the guard and the `decision_*` tools. The classifier runs on OpenRouter (JEV or an equivalent model) or on a local Ollama server. The key question is skipped on Ollama |
 
 The folder and classifier follow-ups appear only after `yes`. Setup writes `effort: medium`, registers two MCP servers (both off) and clones the skills:
 
@@ -238,7 +239,12 @@ With `kb-path` set, joe gets seven tools confined to that folder: `file_read`, `
 
 ## Second opinion and guard
 
-Both need a `classifier` in the profile: a classification model, different from the model that writes code. It writes no text; it answers a typed question (yes/no, a choice, a score) with a probability. joe reaches it through OpenRouter's decisions API, so any decision model OpenRouter serves works; today that is TypeSafe's [Jev](https://openrouter.ai/blog/insights/what-is-jev/) (`typesafe/jev-1.13`). The default model listing leaves them out; list them with `GET https://openrouter.ai/api/v1/models?output_modalities=decisions`. Without a classifier, neither feature exists.
+Both need a `classifier` in the profile: a classification model, different from the model that writes code. It writes no text; it answers a typed question (yes/no, a choice, a score) with a probability. joe reaches it through OpenRouter's decisions API or a local Ollama server.
+
+- On OpenRouter, any decision model OpenRouter serves works; today that is TypeSafe's [Jev](https://openrouter.ai/blog/insights/what-is-jev/) (`typesafe/jev-1.13`). The default model listing leaves them out; list them with `GET https://openrouter.ai/api/v1/models?output_modalities=decisions`.
+- On Ollama, use an Ollama decision model, such as `nimble`. Ollama must be version 0.35 or later, and needs no API key. joe uses `http://localhost:11434` unless `classifier.base-url` says otherwise.
+
+Without a classifier, neither feature exists.
 
 ### Second opinion
 
@@ -361,9 +367,9 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 | `mcps` | MCP servers: `command`, `args`, `env` (variables inherited from joe), `timeout` in seconds (`0` or absent: 60) |
 | `mcps-on` | Servers started at launch; start others with `/mcp on <name>` |
 | `classifier` | Model behind the guard and `decision_*`. Omit for neither |
-| `classifier.provider` | `openrouter` |
+| `classifier.provider` | `openrouter` or `ollama` |
 | `classifier.base-url` | Overrides the provider's endpoint |
-| `classifier.api-key-env` | Name of the variable holding the key. Required |
+| `classifier.api-key-env` | Name of the variable holding the key. Required except on Ollama |
 | `classifier.model` | Classification model, e.g. `typesafe/jev-1.13` |
 | `subagents` | Required. One entry per subagent: `explorer`, `reviewer` and `researcher` |
 | `subagents.<name>.model` | Model the subagent runs on. Required, even when disabled. It uses the `llm` provider, base URL and key |
@@ -391,7 +397,7 @@ joe validates the whole profile before the session opens and lists every fault a
 | `profile name is not a bare name` | Name has characters other than letters, digits, `-`, `_` | Rename the profile |
 | `api key variable is not set` | `api-key-env` names an empty variable | `export` it, or point `api-key-env` at the one you use |
 | `provider is not openrouter, ollama or anthropic` | Unknown `llm.provider` | Use one of the three |
-| `classifier provider is not openrouter` | Any other `classifier.provider` | Use `openrouter` |
+| `classifier provider is not openrouter or ollama` | Any other `classifier.provider` | Use one of the two |
 | `effort is not off, low, medium or max` | Unknown `llm.effort` | Use one of the four |
 | `model is not set` | Empty `llm.model` or `classifier.model` | Set it |
 | `mcps-on names a server that is not registered` | `mcps-on` lists a name missing from `mcps` | Add the server to `mcps` or remove the name |
