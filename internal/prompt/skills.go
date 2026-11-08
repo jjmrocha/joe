@@ -113,6 +113,12 @@ Follow-ups:
 - A skill lists the files it ships. Read the ones it tells you to with
   skill_load_file, giving the skill's name and the file's path — naming a
   reference file is not reading it.
+- When a skill says to run one of the files it ships — "uv run
+  scripts/kb-lock.py acquire <kb_path>", say — run it with skill_execute_file,
+  giving the skill's name, the file's path and the arguments. Never run it with
+  shell_run: the path is relative to the skill's folder, not the repository.
+  A non-zero exit status is the script's answer, so do what the skill says for
+  it. If the call itself fails, tell the user and stop that step.
 - When a step needs a tool this session does not have — a web search to answer
   from outside the code base, say — tell the user which tool is missing and
   stop there; never answer that step from memory instead.
