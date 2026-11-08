@@ -61,7 +61,7 @@ func newModel(t *testing.T, onChat func()) *llm.LLM {
 	}))
 	t.Cleanup(server.Close)
 
-	model, err := llm.New(llm.Config{Provider: llm.ProviderOllama, Model: "test", BaseURL: server.URL})
+	model, err := llm.New(t.Context(), llm.Config{Provider: llm.ProviderOllama, Model: "test", BaseURL: server.URL})
 	require.NoError(t, err)
 
 	return model

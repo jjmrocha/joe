@@ -152,7 +152,9 @@ func fakeWebTools(t *testing.T, err error) *fakePack {
 
 	previous := webTools
 	t.Cleanup(func() { webTools = previous })
-	webTools = constructor
+	webTools = func(ctx context.Context, m *tools.ToolBox, cfg packs.WebConfig) (packs.ToolPack, error) {
+		return constructor(ctx, m, cfg.NoToolPrefix)
+	}
 
 	return pack
 }
@@ -164,7 +166,9 @@ func fakeLibraryTools(t *testing.T, err error) *fakePack {
 
 	previous := libraryTools
 	t.Cleanup(func() { libraryTools = previous })
-	libraryTools = constructor
+	libraryTools = func(ctx context.Context, m *tools.ToolBox, cfg packs.LibraryConfig) (packs.ToolPack, error) {
+		return constructor(ctx, m, cfg.NoToolPrefix)
+	}
 
 	return pack
 }

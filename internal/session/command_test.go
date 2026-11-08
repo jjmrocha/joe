@@ -3,13 +3,15 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/jjmrocha/ai-chat/command"
 	"github.com/jjmrocha/ai-toolkit/agent"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/fn"
@@ -21,6 +23,7 @@ import (
 const (
 	findSymbol = "find_symbol"
 	toolCallID = "toolu_01"
+	modelInfo  = `{"model_info":{"general.architecture":"test","test.context_length":8192}}`
 )
 
 var _ Source = (*agent.Agent)(nil)
@@ -30,7 +33,7 @@ var exportedAt = time.Date(2026, time.October, 7, 14, 30, 15, 500_000_000, time.
 type fakeSource struct {
 	id       string
 	messages []llm.Message
-	info     *agent.ModelInfo
+	model    *llm.LLM
 }
 
 func (f fakeSource) SessionID() string {
@@ -41,8 +44,8 @@ func (f fakeSource) Messages() []llm.Message {
 	return f.messages
 }
 
-func (f fakeSource) ModelInfo(context.Context) *agent.ModelInfo {
-	return f.info
+func (f fakeSource) LLM() *llm.LLM {
+	return f.model
 }
 
 type stream int
@@ -61,10 +64,6 @@ type fakeContext struct {
 	lines []printed
 }
 
-func (f *fakeContext) Agent() command.AgentController {
-	return nil
-}
-
 func (f *fakeContext) Info(text string) {
 	f.lines = append(f.lines, printed{kind: infoStream, text: text})
 }
@@ -76,6 +75,8 @@ func (f *fakeContext) Error(text string) {
 func (f *fakeContext) Clear() error {
 	return nil
 }
+
+func (f *fakeContext) Compact() {}
 
 func (f *fakeContext) Context() context.Context {
 	return context.Background()
@@ -121,6 +122,21 @@ func exportedConversation() []message {
 		{Role: "tool", ToolCallID: toolCallID, ToolName: findSymbol, Content: `[{"name_path":"Run"}]`},
 		{Role: "assistant", Content: "Found it.", StopReason: "end_turn"},
 	}
+}
+
+func newModel(t *testing.T) *llm.LLM {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, modelInfo)
+	}))
+	t.Cleanup(server.Close)
+
+	model, err := llm.New(t.Context(), llm.Config{Provider: llm.ProviderOllama, Model: "qwen3", BaseURL: server.URL, Effort: llm.EffortMedium})
+	require.NoError(t, err)
+
+	return model
 }
 
 func session(msgs []llm.Message) fakeSource {
@@ -185,7 +201,7 @@ func TestExportCommand(t *testing.T) {
 		// given
 		dir := sessionsDir(t)
 		src := session(conversation())
-		src.info = &agent.ModelInfo{Provider: "anthropic", ModelName: "claude-opus-5-5", Effort: "high"}
+		src.model = newModel(t)
 		runExport(t, src)
 		// when
 		result, _ := readSession(t, dir, src.id)
@@ -194,9 +210,9 @@ func TestExportCommand(t *testing.T) {
 			Session:  src.id,
 			Exported: time.Date(2026, time.October, 7, 13, 30, 15, 0, time.UTC),
 			Repo:     "/work/repo",
-			Provider: "anthropic",
-			Model:    "claude-opus-5-5",
-			Effort:   "high",
+			Provider: "ollama",
+			Model:    "qwen3",
+			Effort:   "medium",
 			Messages: exportedConversation(),
 		}
 		assert.Equal(t, expected, result)

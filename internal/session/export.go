@@ -1,7 +1,6 @@
 package session
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -12,7 +11,7 @@ import (
 	"github.com/jjmrocha/joe/internal/config"
 )
 
-func export(ctx context.Context, src Source, repoPath string, msgs []llm.Message, exported time.Time) (string, error) {
+func export(src Source, repoPath string, msgs []llm.Message, exported time.Time) (string, error) {
 	session := file{
 		Session:  src.SessionID(),
 		Exported: exported.UTC().Truncate(time.Second),
@@ -20,10 +19,11 @@ func export(ctx context.Context, src Source, repoPath string, msgs []llm.Message
 		Messages: toMessages(msgs),
 	}
 
-	if info := src.ModelInfo(ctx); info != nil {
+	if model := src.LLM(); model != nil {
+		info := model.ModelInfo()
 		session.Provider = string(info.Provider)
-		session.Model = info.ModelName
-		session.Effort = string(info.Effort)
+		session.Model = info.Name
+		session.Effort = string(model.Effort())
 	}
 
 	if err := write(&session); err != nil {

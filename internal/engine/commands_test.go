@@ -1,24 +1,53 @@
 package engine
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/jjmrocha/ai-chat/chat"
 	"github.com/jjmrocha/ai-chat/command"
 	"github.com/jjmrocha/ai-toolkit/agent"
+	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/go-algo/fn"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func registered(options []chat.Option) []command.Command {
-	return chat.New("", &agent.Agent{}, options...).Commands()
+const modelInfo = `{"model_info":{"general.architecture":"test","test.context_length":8192}}`
+
+func newAgent(t *testing.T) *agent.Agent {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, modelInfo)
+	}))
+	t.Cleanup(server.Close)
+
+	model, err := llm.New(t.Context(), llm.Config{Provider: llm.ProviderOllama, Model: "test", BaseURL: server.URL})
+	require.NoError(t, err)
+
+	ag, err := agent.New(agent.Config{}, model)
+	require.NoError(t, err)
+
+	return ag
 }
 
-func registeredSkills(options []chat.Option) map[string]string {
+func registered(t *testing.T, options []chat.Option) []command.Command {
+	t.Helper()
+
+	return chat.New("", newAgent(t), options...).Commands()
+}
+
+func registeredSkills(t *testing.T, options []chat.Option) map[string]string {
+	t.Helper()
+
 	known := skillHelp()
 	help := make(map[string]string)
 
-	for _, cmd := range registered(options) {
+	for _, cmd := range registered(t, options) {
 		if _, ok := known[cmd.Name()]; ok {
 			help[cmd.Name()] = cmd.Help()
 		}
@@ -48,7 +77,7 @@ func TestBuildCommands(t *testing.T) {
 		// when
 		result := buildCommands(request)
 		// then
-		assert.Equal(t, expected, registeredSkills(result))
+		assert.Equal(t, expected, registeredSkills(t, result))
 	})
 
 	t.Run("leaves out knowledge-base when no knowledge base is configured", func(t *testing.T) {
@@ -59,7 +88,7 @@ func TestBuildCommands(t *testing.T) {
 		// when
 		result := buildCommands(request)
 		// then
-		assert.Equal(t, expected, registeredSkills(result))
+		assert.Equal(t, expected, registeredSkills(t, result))
 	})
 
 	t.Run("registers the session commands", func(t *testing.T) {
@@ -69,7 +98,7 @@ func TestBuildCommands(t *testing.T) {
 		// when
 		result := buildCommands(request)
 		// then
-		names := fn.Map(registered(result), command.Command.Name)
+		names := fn.Map(registered(t, result), command.Command.Name)
 		assert.Subset(t, names, expected)
 	})
 }

@@ -33,7 +33,7 @@ type Request struct {
 
 func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeFn func(), err error) {
 	// Initialize the model
-	llmClient, err := llm.New(r.LLM)
+	llmClient, err := llm.New(ctx, r.LLM)
 	if err != nil {
 		return nil, fmt.Errorf("model: %w", err)
 	}
@@ -65,11 +65,13 @@ func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeF
 		}
 	}()
 
-	if err = toolPacks.Add(webTools(ctx, toolBox, true)); err != nil {
+	webConfig := packs.WebConfig{NoToolPrefix: true}
+	if err = toolPacks.Add(webTools(ctx, toolBox, webConfig)); err != nil {
 		return nil, fmt.Errorf("web tools: %w", err)
 	}
 
-	if err = toolPacks.Add(libraryTools(ctx, toolBox, true)); err != nil {
+	libConfig := packs.LibraryConfig{NoToolPrefix: true}
+	if err = toolPacks.Add(libraryTools(ctx, toolBox, libConfig)); err != nil {
 		return nil, fmt.Errorf("library tools: %w", err)
 	}
 

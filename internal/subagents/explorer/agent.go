@@ -33,7 +33,7 @@ type Request struct {
 
 func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeFn func(), err error) {
 	// Initialize the model
-	llmClient, err := llm.New(r.LLM)
+	llmClient, err := llm.New(ctx, r.LLM)
 	if err != nil {
 		return nil, fmt.Errorf("model: %w", err)
 	}
@@ -86,7 +86,11 @@ func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeF
 	}
 
 	if r.KBPath != "" {
-		if err = toolPacks.Add(packs.FileTools(toolBox, r.KBPath, true)); err != nil {
+		fileConfig := packs.FileConfig{
+			Path:     r.KBPath,
+			ReadOnly: true,
+		}
+		if err = toolPacks.Add(packs.FileTools(toolBox, fileConfig)); err != nil {
 			return nil, fmt.Errorf("knowledge-base tools: %w", err)
 		}
 	}

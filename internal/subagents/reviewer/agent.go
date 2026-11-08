@@ -33,7 +33,7 @@ type Request struct {
 
 func Register(ctx context.Context, manager *subagent.Manager, r Request) (closeFn func(), err error) {
 	// Initialize the model
-	llmClient, err := llm.New(r.LLM)
+	llmClient, err := llm.New(ctx, r.LLM)
 	if err != nil {
 		return nil, fmt.Errorf("model: %w", err)
 	}

@@ -24,7 +24,7 @@ import (
 
 func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) error {
 	// Initialize models
-	llmClient, err := llm.New(cfg.LLMConfig())
+	llmClient, err := llm.New(ctx, cfg.LLMConfig())
 	if err != nil {
 		return fmt.Errorf("model: %w", err)
 	}
@@ -124,7 +124,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) 
 	}
 
 	if cfg.KBPath != "" {
-		if err = toolPacks.Add(packs.FileTools(toolBox, cfg.KBPath, false)); err != nil {
+		if err = toolPacks.Add(packs.FileTools(toolBox, packs.FileConfig{Path: cfg.KBPath})); err != nil {
 			return fmt.Errorf("knowledge-base tools: %w", err)
 		}
 	}
