@@ -11,32 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateSkillsDir(t *testing.T) {
-	t.Run("creates an empty skills folder", func(t *testing.T) {
-		// given
-		dir := configDir(t)
-		// when
-		err := createSkillsDir()
-		// then
-		require.NoError(t, err)
-
-		entries, err := os.ReadDir(filepath.Join(dir, "skills"))
-		require.NoError(t, err)
-		assert.Empty(t, entries)
-	})
-
-	t.Run("reports a folder it cannot create", func(t *testing.T) {
-		// given
-		blocked := filepath.Join(t.TempDir(), "blocked")
-		require.NoError(t, os.WriteFile(blocked, nil, 0o600))
-		t.Setenv("XDG_CONFIG_HOME", blocked)
-		// when
-		err := createSkillsDir()
-		// then
-		assert.Error(t, err)
-	})
-}
-
 func TestCloneSkills(t *testing.T) {
 	t.Run("clones the skills into their folder", func(t *testing.T) {
 		// given

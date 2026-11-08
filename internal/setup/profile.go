@@ -38,15 +38,13 @@ type answers struct {
 	researchTools       bool
 }
 
-func writeProfile() error {
+func writeProfile(in io.Reader, out io.Writer) error {
 	path, err := config.ProfilePath(config.DefaultProfile)
 	if err != nil {
 		return err
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-
-	given, err := askProfile(reader, os.Stdout)
+	given, err := askProfile(bufio.NewReader(in), out)
 	if err != nil {
 		return err
 	}

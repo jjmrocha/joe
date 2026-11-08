@@ -96,6 +96,10 @@ func validateLLM(cfg LLM) []error {
 }
 
 func validateSubagent(name string, cfg Subagent) []error {
+	if !cfg.Enabled {
+		return nil
+	}
+
 	var problems []error
 
 	if !efforts.Contains(cfg.Effort) {

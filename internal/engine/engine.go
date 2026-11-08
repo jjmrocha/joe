@@ -187,7 +187,7 @@ func Run(ctx context.Context, cfg *config.Config, sessionID string, debug bool) 
 		WithExplorer:     cfg.Subagents.Explorer.Enabled,
 		WithReviewer:     cfg.Subagents.Reviewer.Enabled,
 		WithResearcher:   cfg.Subagents.Researcher.Enabled,
-		ToolInstructions: toolInstructions(ctx, &toolPacks, mcpManager),
+		ToolInstructions: append(mcpManager.Instructions(), toolPacks.Instructions(ctx)...),
 	})
 
 	// Set session

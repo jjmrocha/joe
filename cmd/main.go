@@ -15,10 +15,6 @@ import (
 func main() {
 	ctx := context.Background()
 
-	if err := setup.BuildIfNeeded(ctx); err != nil {
-		log.Fatal(err)
-	}
-
 	args, err := cli.Parse(os.Args[1:])
 	if err != nil {
 		cli.Usage(os.Stdout)
@@ -28,6 +24,10 @@ func main() {
 		}
 
 		os.Exit(1)
+	}
+
+	if err = setup.BuildIfNeeded(ctx, os.Stdin, os.Stdout); err != nil {
+		log.Fatal(err)
 	}
 
 	cfg, err := config.Load(args.Profile)

@@ -9,9 +9,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/ai-toolkit/packs"
@@ -19,6 +22,7 @@ import (
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/go-algo/fn"
 	"github.com/jjmrocha/joe/internal/config"
+	"github.com/jjmrocha/joe/internal/guard"
 	"github.com/jjmrocha/joe/internal/skills"
 	"github.com/jjmrocha/joe/internal/subagents/explorer/prompt"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +36,8 @@ const (
 	serenaManual   = "Use the symbolic tools."
 	testSerenaTool = "find_symbol"
 	knowledgeBase  = "---\nname: knowledge-base\ndescription: Reads the knowledge base\n---\nRead the index first.\n"
+	toolCallReply  = `{"message":{"content":"","tool_calls":[{"function":{"name":"` + testSerenaTool + `","arguments":{}}}]},"done":true,"prompt_eval_count":20,"eval_count":10}`
+	unsafeVerdict  = `{"answers":{"violates":{"type":"noul","noul":0.99},"tool-safe":{"type":"noul","noul":0.99}},"usage":{}}`
 )
 
 type chatMessage struct {
@@ -64,17 +70,40 @@ func (r chatRequest) toolNames() []string {
 	return fn.Map(r.Tools, func(tool chatTool) string { return tool.Function.Name })
 }
 
+func (r chatRequest) toolResult() string {
+	for _, message := range slices.Backward(r.Messages) {
+		if message.Role == "tool" {
+			return message.Content
+		}
+	}
+
+	return ""
+}
+
 type modelServer struct {
 	mu       sync.Mutex
 	requests []chatRequest
 	url      string
 }
 
-func (s *modelServer) record(request chatRequest) {
+func (s *modelServer) record(request chatRequest) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.requests = append(s.requests, request)
+
+	return len(s.requests) - 1
+}
+
+func (s *modelServer) lastRequest(t *testing.T) chatRequest {
+	t.Helper()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	require.NotEmpty(t, s.requests)
+
+	return s.requests[len(s.requests)-1]
 }
 
 func (s *modelServer) firstRequest(t *testing.T) chatRequest {
@@ -88,7 +117,7 @@ func (s *modelServer) firstRequest(t *testing.T) chatRequest {
 	return s.requests[0]
 }
 
-func newModelServer(t *testing.T) *modelServer {
+func newModelServer(t *testing.T, replies ...string) *modelServer {
 	t.Helper()
 
 	recorder := &modelServer{}
@@ -104,9 +133,14 @@ func newModelServer(t *testing.T) *modelServer {
 		var request chatRequest
 
 		_ = json.NewDecoder(r.Body).Decode(&request)
-		recorder.record(request)
+		turn := recorder.record(request)
 
-		_, _ = io.WriteString(w, answerReply)
+		reply := answerReply
+		if turn < len(replies) {
+			reply = replies[turn]
+		}
+
+		_, _ = io.WriteString(w, reply)
 	}))
 	t.Cleanup(server.Close)
 
@@ -115,8 +149,24 @@ func newModelServer(t *testing.T) *modelServer {
 	return recorder
 }
 
+func unsafeClassifier(t *testing.T) *decision.Decision {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, unsafeVerdict)
+	}))
+	t.Cleanup(server.Close)
+
+	classifier, err := decision.New(decision.Config{Provider: decision.ProviderOllama, Model: "guard", BaseURL: server.URL})
+	require.NoError(t, err)
+
+	return classifier
+}
+
 type fakePack struct {
 	closed bool
+	runs   atomic.Int32
 }
 
 func (p *fakePack) Close() error {
@@ -152,7 +202,11 @@ func fakeCodingTools(t *testing.T, err error) (*fakePack, *[]codingToolsCall) {
 		}
 
 		findSymbol := llm.Tool{Name: testSerenaTool, Description: "Finds a symbol"}
-		if addErr := m.Add(findSymbol, func(context.Context, map[string]any) (string, error) { return "", nil }); addErr != nil {
+		findSymbolHandler := func(context.Context, map[string]any) (string, error) {
+			pack.runs.Add(1)
+			return "", nil
+		}
+		if addErr := m.Add(findSymbol, findSymbolHandler); addErr != nil {
 			return nil, addErr
 		}
 
@@ -191,7 +245,7 @@ func TestRegister(t *testing.T) {
 		manager := subagent.NewManager()
 		expected := []subagent.Info{{Name: "explorer", Description: description}}
 		// when
-		closeFn, err := Register(context.Background(), manager, newRequest(server, ""))
+		closeFn, err := Register(t.Context(), manager, newRequest(server, ""))
 		// then
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
@@ -205,7 +259,7 @@ func TestRegister(t *testing.T) {
 		manager := subagent.NewManager()
 		expected := []codingToolsCall{{project: testRepoPath, readOnly: true, noToolPrefix: true}}
 		// when
-		closeFn, err := Register(context.Background(), manager, newRequest(server, ""))
+		closeFn, err := Register(t.Context(), manager, newRequest(server, ""))
 		// then
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
@@ -218,11 +272,11 @@ func TestRegister(t *testing.T) {
 		fakeCodingTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server, ""))
+		closeFn, err := Register(t.Context(), manager, newRequest(server, ""))
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
 		// when
-		result, err := manager.Run(context.Background(), "explorer", "find Run")
+		result, err := manager.Run(t.Context(), "explorer", "find Run")
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "the answer", result)
@@ -239,11 +293,11 @@ func TestRegister(t *testing.T) {
 		fakeCodingTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server, kbPath))
+		closeFn, err := Register(t.Context(), manager, newRequest(server, kbPath))
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
 		// when
-		_, err = manager.Run(context.Background(), "explorer", "is there a plan?")
+		_, err = manager.Run(t.Context(), "explorer", "is there a plan?")
 		// then
 		require.NoError(t, err)
 
@@ -262,7 +316,7 @@ func TestRegister(t *testing.T) {
 		fakeCodingTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server, ""))
+		closeFn, err := Register(t.Context(), manager, newRequest(server, ""))
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
 
@@ -271,7 +325,7 @@ func TestRegister(t *testing.T) {
 			ToolInstructions: []mcp.Instruction{{Name: "serena", Text: serenaManual}},
 		})
 		// when
-		_, err = manager.Run(context.Background(), "explorer", "find Run")
+		_, err = manager.Run(t.Context(), "explorer", "find Run")
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, server.firstRequest(t).systemMessage())
@@ -283,7 +337,7 @@ func TestRegister(t *testing.T) {
 		pack, _ := fakeCodingTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server, ""))
+		closeFn, err := Register(t.Context(), manager, newRequest(server, ""))
 		require.NoError(t, err)
 		// when
 		closeFn()
@@ -298,7 +352,7 @@ func TestRegister(t *testing.T) {
 		fakeCodingTools(t, failure)
 		manager := subagent.NewManager()
 		// when
-		_, err := Register(context.Background(), manager, newRequest(server, ""))
+		_, err := Register(t.Context(), manager, newRequest(server, ""))
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "coding tools: ")
@@ -312,7 +366,7 @@ func TestRegister(t *testing.T) {
 		_, calls := fakeCodingTools(t, nil)
 		manager := subagent.NewManager()
 		// when
-		_, err := Register(context.Background(), manager, newRequest(server, t.TempDir()))
+		_, err := Register(t.Context(), manager, newRequest(server, t.TempDir()))
 		// then
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "skills: ")
@@ -328,11 +382,30 @@ func TestRegister(t *testing.T) {
 		manager := subagent.NewManager()
 		missingFolder := filepath.Join(t.TempDir(), "missing")
 		// when
-		_, err := Register(context.Background(), manager, newRequest(server, missingFolder))
+		_, err := Register(t.Context(), manager, newRequest(server, missingFolder))
 		// then
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "knowledge-base tools: ")
 		assert.True(t, pack.closed)
 		assert.Empty(t, manager.Agents())
+	})
+
+	t.Run("refuses a tool call the classifier judges unsafe", func(t *testing.T) {
+		// given
+		server := newModelServer(t, toolCallReply, answerReply)
+		pack, _ := fakeCodingTools(t, nil)
+		manager := subagent.NewManager()
+		request := newRequest(server, "")
+		request.Classifier = unsafeClassifier(t)
+
+		closeFn, err := Register(t.Context(), manager, request)
+		require.NoError(t, err)
+		t.Cleanup(closeFn)
+		// when
+		_, err = manager.Run(t.Context(), "explorer", "find Run")
+		// then
+		require.NoError(t, err)
+		assert.Zero(t, pack.runs.Load())
+		assert.Contains(t, server.lastRequest(t).toolResult(), guard.ErrToolCallRejected.Error())
 	})
 }

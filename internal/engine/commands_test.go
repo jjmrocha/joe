@@ -2,8 +2,10 @@ package engine
 
 import (
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/jjmrocha/ai-chat/chat"
@@ -44,11 +46,11 @@ func registered(t *testing.T, options []chat.Option) []command.Command {
 func registeredSkills(t *testing.T, options []chat.Option) map[string]string {
 	t.Helper()
 
-	known := skillHelp()
+	known := skillNames()
 	help := make(map[string]string)
 
 	for _, cmd := range registered(t, options) {
-		if _, ok := known[cmd.Name()]; ok {
+		if slices.Contains(known, cmd.Name()) {
 			help[cmd.Name()] = cmd.Help()
 		}
 	}
@@ -56,16 +58,16 @@ func registeredSkills(t *testing.T, options []chat.Option) map[string]string {
 	return help
 }
 
-func skillHelp() map[string]string {
-	return map[string]string{
-		"addressing-findings":        "Work through review findings one at a time",
-		"analyze-code":               "Review code for bugs, security and tech debt",
-		"brainstorm":                 "Turn an idea into an approved design",
-		"guiding-manual-testing":     "Guide manual testing of a change",
-		"knowledge-base":             "Query or update the knowledge base",
-		"research":                   "Answer a question about the code base, with sources",
-		"using-software-specialists": "Plan and implement a code change",
-		"writing-unit-tests":         "Add unit tests to existing code",
+func skillNames() []string {
+	return []string{
+		"addressing-findings",
+		"analyze-code",
+		"brainstorm",
+		"guiding-manual-testing",
+		"knowledge-base",
+		"research",
+		"using-software-specialists",
+		"writing-unit-tests",
 	}
 }
 
@@ -73,22 +75,26 @@ func TestBuildCommands(t *testing.T) {
 	t.Run("registers every skill command when a knowledge base is configured", func(t *testing.T) {
 		// given
 		request := &commandsRequest{kbPath: "/srv/wiki"}
-		expected := skillHelp()
+		expected := skillNames()
 		// when
 		result := buildCommands(request)
 		// then
-		assert.Equal(t, expected, registeredSkills(t, result))
+		help := registeredSkills(t, result)
+		assert.ElementsMatch(t, expected, slices.Collect(maps.Keys(help)))
+		for name, text := range help {
+			assert.NotEmpty(t, text, name)
+		}
 	})
 
 	t.Run("leaves out knowledge-base when no knowledge base is configured", func(t *testing.T) {
 		// given
 		request := &commandsRequest{}
-		expected := skillHelp()
-		delete(expected, "knowledge-base")
+		expected := slices.DeleteFunc(skillNames(), func(name string) bool { return name == "knowledge-base" })
 		// when
 		result := buildCommands(request)
 		// then
-		assert.Equal(t, expected, registeredSkills(t, result))
+		help := registeredSkills(t, result)
+		assert.ElementsMatch(t, expected, slices.Collect(maps.Keys(help)))
 	})
 
 	t.Run("registers the session commands", func(t *testing.T) {

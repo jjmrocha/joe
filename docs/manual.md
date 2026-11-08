@@ -371,8 +371,8 @@ Each profile is complete: joe runs exactly what the file says, with no merging a
 | `classifier.base-url` | Overrides the provider's endpoint |
 | `classifier.api-key-env` | Name of the variable holding the key. Required except on Ollama |
 | `classifier.model` | Classification model, e.g. `typesafe/jev-1.13` |
-| `subagents` | Required. One entry per subagent: `explorer`, `reviewer` and `researcher` |
-| `subagents.<name>.model` | Model the subagent runs on. Required, even when disabled. It uses the `llm` provider, base URL and key |
+| `subagents` | One entry per subagent: `explorer`, `reviewer` and `researcher`. A missing entry, or a missing section, leaves that subagent out |
+| `subagents.<name>.model` | Model the subagent runs on. Required when the subagent is enabled. It uses the `llm` provider, base URL and key |
 | `subagents.<name>.effort` | `off`, `low`, `medium` or `max`. Setup writes `medium` |
 | `subagents.<name>.enabled` | `true` registers the subagent; `false` or absent leaves it out |
 

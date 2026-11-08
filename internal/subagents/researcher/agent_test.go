@@ -7,15 +7,19 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 
+	"github.com/jjmrocha/ai-toolkit/decision"
 	"github.com/jjmrocha/ai-toolkit/llm"
 	"github.com/jjmrocha/ai-toolkit/mcp"
 	"github.com/jjmrocha/ai-toolkit/packs"
 	"github.com/jjmrocha/ai-toolkit/subagent"
 	"github.com/jjmrocha/ai-toolkit/tools"
 	"github.com/jjmrocha/go-algo/fn"
+	"github.com/jjmrocha/joe/internal/guard"
 	"github.com/jjmrocha/joe/internal/subagents/researcher/prompt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,6 +32,8 @@ const (
 	testWebTool     = "web_search"
 	testLibraryTool = "query-docs"
 	libraryManual   = "Resolve the library id first."
+	toolCallReply   = `{"message":{"content":"","tool_calls":[{"function":{"name":"` + testWebTool + `","arguments":{}}}]},"done":true,"prompt_eval_count":20,"eval_count":10}`
+	unsafeVerdict   = `{"answers":{"violates":{"type":"noul","noul":0.99},"tool-safe":{"type":"noul","noul":0.99}},"usage":{}}`
 )
 
 type chatMessage struct {
@@ -60,17 +66,40 @@ func (r chatRequest) toolNames() []string {
 	return fn.Map(r.Tools, func(tool chatTool) string { return tool.Function.Name })
 }
 
+func (r chatRequest) toolResult() string {
+	for _, message := range slices.Backward(r.Messages) {
+		if message.Role == "tool" {
+			return message.Content
+		}
+	}
+
+	return ""
+}
+
 type modelServer struct {
 	mu       sync.Mutex
 	requests []chatRequest
 	url      string
 }
 
-func (s *modelServer) record(request chatRequest) {
+func (s *modelServer) record(request chatRequest) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.requests = append(s.requests, request)
+
+	return len(s.requests) - 1
+}
+
+func (s *modelServer) lastRequest(t *testing.T) chatRequest {
+	t.Helper()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	require.NotEmpty(t, s.requests)
+
+	return s.requests[len(s.requests)-1]
 }
 
 func (s *modelServer) firstRequest(t *testing.T) chatRequest {
@@ -84,7 +113,7 @@ func (s *modelServer) firstRequest(t *testing.T) chatRequest {
 	return s.requests[0]
 }
 
-func newModelServer(t *testing.T) *modelServer {
+func newModelServer(t *testing.T, replies ...string) *modelServer {
 	t.Helper()
 
 	recorder := &modelServer{}
@@ -100,9 +129,14 @@ func newModelServer(t *testing.T) *modelServer {
 		var request chatRequest
 
 		_ = json.NewDecoder(r.Body).Decode(&request)
-		recorder.record(request)
+		turn := recorder.record(request)
 
-		_, _ = io.WriteString(w, answerReply)
+		reply := answerReply
+		if turn < len(replies) {
+			reply = replies[turn]
+		}
+
+		_, _ = io.WriteString(w, reply)
 	}))
 	t.Cleanup(server.Close)
 
@@ -111,10 +145,26 @@ func newModelServer(t *testing.T) *modelServer {
 	return recorder
 }
 
+func unsafeClassifier(t *testing.T) *decision.Decision {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, unsafeVerdict)
+	}))
+	t.Cleanup(server.Close)
+
+	classifier, err := decision.New(decision.Config{Provider: decision.ProviderOllama, Model: "guard", BaseURL: server.URL})
+	require.NoError(t, err)
+
+	return classifier
+}
+
 type fakePack struct {
 	instruction  *mcp.Instruction
 	closed       bool
 	noToolPrefix bool
+	runs         atomic.Int32
 }
 
 func (p *fakePack) Close() error {
@@ -137,7 +187,11 @@ func fakeTools(toolName string, instruction *mcp.Instruction, err error) (*fakeP
 		}
 
 		tool := llm.Tool{Name: toolName, Description: toolName}
-		if addErr := m.Add(tool, func(context.Context, map[string]any) (string, error) { return "", nil }); addErr != nil {
+		handler := func(context.Context, map[string]any) (string, error) {
+			pack.runs.Add(1)
+			return "", nil
+		}
+		if addErr := m.Add(tool, handler); addErr != nil {
 			return nil, addErr
 		}
 
@@ -189,7 +243,7 @@ func TestRegister(t *testing.T) {
 		manager := subagent.NewManager()
 		expected := []subagent.Info{{Name: "researcher", Description: description}}
 		// when
-		closeFn, err := Register(context.Background(), manager, newRequest(server))
+		closeFn, err := Register(t.Context(), manager, newRequest(server))
 		// then
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
@@ -203,11 +257,11 @@ func TestRegister(t *testing.T) {
 		fakeLibraryTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server))
+		closeFn, err := Register(t.Context(), manager, newRequest(server))
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
 		// when
-		result, err := manager.Run(context.Background(), "researcher", "which Go TUI library?")
+		result, err := manager.Run(t.Context(), "researcher", "which Go TUI library?")
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "the answer", result)
@@ -221,7 +275,7 @@ func TestRegister(t *testing.T) {
 		library := fakeLibraryTools(t, nil)
 		manager := subagent.NewManager()
 		// when
-		closeFn, err := Register(context.Background(), manager, newRequest(server))
+		closeFn, err := Register(t.Context(), manager, newRequest(server))
 		// then
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
@@ -236,7 +290,7 @@ func TestRegister(t *testing.T) {
 		fakeLibraryTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server))
+		closeFn, err := Register(t.Context(), manager, newRequest(server))
 		require.NoError(t, err)
 		t.Cleanup(closeFn)
 
@@ -244,7 +298,7 @@ func TestRegister(t *testing.T) {
 			ToolInstructions: []mcp.Instruction{{Name: "context7", Text: libraryManual}},
 		})
 		// when
-		_, err = manager.Run(context.Background(), "researcher", "which Go TUI library?")
+		_, err = manager.Run(t.Context(), "researcher", "which Go TUI library?")
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, expected, server.firstRequest(t).systemMessage())
@@ -257,7 +311,7 @@ func TestRegister(t *testing.T) {
 		library := fakeLibraryTools(t, nil)
 		manager := subagent.NewManager()
 
-		closeFn, err := Register(context.Background(), manager, newRequest(server))
+		closeFn, err := Register(t.Context(), manager, newRequest(server))
 		require.NoError(t, err)
 		// when
 		closeFn()
@@ -274,7 +328,7 @@ func TestRegister(t *testing.T) {
 		fakeLibraryTools(t, nil)
 		manager := subagent.NewManager()
 		// when
-		_, err := Register(context.Background(), manager, newRequest(server))
+		_, err := Register(t.Context(), manager, newRequest(server))
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "web tools: ")
@@ -289,11 +343,31 @@ func TestRegister(t *testing.T) {
 		fakeLibraryTools(t, failure)
 		manager := subagent.NewManager()
 		// when
-		_, err := Register(context.Background(), manager, newRequest(server))
+		_, err := Register(t.Context(), manager, newRequest(server))
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "library tools: ")
 		assert.True(t, web.closed)
 		assert.Empty(t, manager.Agents())
+	})
+
+	t.Run("refuses a tool call the classifier judges unsafe", func(t *testing.T) {
+		// given
+		server := newModelServer(t, toolCallReply, answerReply)
+		web := fakeWebTools(t, nil)
+		fakeLibraryTools(t, nil)
+		manager := subagent.NewManager()
+		request := newRequest(server)
+		request.Classifier = unsafeClassifier(t)
+
+		closeFn, err := Register(t.Context(), manager, request)
+		require.NoError(t, err)
+		t.Cleanup(closeFn)
+		// when
+		_, err = manager.Run(t.Context(), "researcher", "which Go TUI library?")
+		// then
+		require.NoError(t, err)
+		assert.Zero(t, web.runs.Load())
+		assert.Contains(t, server.lastRequest(t).toolResult(), guard.ErrToolCallRejected.Error())
 	})
 }

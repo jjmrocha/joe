@@ -251,11 +251,6 @@ func TestLoad(t *testing.T) {
 				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"model": "m", "effort": "low"}, "researcher": {"model": "", "effort": "low", "enabled": true}}`),
 				expected: ErrMissingModel,
 			},
-			{
-				name:     "disabled explorer model",
-				content:  profileWith(`"subagents": {"explorer": {"model": "", "effort": "medium", "enabled": false}}`),
-				expected: ErrMissingModel,
-			},
 		}
 
 		for _, testCase := range testCases {
@@ -402,14 +397,17 @@ func TestLoad(t *testing.T) {
 		assert.False(t, result.Subagents.Explorer.Enabled)
 	})
 
-	t.Run("names the subagent in its validation errors", func(t *testing.T) {
+	t.Run("skips the checks of a disabled subagent", func(t *testing.T) {
 		testCases := []struct {
-			name     string
-			content  string
-			expected string
+			name    string
+			content string
 		}{
 			{
-				name: "missing section",
+				name:    "no model or effort",
+				content: profileWith(`"subagents": {"explorer": {"model": "", "effort": "", "enabled": false}}`),
+			},
+			{
+				name: "no subagents section",
 				content: `{
   "instructions": "claude",
   "llm": {"provider": "openrouter", "api-key-env": "` + testKeyEnv + `", "model": "` + testModel + `", "effort": "medium"},
@@ -417,8 +415,31 @@ func TestLoad(t *testing.T) {
   "mcps": {},
   "mcps-on": []
 }`,
-				expected: "subagents.explorer: model is not set",
 			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				// given
+				t.Setenv(testKeyEnv, "sk-test")
+
+				dir := configDir(t)
+				writeProfile(t, dir, "local", testCase.content)
+				// when
+				result, err := Load("local")
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, Subagents{}, result.Subagents)
+			})
+		}
+	})
+
+	t.Run("names the subagent in its validation errors", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			content  string
+			expected string
+		}{
 			{
 				name:     "effort",
 				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "extreme", "enabled": true}}`),
@@ -426,12 +447,12 @@ func TestLoad(t *testing.T) {
 			},
 			{
 				name:     "reviewer model",
-				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"effort": "low"}}`),
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"effort": "low", "enabled": true}}`),
 				expected: "subagents.reviewer: model is not set",
 			},
 			{
 				name:     "researcher model",
-				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"model": "m", "effort": "low"}, "researcher": {"effort": "low"}}`),
+				content:  profileWith(`"subagents": {"explorer": {"model": "m", "effort": "low"}, "reviewer": {"model": "m", "effort": "low"}, "researcher": {"effort": "low", "enabled": true}}`),
 				expected: "subagents.researcher: model is not set",
 			},
 		}

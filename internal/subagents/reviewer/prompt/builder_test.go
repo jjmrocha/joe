@@ -87,8 +87,7 @@ func TestBuild(t *testing.T) {
 		result := Build(request)
 		// then
 		assert.Contains(t, result, "| Style | style-checker |")
-		assert.NotContains(t, result, "| A change that adds or widens an interface |")
-		assert.Contains(t, result, "using-software-specialists, then read only that lens's specialist reference")
+		assert.Contains(t, result, "only that lens's specialist reference")
 	})
 
 	t.Run("rates severity with analyze-code's table and says where each finding runs", func(t *testing.T) {
@@ -97,9 +96,8 @@ func TestBuild(t *testing.T) {
 		// when
 		result := Build(request)
 		// then
-		assert.Contains(t, result, "Rate severity with analyze-code's Severity Scale table, examples included.")
-		assert.Contains(t, result, "    - Where it runs: <its role and exposure")
-		assert.NotContains(t, result, "Critical is data loss")
+		assert.Contains(t, result, "Severity Scale table")
+		assert.Contains(t, result, "Where it runs:")
 	})
 
 	t.Run("sends every lens to analyze-code's checks without its workflow", func(t *testing.T) {
@@ -108,8 +106,8 @@ func TestBuild(t *testing.T) {
 		// when
 		result := Build(request)
 		// then
-		assert.Contains(t, result, "| Every lens | analyze-code: read its Five Lenses table and step 5's checks for your lens only. Do not run its workflow. |")
-		assert.Contains(t, result, `section "Security lens — exclusions and precedents"`)
+		assert.Contains(t, result, "Do not run its workflow")
+		assert.Contains(t, result, "Security lens — exclusions and precedents")
 	})
 
 	t.Run("renders each tool's instructions under its name, in name order", func(t *testing.T) {

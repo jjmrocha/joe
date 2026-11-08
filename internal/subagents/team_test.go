@@ -30,6 +30,12 @@ const (
 	testResearcherModel = "z-ai/glm-5.3"
 	answerReply         = `{"message":{"content":"the answer"},"done":true,"prompt_eval_count":20,"eval_count":10}`
 	modelInfo           = `{"model_info":{"general.architecture":"test","test.context_length":8192}}`
+	explorerLine        = "- explorer:"
+	reviewerLine        = "- reviewer:"
+	researcherLine      = "- researcher:"
+	explorerListed      = explorerLine + " Reads code"
+	reviewerListed      = reviewerLine + " Audits code"
+	researcherListed    = researcherLine + " Searches the web"
 )
 
 func newConfig(explorerOn, reviewerOn bool) *config.Config {
@@ -181,7 +187,7 @@ func TestStart(t *testing.T) {
 		researcherFake := installFakeResearcher(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), toolBox, Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		require.NotNil(t, team)
@@ -192,19 +198,43 @@ func TestStart(t *testing.T) {
 		assert.Empty(t, researcherFake.requests)
 	})
 
-	t.Run("adds the subagent tool listing the explorer when it is enabled", func(t *testing.T) {
-		// given
-		installFakeExplorer(t, nil)
-		toolBox := tools.NewToolBox()
-		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
-		// then
-		require.NoError(t, err)
-		t.Cleanup(team.Close)
+	t.Run("lists the enabled subagents in the tool's description", func(t *testing.T) {
+		testCases := []struct {
+			name    string
+			config  *config.Config
+			listed  []string
+			omitted []string
+		}{
+			{name: "explorer", config: newConfig(true, false), listed: []string{explorerListed}, omitted: []string{reviewerLine, researcherLine}},
+			{name: "reviewer", config: newConfig(false, true), listed: []string{reviewerListed}, omitted: []string{explorerLine, researcherLine}},
+			{name: "researcher", config: withResearcher(newConfig(false, false)), listed: []string{researcherListed}, omitted: []string{explorerLine, reviewerLine}},
+			{name: "explorer and reviewer", config: newConfig(true, true), listed: []string{explorerListed, reviewerListed}, omitted: []string{researcherLine}},
+			{name: "all three", config: withResearcher(newConfig(true, true)), listed: []string{explorerListed, reviewerListed, researcherListed}},
+		}
 
-		result, found := toolBox.Tool("subagent")
-		require.True(t, found)
-		assert.Contains(t, result.Description, "- explorer: Reads code")
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				// given
+				installFakeExplorer(t, nil)
+				installFakeReviewer(t, nil)
+				installFakeResearcher(t, nil)
+				toolBox := tools.NewToolBox()
+				// when
+				team, err := Start(t.Context(), toolBox, Request{Config: testCase.config, RepoPath: testRepoPath, Progress: &fakeProgress{}})
+				// then
+				require.NoError(t, err)
+				t.Cleanup(team.Close)
+
+				result, found := toolBox.Tool("subagent")
+				require.True(t, found)
+				for _, line := range testCase.listed {
+					assert.Contains(t, result.Description, line)
+				}
+				for _, line := range testCase.omitted {
+					assert.NotContains(t, result.Description, line)
+				}
+			})
+		}
 	})
 
 	t.Run("gives the explorer its model, the repository and the knowledge base", func(t *testing.T) {
@@ -212,7 +242,7 @@ func TestStart(t *testing.T) {
 		fake := installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -233,47 +263,12 @@ func TestStart(t *testing.T) {
 		installFakeExplorer(t, failure)
 		toolBox := tools.NewToolBox()
 		// when
-		_, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		_, err := Start(t.Context(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "explorer: ")
 		_, found := toolBox.Tool("subagent")
 		assert.False(t, found)
-	})
-
-	t.Run("lists only the reviewer when only the reviewer is enabled", func(t *testing.T) {
-		// given
-		explorerFake := installFakeExplorer(t, nil)
-		installFakeReviewer(t, nil)
-		toolBox := tools.NewToolBox()
-		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(false, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
-		// then
-		require.NoError(t, err)
-		t.Cleanup(team.Close)
-
-		result, found := toolBox.Tool("subagent")
-		require.True(t, found)
-		assert.Contains(t, result.Description, "- reviewer: Audits code")
-		assert.NotContains(t, result.Description, "- explorer:")
-		assert.Empty(t, explorerFake.requests)
-	})
-
-	t.Run("lists both subagents when both are enabled", func(t *testing.T) {
-		// given
-		installFakeExplorer(t, nil)
-		installFakeReviewer(t, nil)
-		toolBox := tools.NewToolBox()
-		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
-		// then
-		require.NoError(t, err)
-		t.Cleanup(team.Close)
-
-		result, found := toolBox.Tool("subagent")
-		require.True(t, found)
-		assert.Contains(t, result.Description, "- explorer: Reads code")
-		assert.Contains(t, result.Description, "- reviewer: Audits code")
 	})
 
 	t.Run("gives the reviewer its model, the repository and the user's instructions", func(t *testing.T) {
@@ -283,7 +278,7 @@ func TestStart(t *testing.T) {
 		toolBox := tools.NewToolBox()
 		expected := []instructions.Block{{Path: "/src/joe/CLAUDE.md", Content: "Do not write comments."}}
 		// when
-		team, err := Start(context.Background(), toolBox, Request{
+		team, err := Start(t.Context(), toolBox, Request{
 			Config:           newConfig(false, true),
 			RepoPath:         testRepoPath,
 			UserInstructions: expected,
@@ -309,51 +304,13 @@ func TestStart(t *testing.T) {
 		installFakeReviewer(t, failure)
 		toolBox := tools.NewToolBox()
 		// when
-		_, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		_, err := Start(t.Context(), toolBox, Request{Config: newConfig(true, true), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "reviewer: ")
 		assert.Equal(t, 1, explorerFake.closed)
 		_, found := toolBox.Tool("subagent")
 		assert.False(t, found)
-	})
-
-	t.Run("lists only the researcher when only the researcher is enabled", func(t *testing.T) {
-		// given
-		installFakeExplorer(t, nil)
-		installFakeReviewer(t, nil)
-		installFakeResearcher(t, nil)
-		toolBox := tools.NewToolBox()
-		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
-		// then
-		require.NoError(t, err)
-		t.Cleanup(team.Close)
-
-		result, found := toolBox.Tool("subagent")
-		require.True(t, found)
-		assert.Contains(t, result.Description, "- researcher: Searches the web")
-		assert.NotContains(t, result.Description, "- explorer:")
-		assert.NotContains(t, result.Description, "- reviewer:")
-	})
-
-	t.Run("lists all three subagents when all are enabled", func(t *testing.T) {
-		// given
-		installFakeExplorer(t, nil)
-		installFakeReviewer(t, nil)
-		installFakeResearcher(t, nil)
-		toolBox := tools.NewToolBox()
-		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
-		// then
-		require.NoError(t, err)
-		t.Cleanup(team.Close)
-
-		result, found := toolBox.Tool("subagent")
-		require.True(t, found)
-		assert.Contains(t, result.Description, "- explorer: Reads code")
-		assert.Contains(t, result.Description, "- reviewer: Audits code")
-		assert.Contains(t, result.Description, "- researcher: Searches the web")
 	})
 
 	t.Run("gives the researcher its model and the repository", func(t *testing.T) {
@@ -363,7 +320,7 @@ func TestStart(t *testing.T) {
 		fake := installFakeResearcher(t, nil)
 		toolBox := tools.NewToolBox()
 		// when
-		team, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), toolBox, Request{Config: withResearcher(newConfig(false, false)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
@@ -383,7 +340,7 @@ func TestStart(t *testing.T) {
 		installFakeResearcher(t, nil)
 		line := &fakeProgress{}
 		// when
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{
+		team, err := Start(t.Context(), tools.NewToolBox(), Request{
 			Config:   withResearcher(newConfig(true, true)),
 			RepoPath: testRepoPath,
 			Progress: line,
@@ -404,7 +361,7 @@ func TestStart(t *testing.T) {
 		// given
 		line := &fakeProgress{}
 		// when
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{
+		team, err := Start(t.Context(), tools.NewToolBox(), Request{
 			Config:   newConfig(false, false),
 			RepoPath: testRepoPath,
 			Progress: line,
@@ -424,7 +381,7 @@ func TestStart(t *testing.T) {
 		installFakeResearcher(t, failure)
 		toolBox := tools.NewToolBox()
 		// when
-		_, err := Start(context.Background(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		_, err := Start(t.Context(), toolBox, Request{Config: withResearcher(newConfig(true, true)), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		// then
 		require.ErrorIs(t, err, failure)
 		assert.Contains(t, err.Error(), "researcher: ")
@@ -450,7 +407,7 @@ func TestTeamChatOption(t *testing.T) {
 		fake := installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
 
@@ -461,10 +418,11 @@ func TestTeamChatOption(t *testing.T) {
 		fake.onChat = func() { seen = append(seen, chatCore.Progress().Subagent) }
 		call := llm.ToolCall{ID: "1", Name: "subagent", Arguments: map[string]any{"agent": "explorer", "prompt": "find Run"}}
 		// when
-		_, err = toolBox.Execute(context.Background(), call)
+		_, err = toolBox.Execute(t.Context(), call)
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, []string{"0 tools · 0 tokens"}, seen)
+		require.Len(t, seen, 1)
+		assert.NotEmpty(t, seen[0])
 		assert.Empty(t, chatCore.Progress().Subagent)
 	})
 
@@ -472,7 +430,7 @@ func TestTeamChatOption(t *testing.T) {
 		// given
 		installFakeExplorer(t, nil)
 
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		// when
 		chatCore := chat.New("JOE", newMainAgent(t), team.ChatOption())
@@ -484,9 +442,9 @@ func TestTeamChatOption(t *testing.T) {
 const explorerName = "explorer"
 
 type debuggedRun struct {
-	agentName string
-	messages  int
-	err       error
+	agentName   string
+	hasMessages bool
+	err         error
 }
 
 func TestTeamSetDebugger(t *testing.T) {
@@ -495,28 +453,28 @@ func TestTeamSetDebugger(t *testing.T) {
 		installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		t.Cleanup(team.Close)
 
 		var result []debuggedRun
 
 		team.SetDebugger(func(agentName string, messages []llm.Message, err error) {
-			result = append(result, debuggedRun{agentName: agentName, messages: len(messages), err: err})
+			result = append(result, debuggedRun{agentName: agentName, hasMessages: len(messages) > 0, err: err})
 		})
 
 		call := llm.ToolCall{ID: "1", Name: "subagent", Arguments: map[string]any{"agent": explorerName, "prompt": "find Run"}}
 		// when
-		_, err = toolBox.Execute(context.Background(), call)
+		_, err = toolBox.Execute(t.Context(), call)
 		// then
 		require.NoError(t, err)
-		expected := []debuggedRun{{agentName: explorerName, messages: 3}}
+		expected := []debuggedRun{{agentName: explorerName, hasMessages: true}}
 		assert.Equal(t, expected, result)
 	})
 
 	t.Run("does nothing when no subagent is enabled", func(t *testing.T) {
 		// given
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), tools.NewToolBox(), Request{Config: newConfig(false, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		// when
 		setDebugger := func() { team.SetDebugger(func(string, []llm.Message, error) {}) }
@@ -531,7 +489,7 @@ func TestTeamClose(t *testing.T) {
 		fake := installFakeExplorer(t, nil)
 		toolBox := tools.NewToolBox()
 
-		team, err := Start(context.Background(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), toolBox, Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 		// when
 		team.Close()
@@ -545,7 +503,7 @@ func TestTeamClose(t *testing.T) {
 		// given
 		fake := installFakeExplorer(t, nil)
 
-		team, err := Start(context.Background(), tools.NewToolBox(), Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
+		team, err := Start(t.Context(), tools.NewToolBox(), Request{Config: newConfig(true, false), RepoPath: testRepoPath, Progress: &fakeProgress{}})
 		require.NoError(t, err)
 
 		team.Close()

@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/jjmrocha/joe/internal/instructions"
 )
 
-func BuildIfNeeded(ctx context.Context) error {
+func BuildIfNeeded(ctx context.Context, in io.Reader, out io.Writer) error {
 	dir, err := config.Dir()
 	if err != nil {
 		return err
@@ -26,7 +27,7 @@ func BuildIfNeeded(ctx context.Context) error {
 			return err
 		}
 
-		if err = build(dir); err != nil {
+		if err = build(dir, in, out); err != nil {
 			return err
 		}
 	}
@@ -41,18 +42,18 @@ func BuildIfNeeded(ctx context.Context) error {
 			return err
 		}
 
-		return cloneSkills(ctx, os.Stdout)
+		return cloneSkills(ctx, out)
 	}
 
 	return nil
 }
 
-func build(dir string) error {
+func build(dir string, in io.Reader, out io.Writer) error {
 	if err := createConfigDir(dir); err != nil {
 		return err
 	}
 
-	if err := writeProfile(); err != nil {
+	if err := writeProfile(in, out); err != nil {
 		return err
 	}
 

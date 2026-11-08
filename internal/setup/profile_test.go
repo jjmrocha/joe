@@ -3,6 +3,7 @@ package setup
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -382,9 +383,9 @@ func TestWriteProfile(t *testing.T) {
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\nopenrouter\n"+testClassifierModel+"\nOPEN_ROUTER_KEY\n")
+		in := strings.NewReader("openrouter\nz-ai/glm-5.3-flash\nOPEN_ROUTER_KEY\nclaude\nno\nyes\nopenrouter\n" + testClassifierModel + "\nOPEN_ROUTER_KEY\n")
 		// when
-		err := writeProfile()
+		err := writeProfile(in, io.Discard)
 		// then
 		require.NoError(t, err)
 
@@ -403,9 +404,9 @@ func TestWriteProfile(t *testing.T) {
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
+		in := strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := writeProfile()
+		err := writeProfile(in, io.Discard)
 		// then
 		require.NoError(t, err)
 
@@ -421,9 +422,9 @@ func TestWriteProfile(t *testing.T) {
 
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
-		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
+		in := strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := writeProfile()
+		err := writeProfile(in, io.Discard)
 		// then
 		require.NoError(t, err)
 
@@ -437,9 +438,9 @@ func TestWriteProfile(t *testing.T) {
 		dir := configDir(t)
 		require.NoError(t, os.MkdirAll(dir, 0o750))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "default.json"), []byte("{}"), 0o600))
-		answer(t, "ollama\nqwen3\nclaude\nno\nno\n")
+		in := strings.NewReader("ollama\nqwen3\nclaude\nno\nno\n")
 		// when
-		err := writeProfile()
+		err := writeProfile(in, io.Discard)
 		// then
 		assert.Error(t, err)
 	})

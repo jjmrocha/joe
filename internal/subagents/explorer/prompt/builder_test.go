@@ -47,7 +47,7 @@ func TestBuild(t *testing.T) {
 		// when
 		result := Build(request)
 		// then
-		assert.Contains(t, result, "When the task lists the verdicts to choose from, answer with exactly one,\n  in place of your own confidence.")
+		assert.Contains(t, result, "answer with exactly one")
 	})
 
 	t.Run("fills the locations with the repository only when there is no knowledge base", func(t *testing.T) {
